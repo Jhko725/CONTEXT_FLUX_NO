@@ -1,5 +1,5 @@
 import logging
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from typing import Literal
 
 import numpy as np
@@ -24,8 +24,8 @@ def pdesolve_pyclaw(
     solver: ClawSolver,
     problem_data: dict[str, float],
     ic_factory: Callable[[Float[np.ndarray, " Nx"]], Float[np.ndarray, " Nx"]],
-    x_span: tuple[float, float],
-    Nx: int,
+    x_spans: Sequence[tuple[float, float]],
+    Nxs: Sequence[int],
     t_span: tuple[float, float],
     Nt: int,
     bc: Literal["periodic"],
@@ -41,9 +41,9 @@ def pdesolve_pyclaw(
         logger = logging.getLogger("pyclaw")
         logger.setLevel(logging.CRITICAL)
 
-    # Need to change for >1D cases
-    solver.bc_lower[0] = solver.bc_upper[0] = bc_from_string(bc)
-    domain = make_domain(x_span, Nx)
+    # Need to change for per-axis boundary conditions
+    solver.all_bcs = bc_from_string(bc)
+    domain = make_domain(x_spans, Nxs)
 
     state = pyclaw.State(domain, solver.num_eqn)
     state.problem_data.update(problem_data)

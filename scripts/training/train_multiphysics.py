@@ -25,9 +25,9 @@ def main(cfg: DictConfig) -> None:
     loss_fn = hydra.utils.instantiate(cfg.loss_fn)
 
     if isinstance(loss_fn, PushforwardOneStepLoss):
-            segment_length = cfg.training.context_length + 2
+        segment_length = cfg.training.context_length + 2
     else:
-            segment_length = cfg.training.context_length + 1
+        segment_length = cfg.training.context_length + 1
 
     source_train = ZarrWellDatasetSource(
         well_base_path=cfg.data.well_base_path,
@@ -45,19 +45,19 @@ def main(cfg: DictConfig) -> None:
     )
 
     source_valid = ZarrWellDatasetSource(
-            well_base_path=cfg.data.well_base_path,
-            well_dataset_name=cfg.data.well_dataset_name,
-            well_split_name="valid",
-            window_size=segment_length,
-            restrict_trajectory_lengths_to=cfg.data.restrict_trajectory_lengths_to,
-        )
+        well_base_path=cfg.data.well_base_path,
+        well_dataset_name=cfg.data.well_dataset_name,
+        well_split_name="valid",
+        window_size=segment_length,
+        restrict_trajectory_lengths_to=cfg.data.restrict_trajectory_lengths_to,
+    )
     loader_valid = grain.DataLoader(
-            data_source=source_valid,
-            sampler=grain.samplers.IndexSampler(len(source_valid), shuffle=True, seed=1),
-            operations=[grain.transforms.Batch(batch_size=cfg.training.batch_size)],
-            worker_count=cfg.data.worker_count,
-            worker_buffer_size=50,
-        )
+        data_source=source_valid,
+        sampler=grain.samplers.IndexSampler(len(source_valid), shuffle=True, seed=1),
+        operations=[grain.transforms.Batch(batch_size=cfg.training.batch_size)],
+        worker_count=cfg.data.worker_count,
+        worker_buffer_size=50,
+    )
     # segment_length for loader must be cfg.training.context_length+2 for pushforward
     trainer = Trainer(
         hydra.utils.instantiate(cfg.training.optimizer),

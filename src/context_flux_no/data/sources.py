@@ -33,6 +33,7 @@ IO_PARAMS = {
     },
 }
 
+
 class HierarchicalStorage(Protocol):
     """Protocol for an object representing a hierarchical dataset.
 
@@ -274,7 +275,7 @@ class ZarrWellDatasetSource(WellDatasetSourceBase):
         exclude_filters: list[str] | None = None,
         window_size: int = 21,
         exclude_field_names: Sequence[str] = [],
-        restrict_trajectory_lengths_to: int|None = None,
+        restrict_trajectory_lengths_to: int | None = None,
     ):
         super().__init__(
             well_base_path=well_base_path,
@@ -332,20 +333,20 @@ class TheWellDataSource(WellDatasetSourceBase):
         downsample_spatial: int = 1,
         use_normalization: bool = True,  # Only support z-score norm for now
         exclude_field_names: Sequence[str] = [],
-        restrict_trajectory_lengths_to: int|None = None,
+        restrict_trajectory_lengths_to: int | None = None,
     ):
         super().__init__(
-                    well_base_path=well_base_path,
-                    well_dataset_name=well_dataset_name,
-                    well_split_name=well_split_name,
-                    include_filters=include_filters,
-                    exclude_filters=exclude_filters,
-                    window_size=window_size,
-                    use_normalization=use_normalization,
-                    exclude_field_names=exclude_field_names,
-                    restrict_trajectory_lengths_to=restrict_trajectory_lengths_to,
-                )
-        
+            well_base_path=well_base_path,
+            well_dataset_name=well_dataset_name,
+            well_split_name=well_split_name,
+            include_filters=include_filters,
+            exclude_filters=exclude_filters,
+            window_size=window_size,
+            use_normalization=use_normalization,
+            exclude_field_names=exclude_field_names,
+            restrict_trajectory_lengths_to=restrict_trajectory_lengths_to,
+        )
+
         dataset_dir = os.path.join(
             well_base_path, well_dataset_name, "data", well_split_name
         )
@@ -411,12 +412,12 @@ class TheWellDataSource(WellDatasetSourceBase):
 
     def get_datapaths(self) -> list[str | Path]:  # TODO: fix type annotation
         dataset_dir = os.path.join(
-                    self.well_base_path, self.well_dataset_name, "data", eslf.well_split_name
-                )
+            self.well_base_path, self.well_dataset_name, "data", eslf.well_split_name
+        )
         datapaths = sorted(
-                    self.filesystem.glob(dataset_dir + "/*.h5")
-                    + self.filesystem.glob(dataset_dir + "/*.hdf5")
-                )
+            self.filesystem.glob(dataset_dir + "/*.h5")
+            + self.filesystem.glob(dataset_dir + "/*.hdf5")
+        )
         return datapaths
 
     @contextlib.contextmanager
@@ -426,4 +427,3 @@ class TheWellDataSource(WellDatasetSourceBase):
         yield root  # TODO: fix protocol
         root.close()
         _f.close()
-    

@@ -1,3 +1,4 @@
+from typing import Sequence
 from collections.abc import Callable
 
 import numpy as np
@@ -45,23 +46,21 @@ def grid_centers_from_state(
     return grid_centers
 
 
-def make_domain(x_span, Nx):
-    match x_span, Nx:
-        case tuple([float() | int(), float() | int()]), int():
-            dim = pyclaw.Dimension(*x_span, Nx, name="x")
-        case [[tuple([float() | int(), float() | int()]), *_], int()]:
-            dim = [
-                pyclaw.Dimension(*x_span_i, Nx, name=f"x_{i}")
-                for i, x_span_i in enumerate(x_span)
-            ]
-        case [[tuple([float() | int(), float() | int()]), *_], [int(), _]]:
-            dim = [
-                pyclaw.Dimension(*x_span_i, Nx_i, name=f"x_{i}")
-                for i, (x_span_i, Nx_i) in enumerate(zip(x_span, Nx))
-            ]
-        case _:
-            raise ValueError("Unexpected combinattion of arguments")
-    return pyclaw.Domain(dim)
+def make_domain(x_spans: Sequence[tuple[float, float]], Nxs: Sequence[int]):
+    if (n_spatial_dims := len(x_spans)) != len(Nxs):
+        raise ValueError("x_spans and Nxs must have the same length.")
+
+    if n_spatial_dims <= 3:
+        dim_names = ["x", "y", "z"][:n_spatial_dims]
+    else:
+        dim_names = [f"x_{i}" for i in range(n_spatial_dims)]
+
+    dims = [
+        pyclaw.Dimension(*x_span, Nx, name=name)
+        for x_span, Nx, name in zip(x_spans, Nxs, dim_names)
+    ]
+    print(dims)
+    return pyclaw.Domain(dims)
 
 
 def apply_initial_condition(
@@ -71,5 +70,4 @@ def apply_initial_condition(
     ],
 ) -> None:
     grid_centers = grid_centers_from_state(state)
-    grid = np.meshgrid(*grid_centers)
-    state.q = np.asfortranarray(ic_factory(*grid))
+    state.q = np.asfortranarray(ic_factory(grid_centers))

@@ -267,9 +267,7 @@ class Euler2D(eqx.Module):
         speed_l, _ = self.signal_speeds(q_l)
         speed_r, _ = self.signal_speeds(q_r)
         speed = jnp.maximum(speed_l, speed_r)
-        return 0.5 * (self.flux_x(q_l) + self.flux_x(q_r)) - 0.5 * speed * (
-            q_r - q_l
-        )
+        return 0.5 * (self.flux_x(q_l) + self.flux_x(q_r)) - 0.5 * speed * (q_r - q_l)
 
     def _rusanov_flux_y(
         self,
@@ -279,9 +277,7 @@ class Euler2D(eqx.Module):
         _, speed_l = self.signal_speeds(q_l)
         _, speed_r = self.signal_speeds(q_r)
         speed = jnp.maximum(speed_l, speed_r)
-        return 0.5 * (self.flux_y(q_l) + self.flux_y(q_r)) - 0.5 * speed * (
-            q_r - q_l
-        )
+        return 0.5 * (self.flux_y(q_l) + self.flux_y(q_r)) - 0.5 * speed * (q_r - q_l)
 
     def _step_rusanov_2d(
         self,
@@ -303,9 +299,7 @@ class Euler2D(eqx.Module):
         flux_y_r = self._rusanov_flux_y(q, q_yr)
         flux_y_l = self._rusanov_flux_y(q_yl, q)
 
-        return q - (dt / dx) * (flux_x_r - flux_x_l) - (dt / dy) * (
-            flux_y_r - flux_y_l
-        )
+        return q - (dt / dx) * (flux_x_r - flux_x_l) - (dt / dy) * (flux_y_r - flux_y_l)
 
     def _validate_state(self, q: Array, *, where: str) -> None:
         if q.ndim != 3 or q.shape[0] != self.n_eqns:
@@ -372,9 +366,7 @@ class Euler2D(eqx.Module):
             substeps = 0
             while remaining > time_tolerance:
                 speed_x, speed_y = self.signal_speeds(q)
-                inverse_dt = float(jnp.max(speed_x)) / dx + float(
-                    jnp.max(speed_y)
-                ) / dy
+                inverse_dt = float(jnp.max(speed_x)) / dx + float(jnp.max(speed_y)) / dy
                 dt_cfl = cfl / inverse_dt if inverse_dt > 0.0 else remaining
                 dt = min(remaining, dt_cfl)
                 if not np.isfinite(dt) or dt <= 0.0:
@@ -392,7 +384,5 @@ class Euler2D(eqx.Module):
             self._validate_state(q, where=f"state at output {output_index + 1}")
             snapshots.append(q)
 
-        trajectory: Float[Array, "Nt_plus_1 4 Nx Ny"] = jnp.stack(
-            snapshots, axis=0
-        )
+        trajectory: Float[Array, "Nt_plus_1 4 Nx Ny"] = jnp.stack(snapshots, axis=0)
         return solution_to_dataset(trajectory, t, (x, y), self.coeffs)

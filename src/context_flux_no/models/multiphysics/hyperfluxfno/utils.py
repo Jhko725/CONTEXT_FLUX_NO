@@ -22,6 +22,7 @@ def _get_activation(name: str):
 
     return getattr(jnn, name)
 
+
 def make_encoder(
     encoder_type: Literal["ViT", "DPOT", "TRecViT"],
     num_spatial_dims: int,
@@ -39,7 +40,6 @@ def make_encoder(
             activation = encoder_kwargs.get("activation")
 
             if isinstance(activation, str):
-
                 encoder_kwargs["activation"] = _get_activation(activation)
             if num_spatial_dims != 1:
                 raise ValueError("ViTEncoder is only supported for num_spatial_dims=1")
@@ -82,6 +82,7 @@ def make_encoder(
             raise NotImplementedError("Unrecognized encoder type.")
 
     return encoder
+
 
 TARGET_NETWORK_DICT = {
     "UNet": UNetTargetNetwork,
