@@ -190,11 +190,15 @@ class GaussianRandomField(eqx.Module):
     num_modes: int
     dim: int
     _srfs: tuple[gs.SRF, ...]
+    means: np.ndarray
+    scales: np.ndarray
     transforms: tuple
 
     def __init__(
         self,
         covariance_fns: Sequence[gs.CovModel],
+        means: Sequence[float] | None,
+        scales: Sequence[float] | None,
         period: float = 1.0,
         num_modes: int = 32,
         transforms=None,
@@ -216,6 +220,16 @@ class GaussianRandomField(eqx.Module):
             )
             normalizers = transforms
         self.transforms = tuple(normalizers)
+
+        _shape = (self.channels,) + (1,) * self.dim
+        self.means = (
+            np.asarray(means).reshape(_shape) if means is not None else np.zeros(_shape)
+        )
+        self.scales = (
+            np.asarray(scales).reshape(_shape)
+            if scales is not None
+            else np.ones(_shape)
+        )
 
         self._srfs = tuple(
             [
@@ -246,4 +260,4 @@ class GaussianRandomField(eqx.Module):
         fields = [
             srf(xs, seed=s, mesh_type="structured") for srf, s in zip(self._srfs, seeds)
         ]
-        return np.stack(fields, axis=0)
+        return np.stack(fields, axis=0) * self.scales + self.means

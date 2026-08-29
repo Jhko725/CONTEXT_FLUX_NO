@@ -5,6 +5,7 @@ from typing import Any, Literal
 
 import equinox as eqx
 import jax
+import jax.numpy as jnp
 import numpy as np
 import zarr
 from jaxtyping import Array, PRNGKeyArray
@@ -16,6 +17,30 @@ from context_flux_no.simulations.pde.base import AbstractHyperbolicConservationL
 
 
 logger = logging.getLogger(__name__)
+
+
+def sample_coefficients(
+    key: PRNGKeyArray,
+    coeff_range_dict: dict[str, tuple[float, float]],
+    strategy: Literal["uniform", "linspace"],
+    n_coeffs: int = 1,
+):
+    if strategy == "uniform":
+
+        def _sample(key_, coeff_range_: tuple[float, float]):
+            return jax.random.uniform(
+                key_, shape=(n_coeffs,), minval=coeff_range_[0], maxval=coeff_range_[1]
+            )
+    else:
+
+        def _sample(key_, coeff_range_: tuple[float, float]):
+            return jnp.linspace(*coeff_range_, n_coeffs)
+
+    subkeys = jax.random.split(key, len(coeff_range_dict))
+    return {
+        name: _sample(subkey, coeff_range)
+        for subkey, (name, coeff_range) in zip(subkeys, coeff_range_dict.items())
+    }
 
 
 def sample_coefficients_uniform(
@@ -52,26 +77,32 @@ def generate_dataset(
     Nt: int,
     bc: Literal["periodic"] = "periodic",
     dataset_type: Literal["train", "valid", "test"] = "train",
+    coeff_sampling_strategy: Literal["uniform", "linspace"] = "uniform",
     savedir: str | Path = "./",
     filename: str | None = None,
     codec: zarr.abc.codec.Codec | None = zarr.codecs.BloscCodec(
         cname="zstd", clevel=3, shuffle="bitshuffle"
     ),
     seed: int = 0,
+    **solve_kwargs,
 ):
     if filename is None:
         filename = f"{dataset_name}_{seed=}.zarr"
     savepath = Path(savedir) / dataset_name / "data" / dataset_type / filename
     base_key = jax.random.key({"train": 0, "valid": 1, "test": 2}[dataset_type])
-    keys = jax.random.split(jax.random.fold_in(base_key, seed), n_coeffs)
+    keys = jax.random.split(jax.random.fold_in(base_key, seed), n_coeffs + 1)
+    coeffs = sample_coefficients(
+        keys[0], coeff_range_dict, coeff_sampling_strategy, n_coeffs
+    )
 
     write_idx = 0
-    for is_first, _, key in mark_ends(tqdm(keys)):
-        key_coeff, *key_ics = jax.random.split(key, n_ics_per_coeff + 1)
-        coeffs = sample_coefficients_uniform(key_coeff, coeff_range_dict)
-        pde: AbstractHyperbolicConservationLaw = pde_factory(**coeffs)
+    for i, key in enumerate(tqdm(keys[1:])):
+        key_ics = jax.random.split(key, n_ics_per_coeff)
+        coeffs_i = {k: float(v[i]) for k, v in coeffs.items()}
 
-        if is_first:
+        pde: AbstractHyperbolicConservationLaw = pde_factory(**coeffs_i)
+
+        if i == 0:
             well_writer = ZarrWellDataset(
                 dataset_name=dataset_name,
                 savepath=savepath,
@@ -84,18 +115,23 @@ def generate_dataset(
 
         for key_ic in key_ics:
             try:
-                u, t, x = pde.solve(
+                u, t, xs = pde.solve(
                     lambda u0: initial_condition_fn(u0, key_ic),
-                    x_spans[0],  # TODO: works only for 1D; need to fix later
-                    Nxs[0],
+                    x_spans,  # TODO: check if it works for both 1D and 2D
+                    Nxs,
                     t_span,
                     Nt,
                     bc=bc,
                     verbose=False,
+                    **solve_kwargs,
                 )
+                assert not np.any(np.isnan(u))
+
                 u_well_schema = pde.solution_to_well_schema(u)
                 assert np.allclose(well_writer.root["dimensions"]["time"], t)
-                assert np.allclose(well_writer.root["dimensions"]["x"], x)
+                # Implement n-D check for the spatial axes
+                for x_i, x_i_name in zip(xs, ["x", "y", "z"]):  # Works up to 3D
+                    assert np.allclose(well_writer.root["dimensions"][x_i_name], x_i)
                 well_writer[write_idx] = u_well_schema
 
                 write_idx += 1

@@ -59,7 +59,6 @@ def make_domain(x_spans: Sequence[tuple[float, float]], Nxs: Sequence[int]):
         pyclaw.Dimension(*x_span, Nx, name=name)
         for x_span, Nx, name in zip(x_spans, Nxs, dim_names)
     ]
-    print(dims)
     return pyclaw.Domain(dims)
 
 

@@ -77,6 +77,7 @@ class WellDatasetSourceBase(grain.sources.RandomAccessDataSource):
     exclude_field_names: tuple[str, ...]
     file_index_offsets: list[int]
     restrict_trajectory_lengths_to: int | None
+    preload_cache: list[np.ndarray]|None
 
     def __init__(
         self,
@@ -89,6 +90,7 @@ class WellDatasetSourceBase(grain.sources.RandomAccessDataSource):
         use_normalization: bool = True,  # Only support z-score norm for now
         exclude_field_names: Sequence[str] = [],
         restrict_trajectory_lengths_to: int | None = None,
+        preload_into_ram: bool = False,
     ):
         self.well_base_path = Path(well_base_path)
         self.well_dataset_name = well_dataset_name
@@ -150,7 +152,9 @@ class WellDatasetSourceBase(grain.sources.RandomAccessDataSource):
                 self.metadata_common[stat_name] = np.concatenate(
                     [np.asarray(x).reshape(-1) for x in stats[stat_name].values()]
                 )
-
+        
+        self.preload_cache = self._preload_into_ram() if preload_into_ram else None
+        
     @abc.abstractmethod
     def get_datapaths(self) -> list[str | Path]: ...
 
@@ -220,6 +224,19 @@ class WellDatasetSourceBase(grain.sources.RandomAccessDataSource):
         metadata_common = jax.tree.map(lambda _set: _set.pop(), metadata_common)
         return metadata_common, metadata_varying
 
+    def _preload_into_ram(self) -> list[np.ndarray]:
+        cache=[]
+        for datapath in self.datapaths:
+            with self.open_datapath(datapath) as file:
+                fields = []
+                for rank, field_names in enumerate(self.valid_field_names):
+                    fields += [
+                                            file[f"t{rank}_fields"][n][...] for n in field_names
+                                        ]
+                item = pack(fields, "b "+self._pack_pattern)[0]
+                cache.append(item)
+        return cache
+
     def __len__(self) -> int:
         return self.file_index_offsets[-1]
 
@@ -230,16 +247,19 @@ class WellDatasetSourceBase(grain.sources.RandomAccessDataSource):
             idx_local, self.metadata_varying["n_trajectories"][file_idx]
         )
 
-        with self.open_datapath(self.datapaths[file_idx]) as file:
-            fields = []
-            for rank, field_names in enumerate(self.valid_field_names):
-                fields += [
-                    file[f"t{rank}_fields"][n][
-                        idx_traj, idx_window : idx_window + self.window_size
+        if self.preload_cache is not None:
+            item = self.preload_cache[file_idx][idx_traj, idx_window : idx_window + self.window_size]
+        else:
+            with self.open_datapath(self.datapaths[file_idx]) as file:
+                fields = []
+                for rank, field_names in enumerate(self.valid_field_names):
+                    fields += [
+                        file[f"t{rank}_fields"][n][
+                            idx_traj, idx_window : idx_window + self.window_size
+                        ]
+                        for n in field_names
                     ]
-                    for n in field_names
-                ]
-        item = pack(fields, self._pack_pattern)[0]
+            item = pack(fields, self._pack_pattern)[0]
         # normalize if necessary
         if self.use_normalization:
             item = (item - self.metadata_common["mean"]) / self.metadata_common["std"]
@@ -276,6 +296,7 @@ class ZarrWellDatasetSource(WellDatasetSourceBase):
         window_size: int = 21,
         exclude_field_names: Sequence[str] = [],
         restrict_trajectory_lengths_to: int | None = None,
+        preload_into_ram: bool = False,
     ):
         super().__init__(
             well_base_path=well_base_path,
@@ -287,6 +308,7 @@ class ZarrWellDatasetSource(WellDatasetSourceBase):
             use_normalization=False,  # TODO: compute stats for zarr datasets
             exclude_field_names=exclude_field_names,
             restrict_trajectory_lengths_to=restrict_trajectory_lengths_to,
+            preload_into_ram = preload_into_ram
         )
 
     def get_datapaths(self) -> list[str | Path]:  # TODO: fix type annotation
@@ -412,7 +434,7 @@ class TheWellDataSource(WellDatasetSourceBase):
 
     def get_datapaths(self) -> list[str | Path]:  # TODO: fix type annotation
         dataset_dir = os.path.join(
-            self.well_base_path, self.well_dataset_name, "data", eslf.well_split_name
+            self.well_base_path, self.well_dataset_name, "data", self.well_split_name
         )
         datapaths = sorted(
             self.filesystem.glob(dataset_dir + "/*.h5")

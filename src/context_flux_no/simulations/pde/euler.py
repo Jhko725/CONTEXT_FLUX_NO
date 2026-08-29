@@ -12,23 +12,20 @@ Consequently, primitive initial data must be converted with
     E = p / (gamma - 1) + kinetic_energy.
 
 The 1-D solver uses an HLL Riemann solver through PyClaw.  The 2-D solver
-uses a dimension-by-dimension local Lax--Friedrichs (Rusanov) flux and
-periodic boundaries, matching the periodic ``jnp.roll`` convention used by
-the original scalar-flux implementation.
+uses a the 2-D Roe solver with entropy corrections also through PyClaw.
 """
 
-from __future__ import annotations
-
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from typing import ClassVar, Literal
 
 import equinox as eqx
 import jax.numpy as jnp
 import numpy as np
-from clawpack import pyclaw
+from clawpack import pyclaw, riemann
 from jaxtyping import Array, Float
 
 from ..pdesolve import pdesolve_pyclaw, solution_to_dataset
+from .base import AbstractHyperbolicConservationLaw
 
 
 _RHO_FLOOR = 1.0e-12
@@ -176,213 +173,62 @@ class Euler1D(eqx.Module):
         return solution_to_dataset(q, t, (x_grid,), self.coeffs)
 
 
-class Euler2D(eqx.Module):
-    """Two-dimensional compressible Euler equation with periodic boundaries.
+class Euler2D(AbstractHyperbolicConservationLaw):
+    n_spatial_dims: ClassVar[int] = 2
+    field_rank_names: ClassVar[tuple[tuple[int, str]]] = (
+        (0, "rho"),
+        (1, "m"),
+        (0, "E"),
+    )
 
-    Conservative state order: ``(rho, rho*u, rho*v, E)``.  Arrays use the
-    layout ``(equation, x, y)``.
-    """
-
-    n_dim: ClassVar[int] = 2
-    n_eqns: ClassVar[int] = 4
     gamma: float = eqx.field(static=True)
 
     def __init__(self, gamma: float = 1.4):
-        if gamma <= 1.0:
-            raise ValueError("gamma must be greater than 1")
         self.gamma = gamma
 
     @property
-    def coeffs(self) -> dict[str, float]:
+    def parameters(self) -> dict[str, float]:
         return {"gamma": self.gamma}
-
-    def primitive_to_conservative(
-        self,
-        rho: Float[Array, "..."],
-        velocity_x: Float[Array, "..."],
-        velocity_y: Float[Array, "..."],
-        pressure: Float[Array, "..."],
-    ) -> Float[Array, "4 ..."]:
-        """Convert ``(rho, u, v, p)`` to ``(rho, rho*u, rho*v, E)``."""
-
-        rho = jnp.asarray(rho)
-        velocity_x = jnp.asarray(velocity_x)
-        velocity_y = jnp.asarray(velocity_y)
-        pressure = jnp.asarray(pressure)
-        momentum_x = rho * velocity_x
-        momentum_y = rho * velocity_y
-        energy = pressure / (self.gamma - 1.0) + 0.5 * rho * (
-            velocity_x**2 + velocity_y**2
-        )
-        return jnp.stack((rho, momentum_x, momentum_y, energy), axis=0)
-
-    def pressure(self, q: Float[Array, "4 x y"]) -> Float[Array, "x y"]:
-        rho = jnp.maximum(q[0], _RHO_FLOOR)
-        kinetic = 0.5 * (q[1] ** 2 + q[2] ** 2) / rho
-        return (self.gamma - 1.0) * (q[3] - kinetic)
-
-    def flux_x(self, q: Float[Array, "4 x y"]) -> Float[Array, "4 x y"]:
-        rho = jnp.maximum(q[0], _RHO_FLOOR)
-        velocity_x = q[1] / rho
-        pressure = self.pressure(q)
-        return jnp.stack(
-            (
-                q[1],
-                q[1] * velocity_x + pressure,
-                q[2] * velocity_x,
-                velocity_x * (q[3] + pressure),
-            ),
-            axis=0,
-        )
-
-    def flux_y(self, q: Float[Array, "4 x y"]) -> Float[Array, "4 x y"]:
-        rho = jnp.maximum(q[0], _RHO_FLOOR)
-        velocity_y = q[2] / rho
-        pressure = self.pressure(q)
-        return jnp.stack(
-            (
-                q[2],
-                q[1] * velocity_y,
-                q[2] * velocity_y + pressure,
-                velocity_y * (q[3] + pressure),
-            ),
-            axis=0,
-        )
-
-    def signal_speeds(
-        self, q: Float[Array, "4 x y"]
-    ) -> tuple[Float[Array, "x y"], Float[Array, "x y"]]:
-        rho = jnp.maximum(q[0], _RHO_FLOOR)
-        velocity_x = q[1] / rho
-        velocity_y = q[2] / rho
-        pressure = jnp.maximum(self.pressure(q), _PRESSURE_FLOOR)
-        sound_speed = jnp.sqrt(self.gamma * pressure / rho)
-        return jnp.abs(velocity_x) + sound_speed, jnp.abs(velocity_y) + sound_speed
-
-    def _rusanov_flux_x(
-        self,
-        q_l: Float[Array, "4 x y"],
-        q_r: Float[Array, "4 x y"],
-    ) -> Float[Array, "4 x y"]:
-        speed_l, _ = self.signal_speeds(q_l)
-        speed_r, _ = self.signal_speeds(q_r)
-        speed = jnp.maximum(speed_l, speed_r)
-        return 0.5 * (self.flux_x(q_l) + self.flux_x(q_r)) - 0.5 * speed * (q_r - q_l)
-
-    def _rusanov_flux_y(
-        self,
-        q_l: Float[Array, "4 x y"],
-        q_r: Float[Array, "4 x y"],
-    ) -> Float[Array, "4 x y"]:
-        _, speed_l = self.signal_speeds(q_l)
-        _, speed_r = self.signal_speeds(q_r)
-        speed = jnp.maximum(speed_l, speed_r)
-        return 0.5 * (self.flux_y(q_l) + self.flux_y(q_r)) - 0.5 * speed * (q_r - q_l)
-
-    def _step_rusanov_2d(
-        self,
-        q: Float[Array, "4 x y"],
-        dxs: tuple[float, float],
-        dt: float,
-    ) -> Float[Array, "4 x y"]:
-        dx, dy = dxs
-
-        # Periodic neighbors.  Spatial axes are 1 and 2 because axis 0 stores
-        # the four conservative variables.
-        q_xr = jnp.roll(q, -1, axis=1)
-        q_xl = jnp.roll(q, 1, axis=1)
-        flux_x_r = self._rusanov_flux_x(q, q_xr)
-        flux_x_l = self._rusanov_flux_x(q_xl, q)
-
-        q_yr = jnp.roll(q, -1, axis=2)
-        q_yl = jnp.roll(q, 1, axis=2)
-        flux_y_r = self._rusanov_flux_y(q, q_yr)
-        flux_y_l = self._rusanov_flux_y(q_yl, q)
-
-        return q - (dt / dx) * (flux_x_r - flux_x_l) - (dt / dy) * (flux_y_r - flux_y_l)
-
-    def _validate_state(self, q: Array, *, where: str) -> None:
-        if q.ndim != 3 or q.shape[0] != self.n_eqns:
-            raise ValueError(
-                f"{where} must have shape (4, Nx, Ny); received {tuple(q.shape)}"
-            )
-        min_rho = float(jnp.min(q[0]))
-        min_pressure = float(jnp.min(self.pressure(q)))
-        if min_rho <= 0.0:
-            raise ValueError(f"{where} has non-positive density ({min_rho})")
-        if min_pressure <= 0.0:
-            raise ValueError(f"{where} has non-positive pressure ({min_pressure})")
 
     def solve(
         self,
-        ic_factory: Callable[
-            [tuple[Float[Array, "Nx"], Float[Array, "Ny"]]],
-            Float[Array, "4 Nx Ny"],
-        ],
-        x_spans: tuple[tuple[float, float], tuple[float, float]],
-        Nxs: tuple[int, int],
+        ic_factory: Callable[[Float[np.ndarray, " Nx"]], Float[np.ndarray, " Nx"]],
+        x_spans: Sequence[tuple[float, float]],
+        Nxs: Sequence[int],
         t_span: tuple[float, float],
         Nt: int,
-        *,
-        cfl: float = 0.4,
-        max_substeps_per_output: int = 100_000,
-        **kwargs,
-    ):
-        """Integrate with adaptive CFL substeps and return ``Nt+1`` snapshots.
+        bc: Literal["periodic"],  # TODO: extend to other types as well
+        use_rho_v_p_ics: bool = False,
+        **pdesolve_kwargs,
+    ) -> tuple[
+        Float[np.ndarray, "time dim x_grid"],
+        Float[np.ndarray, " time"],
+        list[Float[np.ndarray, " ?x"]],
+    ]:
+        # Setting from https://www.clawpack.org/gallery/pyclaw/gallery/quadrants.html
+        solver = pyclaw.ClawSolver2D(riemann.euler_4wave_2D)
+        solver.transverse_waves = 2
 
-        ``kwargs`` is accepted for interface compatibility with the original
-        class.  The finite-volume boundary condition is periodic.
-        """
+        solver.num_eqn = self.n_eqns
 
-        del kwargs
-        if not (0.0 < cfl <= 1.0):
-            raise ValueError("cfl must lie in (0, 1]")
-        if Nt <= 0 or min(Nxs) <= 0:
-            raise ValueError("Nt, Nx, and Ny must be positive")
+        problem_data = self.parameters
 
-        Nx, Ny = Nxs
-        x_span, y_span = x_spans
-        dx = (x_span[1] - x_span[0]) / Nx
-        dy = (y_span[1] - y_span[0]) / Ny
-        if dx <= 0.0 or dy <= 0.0:
-            raise ValueError("each spatial span must be strictly increasing")
+        if use_rho_v_p_ics:
+            # Transform (rho, u, v, p) to (rho, rho u, rho v, E)
+            def ic_factory_new(xs):
+                rho, u, v, p = ic_factory(xs)
+                E = 0.5 * rho * (u**2 + v**2) + p / (self.gamma - 1)
+                return np.stack([rho, rho * u, rho * v, E], axis=0)
 
-        t0, t1 = t_span
-        if t1 <= t0:
-            raise ValueError("t_span must be strictly increasing")
-
-        x = jnp.linspace(x_span[0] + 0.5 * dx, x_span[1] - 0.5 * dx, Nx)
-        y = jnp.linspace(y_span[0] + 0.5 * dy, y_span[1] - 0.5 * dy, Ny)
-        t = jnp.linspace(t0, t1, Nt + 1)
-
-        q = jnp.asarray(ic_factory((x, y)))
-        self._validate_state(q, where="initial state")
-        snapshots = [q]
-
-        output_dt = (t1 - t0) / Nt
-        time_tolerance = 16.0 * np.finfo(float).eps * max(1.0, abs(output_dt))
-        for output_index in range(Nt):
-            remaining = output_dt
-            substeps = 0
-            while remaining > time_tolerance:
-                speed_x, speed_y = self.signal_speeds(q)
-                inverse_dt = float(jnp.max(speed_x)) / dx + float(jnp.max(speed_y)) / dy
-                dt_cfl = cfl / inverse_dt if inverse_dt > 0.0 else remaining
-                dt = min(remaining, dt_cfl)
-                if not np.isfinite(dt) or dt <= 0.0:
-                    raise RuntimeError("CFL calculation produced an invalid time step")
-
-                q = self._step_rusanov_2d(q, (dx, dy), dt)
-                remaining -= dt
-                substeps += 1
-                if substeps > max_substeps_per_output:
-                    raise RuntimeError(
-                        "maximum CFL substeps exceeded before output "
-                        f"{output_index + 1}"
-                    )
-
-            self._validate_state(q, where=f"state at output {output_index + 1}")
-            snapshots.append(q)
-
-        trajectory: Float[Array, "Nt_plus_1 4 Nx Ny"] = jnp.stack(snapshots, axis=0)
-        return solution_to_dataset(trajectory, t, (x, y), self.coeffs)
+        u, t, xs = pdesolve_pyclaw(
+            solver,
+            problem_data,
+            ic_factory if not use_rho_v_p_ics else ic_factory_new,
+            x_spans,
+            Nxs,
+            t_span,
+            Nt,
+            bc,
+            **pdesolve_kwargs,
+        )
+        return u, t, xs

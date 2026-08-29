@@ -31,8 +31,8 @@ class AbstractHyperbolicConservationLaw(eqx.Module):
     def solve(
         self,
         ic_factory: Callable[[Float[np.ndarray, " Nx"]], Float[np.ndarray, " Nx"]],
-        x_span: tuple[float, float],
-        Nx: int,
+        x_spans: tuple[tuple[float, float],],
+        Nxs: tuple[int,],
         t_span: tuple[float, float],
         Nt: int,
         bc: Literal["periodic"],  # TODO: extend to other types as well

@@ -5,3 +5,8 @@ coeff_range_dict:
   alpha: [0.5, 1.5]
   gamma: [0.5, 1.5]
   beta: [0.8, 1.2]
+
+x_spans: [[0, 1],]
+Nxs: [100,]
+t_span: [0, 0.5]
+Nt: 100

@@ -4,3 +4,8 @@ pde_factory: context_flux_no.simulations.pde.burgers.ViscousBurgers1D
 coeff_range_dict:
   a: [0.5, 1.5]
   b: [0.005, 0.015]
+
+x_spans: [[0, 1],]
+Nxs: [100,]
+t_span: [0, 0.5]
+Nt: 100

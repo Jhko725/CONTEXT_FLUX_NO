@@ -1,0 +1,10 @@
+name: euler_2d
+pde_factory: context_flux_no.simulations.pde.Euler2D
+
+coeff_range_dict:
+  gamma: [1.2, 1.5]
+
+x_spans: [[0, 1], [0, 1]]
+Nxs: [128,128]
+t_span: [0, 0.5]
+Nt: 100
