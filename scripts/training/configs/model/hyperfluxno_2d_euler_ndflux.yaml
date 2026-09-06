@@ -11,7 +11,7 @@ encoder_kwargs:
   temporal_block_width: 128
   num_heads: 8
   mlp_hidden_dim: 64
-target_network_type: FluxNO
+target_network_type: NDFluxNO
 target_network_kwargs: 
   stencil_widths: [8,8]
   lift_dim: 128
@@ -19,7 +19,7 @@ target_network_kwargs:
   depth: 5
 lift_dim: null
 width_hyper: 128
-blocks_hyper: 4
+blocks_hyper: 7
 activation:
   _target_: hydra.utils.get_method
   path: jax.nn.gelu

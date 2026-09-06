@@ -5,3 +5,7 @@ coeff_range_dict:
   a: [-1.0, 1.0]
   b: [-1.0, 1.0]
   c: [-1.0, 1.0]
+
+coeff_sampling_strategy: linspace
+
+solve_kwargs: null

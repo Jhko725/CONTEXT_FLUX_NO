@@ -3,7 +3,7 @@ num_spatial_dims: ${..data.num_spatial_dims}
 in_channels: ${..data.channels}
 out_channels: ${..data.channels}
 in_timesteps: ${..training.context_length}
-grid_size: [64, 64]
+grid_size: [128,128]
 patch_size: [8, 8]
 embedding_dim: 128
 max_frequency_modes: [10, 10]

@@ -3,12 +3,155 @@ from collections.abc import Callable
 import equinox as eqx
 import jax
 import jax.numpy as jnp
-from einops import pack, unpack
+from einops import pack, rearrange, unpack
 from jaxtyping import Array, Float, PRNGKeyArray
 
+from context_flux_no.nn.channelwise import ChannelwiseMLP
 from context_flux_no.nn.operators.fourier_utils import append_grid_channels
 
 from .base import AbstractTargetNetwork
+
+
+class NDNeuralNetworkFlux(eqx.Module):
+    """An N-D version of the Flux NO that uses full ND hyperrectangular finite volume
+    stencil, instead of using dimensional splitting."""
+
+    num_spatial_dims: int = eqx.field(static=True)
+    in_channels: int = eqx.field(static=True)
+    out_channels: int = eqx.field(static=True)
+    stencil_widths: tuple[int, int] = eqx.field(static=True)
+    lift_dim: int = eqx.field(static=True)
+    hidden_dim: int = eqx.field(static=True)
+    depth: int = eqx.field(static=True)
+
+    lift_layer: eqx.nn.Conv
+    mlp: ChannelwiseMLP
+
+    def __init__(
+        self,
+        num_spatial_dims: int,
+        in_channels: int,
+        out_channels: int,
+        stencil_widths: tuple[int, int],
+        lift_dim: int,
+        hidden_dim: int,
+        depth: int,
+        activation: Callable = jax.nn.gelu,
+        dtype=None,
+        *,
+        key: PRNGKeyArray,
+    ):
+        keys = jax.random.split(key, 2)
+        kernel_size = stencil_widths[0] + stencil_widths[1] + 1
+        self.lift_layer = eqx.nn.Conv(
+            num_spatial_dims=num_spatial_dims,
+            in_channels=in_channels,
+            out_channels=lift_dim,
+            kernel_size=kernel_size,
+            dtype=dtype,
+            key=keys[0],
+        )
+        self.mlp = ChannelwiseMLP(
+            num_spatial_dims=num_spatial_dims,
+            in_channels=lift_dim,
+            out_channels=out_channels * num_spatial_dims,
+            hidden_channels=hidden_dim,
+            depth=depth,
+            activation=activation,
+            dtype=dtype,
+            key=keys[1],
+        )
+        self.num_spatial_dims = num_spatial_dims
+        self.in_channels = in_channels
+        self.out_channels = out_channels
+        self.stencil_widths = stencil_widths
+        self.lift_dim = lift_dim
+        self.hidden_dim = hidden_dim
+        self.depth = depth
+
+    @property
+    def stencil_size(self) -> int:
+        return sum(self.stencil_widths) + 1
+
+    def __call__(
+        self,
+        u: Float[Array, " in_channels *grids"],
+        *,
+        key: PRNGKeyArray | None = None,
+    ) -> Float[Array, "num_spatial_dims out_channels *grids_plus_1"]:
+        del key
+        a, b = self.stencil_widths
+        pad_widths = [(0, 0)] + [(a + 1, b)] * self.num_spatial_dims
+        # Need to change mode if not periodic boundary condition
+        u_padded = jnp.pad(u, pad_widths, mode="wrap")
+        u_stencils: Float[Array, " lift_dim *grids_plus_1"] = self.lift_layer(u_padded)
+        f: Float[Array, " out_channels*num_spatial_dims *grids_plus_1"] = self.mlp(
+            u_stencils
+        )
+        return rearrange(f, "(D C) ... -> D C ...", D=2)
+
+
+class NDFluxNOTargetNetwork(AbstractTargetNetwork):
+    num_spatial_dims: int = eqx.field(static=True)
+    in_channels: int = eqx.field(static=True)
+    out_channels: int = eqx.field(static=True)
+    stack_grid: bool = eqx.field(static=True)
+
+    fluxes: NDNeuralNetworkFlux
+
+    def __init__(
+        self,
+        num_spatial_dims: int,
+        in_channels: int,
+        out_channels: int,
+        lift_dim: int,
+        depth: int,
+        stencil_widths: tuple[int, int],
+        hidden_dim: int,
+        stack_grid: bool = True,
+        activation: Callable = jax.nn.gelu,
+        dtype=None,
+        *,
+        key: PRNGKeyArray,
+    ):
+        in_channels_ = in_channels + num_spatial_dims if stack_grid else in_channels
+        self.fluxes = NDNeuralNetworkFlux(
+            num_spatial_dims=num_spatial_dims,
+            in_channels=in_channels_,
+            out_channels=out_channels,
+            stencil_widths=stencil_widths,
+            lift_dim=lift_dim,
+            hidden_dim=hidden_dim,
+            depth=depth,
+            activation=activation,
+            dtype=dtype,
+            key=key,
+        )
+        self.num_spatial_dims = num_spatial_dims
+        self.in_channels = in_channels
+        self.out_channels = out_channels
+        self.stack_grid = stack_grid
+
+    def __call__(
+        self,
+        u: Float[Array, " in_channels *spatial_dims"],
+        args: tuple[float, ...],
+        *,
+        key: PRNGKeyArray | None = None,
+        inference: bool | None = None,
+    ) -> Float[Array, " out_channels *spatial_dims"]:
+        del key, inference
+        dt, *dxs = args
+
+        v = append_grid_channels(u) if self.stack_grid else u
+        f_: Float[Array, "num_spatial_dims in_channels *spatial_dims_plus_1"] = (
+            self.fluxes(v)
+        )
+        spatial_slices = tuple(slice(0, s) for s in u.shape[1:])
+        for i, dx in enumerate(dxs):
+            df = jnp.diff(f_[i], axis=i + 1)[:, *spatial_slices]
+            u = u - dt * df / dx
+        return u
 
 
 class NeuralNetworkFlux(eqx.Module):

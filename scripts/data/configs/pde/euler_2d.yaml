@@ -8,3 +8,6 @@ x_spans: [[0, 1], [0, 1]]
 Nxs: [128,128]
 t_span: [0, 0.5]
 Nt: 100
+
+solve_kwargs:
+  use_rho_v_p_ics: true

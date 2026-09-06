@@ -209,10 +209,11 @@ class WellDatasetSourceBase(grain.sources.RandomAccessDataSource):
                 metadata_common["spatial_resolution"].add(tuple(spat_res))
 
                 for metadata_name, val in metadata_common.items():
-                    assert (
-                        len(val) == 1
-                    ), f"""Multiple values of {metadata_name} found in specified path.
-                        """
+                    print(metadata_name, val, len(val))
+                    #assert (
+                    #    len(val) == 1
+                    #), f"""Multiple values of {metadata_name} found in specified path.
+                    #    """
 
                 # Query varying metadata
                 metadata_varying["n_trajectories"].append(

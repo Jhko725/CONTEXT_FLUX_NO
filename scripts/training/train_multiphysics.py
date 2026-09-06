@@ -35,6 +35,7 @@ def main(cfg: DictConfig) -> None:
         well_split_name="train",
         window_size=segment_length,
         restrict_trajectory_lengths_to=cfg.data.restrict_trajectory_lengths_to,
+        preload_into_ram=cfg.data.preload_into_ram
     )
     loader_train = grain.DataLoader(
         data_source=source_train,
@@ -50,6 +51,7 @@ def main(cfg: DictConfig) -> None:
         well_split_name="valid",
         window_size=segment_length,
         restrict_trajectory_lengths_to=cfg.data.restrict_trajectory_lengths_to,
+        preload_into_ram=cfg.data.preload_into_ram
     )
     loader_valid = grain.DataLoader(
         data_source=source_valid,

@@ -32,7 +32,7 @@ class AbstractMultiphysicsOperator(eqx.Module):
         """Return the prediction for the next time step and auxiliary outputs."""
         pass
 
-    @abc.abstractmethod
+    #@abc.abstractmethod
     def encode_context(
         self,
         u: Float[Array, "time channels *grids"],
@@ -42,7 +42,7 @@ class AbstractMultiphysicsOperator(eqx.Module):
         inference: bool | None = None,
     ) -> Float[Array, "embedding_dim"]:
         """Return the context embedding used to condition the operator."""
-        pass
+        raise NotImplementedError
 
     def rollout(
         self,

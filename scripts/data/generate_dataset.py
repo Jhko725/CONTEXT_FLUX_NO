@@ -7,6 +7,11 @@ from omegaconf import DictConfig
 @hydra.main(config_path="./configs", config_name="config", version_base=None)
 def main(cfg: DictConfig) -> None:
     print(cfg)
+
+    solve_kwargs = cfg.pde.solve_kwargs
+    if solve_kwargs is None:
+        solve_kwargs = dict()
+
     if cfg.gpu_id != "auto":
         jax.config.update("jax_default_device", jax.devices("gpu")[cfg.gpu_id])
     _ = generate_dataset(
@@ -27,6 +32,7 @@ def main(cfg: DictConfig) -> None:
         seed=cfg.seed,
         savedir=cfg.savedir,
         filename=cfg.savename,
+        **solve_kwargs
     )
 
 

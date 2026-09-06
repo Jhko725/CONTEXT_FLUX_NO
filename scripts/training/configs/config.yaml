@@ -1,5 +1,5 @@
 defaults:
-- data: cubicflux_1d
+- data: cubic_1d
 - model: hyperfluxno
 - training: default
 - loss_fn: vanilla
@@ -7,7 +7,7 @@ defaults:
 - _self_
 
 wandb_kwargs:
-  entity: xx257xx
+  entity: jhko725
   project: hyperfluxfno_revised
   
 hydra:
