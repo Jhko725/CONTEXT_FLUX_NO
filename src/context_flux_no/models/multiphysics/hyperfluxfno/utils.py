@@ -9,8 +9,9 @@ from .target_networks import (
     AbstractTargetNetwork,
     FluxNOTargetNetwork,
     FNOTargetNetwork,
+    LSKFluxNOTargetNetwork,
+    NDFluxNOTargetNetwork,
     UNetTargetNetwork,
-    NDFluxNOTargetNetwork
 )
 
 
@@ -90,11 +91,12 @@ TARGET_NETWORK_DICT = {
     "FNO": FNOTargetNetwork,
     "FluxNO": FluxNOTargetNetwork,
     "NDFluxNO": NDFluxNOTargetNetwork,
+    "LSKFluxNO": LSKFluxNOTargetNetwork
 }
 
 
 def make_target_network(
-    target_network_type: Literal["UNet", "FNO", "FluxNO", "NDFluxNO"],
+    target_network_type: Literal["UNet", "FNO", "FluxNO", "NDFluxNO", "LSKFluxNO"],
     num_spatial_dims: int,
     in_channels: int,
     out_channels: int,

@@ -5,3 +5,4 @@ from .fluxno import (
 )
 from .fno import FNOTargetNetwork as FNOTargetNetwork
 from .unet import UNetTargetNetwork as UNetTargetNetwork
+from .lskflux import LSKFluxNOTargetNetwork as LSKFluxNOTargetNetwork
