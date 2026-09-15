@@ -79,43 +79,6 @@ class TrainerState[M: eqx.Module](eqx.Module):
         return eqx.filter(pytree, self.is_trainable)
 
 
-class StepOutput[M: eqx.Module](eqx.Module):
-    """Class representing the output of a training step."""
-
-    trainer_state: TrainerState[M]
-    loss_train: FloatScalar
-    metrics_train: dict[str, Array]
-    loss_valid: FloatScalar | None = None
-    metrics_valid: dict[str, Array] | None = None
-
-    @property
-    def step(self) -> int:
-        return int(self.trainer_state.step)
-
-    @property
-    def metrics(self) -> dict[str, Array]:
-        metrics = {"train_loss": self.loss_train} | {
-            f"{k}_train": v for k, v in self.metrics_train.items()
-        }
-        if self.loss_valid is not None:
-            metrics = metrics | {"valid_loss": self.loss_valid}
-        if self.metrics_valid is not None:
-            metrics = metrics | {f"{k}_valid": v for k, v in self.metrics_valid.items()}
-        return jax.tree.map(lambda x: float(x), metrics)
-
-    def maybe_save_model_weights(self, ckptr: ocp.training.Checkpointer):
-        weights = eqx.filter(self.trainer_state.model, eqx.is_array)
-        ckptr.save_pytree(step=self.step, pytree=weights, metrics=self.metrics)
-
-    def log_metrics(self, logger: wandb.Run):
-        # In the future, could change to accept a list of different loggers...
-        logger.log(self.metrics, step=self.step)
-        print(
-            f"""Step: {self.step} | Train loss: {self.loss_train} | Valid loss: 
-            {self.loss_valid}"""
-        )
-
-
 Batch = PyTree
 M = TypeVar("M", bound=eqx.Module)
 
@@ -174,11 +137,11 @@ class Trainer:
         state = TrainerState[M].init(
             model, self.optimizer, trainable_filterspec, key=jax.random.key(seed)
         )
-        if validation_dataloader is None:
-            validation_dataloader = repeat(None)
-            save_metric = "train_loss"
-        else:
-            save_metric = "valid_loss"
+        train_dataiter = iter(train_dataloader)
+        valid_dataiter = iter(validation_dataloader) if validation_dataloader else None
+
+        save_metric = "train_loss" if validation_dataloader is None else "valid_loss"
+    
 
         with ExitStack() as stack:
             logger = stack.enter_context(
@@ -196,76 +159,81 @@ class Trainer:
                 )
             )  # add preservation policy, custom_metadata
 
-            for step_output in self.steps(
-                state,
-                train_dataloader,
-                validation_dataloader,
-                loss_args,
-                num_steps=num_steps,
-            ):
-                step_output.log_metrics(logger)
-                step_output.maybe_save_model_weights(ckptr)
-
-    def steps(
-        self,
-        state: TrainerState[M],
-        train_dataloader: Iterable[Batch],
-        validation_dataloader: Iterable[Batch | None],
-        loss_args: Any = None,
-        *,
-        num_steps: int,
-    ) -> Iterator[StepOutput[M]]:
-        """A generator function that yields StepOutput instances corresponding to each
-        training step."""
-        batch_iterator = iter(zip(train_dataloader, validation_dataloader))
-
-        try:
-            while int(state.step) < num_steps:
+            state_prev, outputs_prev = None, None
+            
+            for _ in range(num_steps):
                 try:
-                    batches: tuple[Batch, Batch | None] = next(batch_iterator)
+                    batch = next(train_dataiter)
+                    batch_valid = next(valid_dataiter)
                 except StopIteration:
-                    # Train and/or validation dataloader exhausted
                     break
-                output = self.train_step(state, *batches, loss_args)
-                state = output.trainer_state
-                yield output
-        finally:
-            del batch_iterator
+
+                state_next, loss, metrics = self.train_step(state, batch, loss_args)
+                loss_valid, metrics_valid = self.valid_step(
+                    state, batch_valid, loss_args
+                )
+
+                output = (
+                    {"train_loss": loss, "valid_loss": loss_valid}
+                    | metrics
+                    | metrics_valid
+                )
+
+                if (outputs_prev is not None) and (state_prev is not None):
+                    step_log = int(state_prev.step)
+                    outputs_prev = jax.tree.map(lambda x: float(x), outputs_prev)
+                    logger.log(outputs_prev, step=step_log)
+                    print(f"""Step: {step_log} | Train loss: {outputs_prev["train_loss"]}
+                     | Valid loss: {outputs_prev["valid_loss"]}""")
+                    weights = eqx.filter(state_prev.model, eqx.is_array)
+                    ckptr.save_pytree(
+                        step=step_log, pytree=weights, metrics=outputs_prev
+                    )
+
+                outputs_prev = output
+                state, state_prev = state_next, state
+
+            step_log = int(state_prev.step)
+            outputs_prev = jax.tree.map(lambda x: float(x), outputs_prev)
+            logger.log(outputs_prev, step=step_log)
+            print(f"""Step: {step_log} | Train loss: {outputs_prev["train_loss"]}
+                                 | Valid loss: {outputs_prev["valid_loss"]}""")
+            weights = eqx.filter(state_prev.model, eqx.is_array)
+            ckptr.save_pytree(
+                step=step_log, pytree=weights, metrics=outputs_prev
+            )
 
     @cached_property
     def train_step(
         self,
-    ) -> Callable[[TrainerState[M], Batch, Batch | None, Any], StepOutput[M]]:
+    ) -> Callable[
+        [TrainerState[M], Batch, Batch | None, Any],
+        tuple[M, FloatScalar, dict[str, Array]],
+    ]:
         return eqx.filter_jit(self._train_step)
 
     def _train_step(
-        self,
-        state: TrainerState[M],
-        batch_train: Batch,
-        batch_validation: Batch | None,
-        args,
-    ) -> StepOutput[M]:
+        self, state: TrainerState[M], batch: Batch, args
+    ) -> tuple[M, FloatScalar, dict[str, Array]]:
         model = eqx.nn.inference_mode(state.model, False)
 
         loss_grad_fn = eqx.filter_value_and_grad(self.loss_fn, has_aux=True)
-        (loss_train, metrics_train), grads = loss_grad_fn(
-            model, batch_train, args, state.training_key
-        )
-        
+        (loss, metrics), grads = loss_grad_fn(model, batch, args, state.training_key)
         state_next = state.take_step(grads)
+        return state_next, loss, metrics
 
-        # If validation batch is given, run model in inference mode
-        if batch_validation is not None:
-            model_valid = eqx.nn.inference_mode(state.model, True)
+    @cached_property
+    def valid_step(
+        self,
+    ) -> Callable[
+        [TrainerState[M], Batch, Batch | None, Any],
+        tuple[FloatScalar, dict[str, Array]],
+    ]:
+        return eqx.filter_jit(self._valid_step)
 
-            loss_valid, metrics_valid = self.loss_fn(
-                model_valid,
-                batch_validation,
-                args,
-                jax.random.fold_in(state.training_key, 1),
-            )
-        else:
-            loss_valid, metrics_valid = None, None
-        return StepOutput(
-            state_next, loss_train, metrics_train, loss_valid, metrics_valid
-        )
+    def _valid_step(
+        self, state: TrainerState[M], batch: Batch, args
+    ) -> tuple[FloatScalar, dict[str, Array]]:
+        model = eqx.nn.inference_mode(state.model, True)
+        loss, metrics = self.loss_fn(model, batch, args, state.training_key)
+        return loss, metrics

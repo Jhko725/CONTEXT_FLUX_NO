@@ -41,8 +41,9 @@ def main(cfg: DictConfig) -> None:
         grain.MapDataset.source(source_train)
         .seed(0)
         .shuffle()
-        .to_iter_dataset()
+        .repeat()
         .batch(batch_size=cfg.training.batch_size, drop_remainder=True)
+        .to_iter_dataset()
     )
     loader_train = grain.experimental.device_put(
         ds=loader_train,
@@ -63,8 +64,9 @@ def main(cfg: DictConfig) -> None:
         grain.MapDataset.source(source_valid)
         .seed(1)
         .shuffle()
-        .to_iter_dataset()
+        .repeat()
         .batch(batch_size=cfg.training.batch_size, drop_remainder=True)
+        .to_iter_dataset()
     )
     loader_valid = grain.experimental.device_put(
         ds=loader_valid,
