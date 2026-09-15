@@ -35,14 +35,20 @@ def main(cfg: DictConfig) -> None:
         well_split_name="train",
         window_size=segment_length,
         restrict_trajectory_lengths_to=cfg.data.restrict_trajectory_lengths_to,
-        preload_into_ram=cfg.data.preload_into_ram
+        preload_into_ram=cfg.data.preload_into_ram,
     )
-    loader_train = grain.DataLoader(
-        data_source=source_train,
-        sampler=grain.samplers.IndexSampler(len(source_train), shuffle=True, seed=0),
-        operations=[grain.transforms.Batch(batch_size=cfg.training.batch_size)],
-        worker_count=cfg.data.worker_count,
-        worker_buffer_size=50,
+    loader_train = (
+        grain.MapDataset.source(source_train)
+        .seed(0)
+        .shuffle()
+        .to_iter_dataset()
+        .batch(batch_size=cfg.training.batch_size, drop_remainder=True)
+    )
+    loader_train = grain.experimental.device_put(
+        ds=loader_train,
+        device=jax.devices()[0],
+        cpu_buffer_size=4,  # batches buffered on host
+        device_buffer_size=2,  # batches buffered on device
     )
 
     source_valid = ZarrWellDatasetSource(
@@ -51,15 +57,22 @@ def main(cfg: DictConfig) -> None:
         well_split_name="valid",
         window_size=segment_length,
         restrict_trajectory_lengths_to=cfg.data.restrict_trajectory_lengths_to,
-        preload_into_ram=cfg.data.preload_into_ram
+        preload_into_ram=cfg.data.preload_into_ram,
     )
-    loader_valid = grain.DataLoader(
-        data_source=source_valid,
-        sampler=grain.samplers.IndexSampler(len(source_valid), shuffle=True, seed=1),
-        operations=[grain.transforms.Batch(batch_size=cfg.training.batch_size)],
-        worker_count=cfg.data.worker_count,
-        worker_buffer_size=50,
+    loader_valid = (
+        grain.MapDataset.source(source_valid)
+        .seed(1)
+        .shuffle()
+        .to_iter_dataset()
+        .batch(batch_size=cfg.training.batch_size, drop_remainder=True)
     )
+    loader_valid = grain.experimental.device_put(
+        ds=loader_valid,
+        device=jax.devices()[0],
+        cpu_buffer_size=4,  # batches buffered on host
+        device_buffer_size=2,  # batches buffered on device
+    )
+    
     # segment_length for loader must be cfg.training.context_length+2 for pushforward
     trainer = Trainer(
         hydra.utils.instantiate(cfg.training.optimizer),
