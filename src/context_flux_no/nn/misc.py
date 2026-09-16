@@ -72,7 +72,7 @@ def to_ntuple(x: T | Sequence[T], n: int) -> tuple[T, ...]:
 def apply_along_axis(
     fn: Callable[[Shaped[Array, " N"]], Shaped[Array, " M"]], x: Array, axis: int = -1
 ) -> Array:
-    """Apply an arary function fn along an axis of the input x. fn *must* map a 1D tensor to a
+    """Apply an array function fn along an axis of the input x. fn *must* map a 1D tensor to a
     1D tensor."""
 
     if axis >= x.ndim or axis < -x.ndim:

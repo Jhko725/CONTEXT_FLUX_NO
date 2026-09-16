@@ -7,6 +7,7 @@ from jaxtyping import PRNGKeyArray
 from .encoders import AbstractEncoder, DPOTEncoder, TRecViTEncoder, ViTEncoder
 from .target_networks import (
     AbstractTargetNetwork,
+    ConvNeXtV2TargetNetwork,
     FluxNOTargetNetwork,
     FNOTargetNetwork,
     LSKFluxNOTargetNetwork,
@@ -91,12 +92,15 @@ TARGET_NETWORK_DICT = {
     "FNO": FNOTargetNetwork,
     "FluxNO": FluxNOTargetNetwork,
     "NDFluxNO": NDFluxNOTargetNetwork,
-    "LSKFluxNO": LSKFluxNOTargetNetwork
+    "LSKFluxNO": LSKFluxNOTargetNetwork,
+    "ConvNextFluxNO": ConvNeXtV2TargetNetwork,
 }
 
 
 def make_target_network(
-    target_network_type: Literal["UNet", "FNO", "FluxNO", "NDFluxNO", "LSKFluxNO"],
+    target_network_type: Literal[
+        "UNet", "FNO", "FluxNO", "NDFluxNO", "LSKFluxNO", "ConvNextFluxNO"
+    ],
     num_spatial_dims: int,
     in_channels: int,
     out_channels: int,

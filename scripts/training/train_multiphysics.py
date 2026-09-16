@@ -43,13 +43,14 @@ def main(cfg: DictConfig) -> None:
         .shuffle()
         .repeat()
         .batch(batch_size=cfg.training.batch_size, drop_remainder=True)
-        .to_iter_dataset()
+        .to_iter_dataset(
+            read_options=grain.ReadOption(prefetch_buffer_size=20)
+        )  # batches buffered on host
+        .map(lambda x: jax.device_put(x, jax.devices()[0]))
     )
-    loader_train = grain.experimental.device_put(
+    loader_train = grain.experimental.ThreadPrefetchIterDataset(
         ds=loader_train,
-        device=jax.devices()[0],
-        cpu_buffer_size=4,  # batches buffered on host
-        device_buffer_size=2,  # batches buffered on device
+        prefetch_buffer_size=20,  # batches buffered on device
     )
 
     source_valid = ZarrWellDatasetSource(
@@ -66,15 +67,14 @@ def main(cfg: DictConfig) -> None:
         .shuffle()
         .repeat()
         .batch(batch_size=cfg.training.batch_size, drop_remainder=True)
-        .to_iter_dataset()
+        .to_iter_dataset(read_options=grain.ReadOption(prefetch_buffer_size=20))
+        .map(lambda x: jax.device_put(x, jax.devices()[0]))
     )
-    loader_valid = grain.experimental.device_put(
-        ds=loader_valid,
-        device=jax.devices()[0],
-        cpu_buffer_size=4,  # batches buffered on host
-        device_buffer_size=2,  # batches buffered on device
-    )
-    
+    loader_valid = grain.experimental.ThreadPrefetchIterDataset(
+           ds=loader_valid,
+           prefetch_buffer_size=20,  # batches buffered on device
+       )
+
     # segment_length for loader must be cfg.training.context_length+2 for pushforward
     trainer = Trainer(
         hydra.utils.instantiate(cfg.training.optimizer),
