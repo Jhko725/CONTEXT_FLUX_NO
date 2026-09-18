@@ -1,9 +1,8 @@
 import datetime
-from collections.abc import Callable, Iterable, Iterator
+from collections.abc import Callable, Iterable
 from contextlib import ExitStack
 from dataclasses import replace
 from functools import cached_property
-from itertools import repeat
 from pathlib import Path
 from typing import Any, Self, TypeVar
 
@@ -141,7 +140,6 @@ class Trainer:
         valid_dataiter = iter(validation_dataloader) if validation_dataloader else None
 
         save_metric = "train_loss" if validation_dataloader is None else "valid_loss"
-    
 
         with ExitStack() as stack:
             logger = stack.enter_context(
@@ -160,7 +158,7 @@ class Trainer:
             )  # add preservation policy, custom_metadata
 
             state_prev, outputs_prev = None, None
-            
+
             for _ in range(num_steps):
                 try:
                     batch = next(train_dataiter)
@@ -199,9 +197,7 @@ class Trainer:
             print(f"""Step: {step_log} | Train loss: {outputs_prev["train_loss"]}
                                  | Valid loss: {outputs_prev["valid_loss"]}""")
             weights = eqx.filter(state_prev.model, eqx.is_array)
-            ckptr.save_pytree(
-                step=step_log, pytree=weights, metrics=outputs_prev
-            )
+            ckptr.save_pytree(step=step_log, pytree=weights, metrics=outputs_prev)
 
     @cached_property
     def train_step(

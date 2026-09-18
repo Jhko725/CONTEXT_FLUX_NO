@@ -157,7 +157,7 @@ class ConvNeXtV2TargetNetwork(AbstractTargetNetwork):
                 ConvNeXtV2(
                     num_spatial_dims=num_spatial_dims,
                     channels=lift_dim,
-                    kernel_size=3,
+                    kernel_size=kernel_size,
                     key=k,
                 )
                 for k in jax.random.split(keys[1], depth)
@@ -186,9 +186,6 @@ class ConvNeXtV2TargetNetwork(AbstractTargetNetwork):
         dt, *dxs = args
 
         v = append_grid_channels(u) if self.stack_grid else u
-        v = jnp.pad(
-            v, pad_width=[(0, 0)] + [(1, 0)] * self.num_spatial_dims, mode="wrap"
-        )
         v: Float[Array, " lift_dim *spatial_dims_plus_1"] = self.lift_layer(v)
         for convnextv2 in self.blocks:
             v: Float[Array, " lift_dim *spatial_dims_plus_1"] = convnextv2(v)
@@ -197,8 +194,7 @@ class ConvNeXtV2TargetNetwork(AbstractTargetNetwork):
                 self.project_layer(v), "(N C) ... -> N C ...", N=self.num_spatial_dims
             )
         )
-        spatial_slices = tuple(slice(0, s) for s in u.shape[1:])
         for i, dx in enumerate(dxs):
-            df = jnp.diff(f_[i], axis=i + 1)[:, *spatial_slices]
+            df = f_[i] - jnp.roll(f_[i], shift=1, axis=i + 1)
             u = u - dt * df / dx
         return u

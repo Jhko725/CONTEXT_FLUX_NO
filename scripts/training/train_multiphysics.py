@@ -44,12 +44,12 @@ def main(cfg: DictConfig) -> None:
         .repeat()
         .batch(batch_size=cfg.training.batch_size, drop_remainder=True)
         .to_iter_dataset(
-            read_options=grain.ReadOption(prefetch_buffer_size=20)
+            read_options=grain.ReadOptions(prefetch_buffer_size=20)
         )  # batches buffered on host
         .map(lambda x: jax.device_put(x, jax.devices()[0]))
     )
     loader_train = grain.experimental.ThreadPrefetchIterDataset(
-        ds=loader_train,
+        loader_train,
         prefetch_buffer_size=20,  # batches buffered on device
     )
 
@@ -67,13 +67,13 @@ def main(cfg: DictConfig) -> None:
         .shuffle()
         .repeat()
         .batch(batch_size=cfg.training.batch_size, drop_remainder=True)
-        .to_iter_dataset(read_options=grain.ReadOption(prefetch_buffer_size=20))
+        .to_iter_dataset(read_options=grain.ReadOptions(prefetch_buffer_size=20))
         .map(lambda x: jax.device_put(x, jax.devices()[0]))
     )
     loader_valid = grain.experimental.ThreadPrefetchIterDataset(
-           ds=loader_valid,
-           prefetch_buffer_size=20,  # batches buffered on device
-       )
+        loader_valid,
+        prefetch_buffer_size=20,  # batches buffered on device
+    )
 
     # segment_length for loader must be cfg.training.context_length+2 for pushforward
     trainer = Trainer(

@@ -11,14 +11,14 @@ encoder_kwargs:
   temporal_block_width: 128
   num_heads: 8
   mlp_hidden_dim: 64
-target_network_type: LSKFluxNO
+target_network_type: ConvNextFluxNO
 target_network_kwargs: 
-  lift_dim: 192
-  depth: 2
-  kernel_sizes: [3,3,3,3]
+  lift_dim: 64
+  depth: 4
+  kernel_size: 5
 lift_dim: null
 width_hyper: 128
-blocks_hyper: 7
+blocks_hyper: 4
 activation:
   _target_: hydra.utils.get_method
   path: jax.nn.gelu
