@@ -46,11 +46,11 @@ def main(cfg: DictConfig) -> None:
         .to_iter_dataset(
             read_options=grain.ReadOptions(prefetch_buffer_size=20)
         )  # batches buffered on host
-        .map(lambda x: jax.device_put(x, jax.devices()[0]))
+        .map(lambda x: jax.device_put(x, jax.extend.backend.get_default_device()))
     )
     loader_train = grain.experimental.ThreadPrefetchIterDataset(
         loader_train,
-        prefetch_buffer_size=20,  # batches buffered on device
+        prefetch_buffer_size=10,  # batches buffered on device
     )
 
     source_valid = ZarrWellDatasetSource(
@@ -68,11 +68,11 @@ def main(cfg: DictConfig) -> None:
         .repeat()
         .batch(batch_size=cfg.training.batch_size, drop_remainder=True)
         .to_iter_dataset(read_options=grain.ReadOptions(prefetch_buffer_size=20))
-        .map(lambda x: jax.device_put(x, jax.devices()[0]))
+        .map(lambda x: jax.device_put(x, jax.extend.backend.get_default_device()))
     )
     loader_valid = grain.experimental.ThreadPrefetchIterDataset(
         loader_valid,
-        prefetch_buffer_size=20,  # batches buffered on device
+        prefetch_buffer_size=10,  # batches buffered on device
     )
 
     # segment_length for loader must be cfg.training.context_length+2 for pushforward

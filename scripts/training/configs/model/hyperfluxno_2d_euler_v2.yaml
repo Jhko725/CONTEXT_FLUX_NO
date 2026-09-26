@@ -1,4 +1,4 @@
-_target_: context_flux_no.models.multiphysics.HyperNeuralOperator
+_target_: context_flux_no.models.multiphysics.HyperNeuralOperatorv2
 num_spatial_dims: ${..data.num_spatial_dims}
 in_channels: ${..data.channels}
 in_timesteps: ${..training.context_length}
@@ -11,19 +11,13 @@ encoder_kwargs:
   temporal_block_width: 128
   num_heads: 8
   mlp_hidden_dim: 64
-target_network_type: FluxNO
-target_network_kwargs: 
-  stencil_widths: [8,8]
-  lift_dim: 128
-  hidden_dim: 128
-  depth: 5
-lift_dim: null
+normal_stencil_halfwidths: [4,4]
+transverse_stencil_halfwidth: 2
+reconstructions_per_channel: 16
+depth_target: 6
+hidden_dim: 128
 width_hyper: 128
-blocks_hyper: 4
-activation:
-  _target_: hydra.utils.get_method
-  path: jax.nn.gelu
-stack_grid: true
+blocks_hyper: 2
 hypernet_init: bias-hyperinit
 key:
   _target_: jax.random.PRNGKey

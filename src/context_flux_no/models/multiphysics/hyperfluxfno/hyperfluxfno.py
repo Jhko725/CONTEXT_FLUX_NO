@@ -1,10 +1,12 @@
 from collections.abc import Callable
+from math import prod, sqrt
 from typing import Any, Literal
 
 import equinox as eqx
 import jax
 import jax.numpy as jnp
-from einops import pack, unpack
+from einops import pack, rearrange, reduce, unpack
+from equinox.nn._misc import default_init
 from jaxtyping import Array, Float, PRNGKeyArray
 
 from context_flux_no.nn.channelwise import ChannelwiseMLP
@@ -15,6 +17,300 @@ from ..abstract import AbstractMultiphysicsOperator
 from .encoders import AbstractEncoder
 from .target_networks import AbstractTargetNetwork
 from .utils import make_encoder, make_target_network
+
+
+def scale(x: Array, axis: int | tuple[int, ...], eps: float = 1e-6):
+    return jnp.sqrt(jnp.mean(x**2, axis=axis) + eps)
+
+
+class InterfaceReconstructor(eqx.Module):
+    """Given an array of cell-averaged states (u_i, ..., u_n), reconstruct the state at
+    the cell interfaces: (u_{-1/2}, ..., u_{n+1/2}). For each state u_i, this is
+    accomplished by using a spatial kernel of width (a, b):
+    u_{i+1/2} = F(u_{i-a}, ..., u_{i+b}).
+
+    The reconstructor works on per-stencil normalized states:
+    \tilde{u}_i=(u_i-u_{center})/u_{scale}, with u_{center}=(u_{max}+u_{min})/2 and
+    u_{scale}=(u_{max}-u_{min})/2.
+    The edge case of constant stencil (u_{max}\approx u_{min}) is handled separately to map to
+    zero.
+    """
+
+    weight: Float[
+        Array, " hidden 1 kernel_normal *kernels_transverse"
+    ]  # shared across channels
+    bias: Float[Array, " hidden *ones"]
+    weight_out: Float[Array, "out hidden"]
+    bias_out: Float[Array, " out * ones"]
+
+    num_spatial_dims: int = eqx.field(static=True)
+    in_channels: int = eqx.field(static=True)
+    out_per_channel: int = eqx.field(static=True)
+    normal_stencil_halfwidths: tuple[int, int] = eqx.field(static=True)
+    transverse_stencil_halfwidth: int = eqx.field(static=True)
+    boundary_condition: Literal["periodic"] = "periodic"
+    eps: float = eqx.field(static=True)
+    activation: Callable
+
+    def __init__(
+        self,
+        num_spatial_dims: int,
+        in_channels: int,
+        out_per_channel: int,
+        hidden_channels: int,
+        normal_stencil_halfwidths: tuple[int, int],
+        transverse_stencil_halfwidth: int = 1,
+        activation: Callable = jax.nn.gelu,
+        boundary_condition: Literal["periodic"] = "periodic",
+        eps: float = 1e-6,
+        dtype=None,
+        *,
+        key: PRNGKeyArray,
+    ):
+        if any(
+            w < 0 for w in (*normal_stencil_halfwidths, transverse_stencil_halfwidth)
+        ):
+            raise ValueError("Stencil widths must be non-negative")
+        self.num_spatial_dims = num_spatial_dims
+        self.in_channels = in_channels
+        self.out_per_channel = out_per_channel
+        self.normal_stencil_halfwidths = normal_stencil_halfwidths
+        self.transverse_stencil_halfwidth = transverse_stencil_halfwidth
+        self.boundary_condition = boundary_condition
+        self.eps = eps
+        self.activation = activation
+
+        wkey, bkey, wokey, bokey = jax.random.split(key, 4)
+        kernel_sizes = (self.normal_stencil_width,) + (
+            self.transverse_stencil_width,
+        ) * (self.num_spatial_dims - 1)
+        ones = (1,) * self.num_spatial_dims
+
+        lim = 1 / sqrt(prod(kernel_sizes))
+        self.weight = default_init(
+            wkey, (hidden_channels, 1) + kernel_sizes, dtype, lim
+        )
+        self.bias = default_init(bkey, (hidden_channels,) + ones, dtype, lim)
+
+        lim_out = 1 / sqrt(hidden_channels)
+
+        self.weight_out = default_init(
+            wokey, (out_per_channel, hidden_channels), dtype, lim_out
+        )
+        self.bias_out = default_init(bokey, (out_per_channel,) + ones, dtype, lim_out)
+
+    @property
+    def normal_stencil_width(self) -> int:
+        return sum(self.normal_stencil_halfwidths) + 1
+
+    @property
+    def transverse_stencil_width(self) -> int:
+        return 2 * self.transverse_stencil_halfwidth + 1
+
+    def pad_ghost_cells(
+        self, u: Float[Array, " in_channels *grids"], normal_axis: int
+    ) -> Float[Array, " in_channels *grids_padded"]:
+        a, b = self.normal_stencil_halfwidths
+        s = self.transverse_stencil_halfwidth
+
+        pad = [(s, s)] * self.num_spatial_dims
+        pad[normal_axis] = (a + 1, b)  # N+1 faces along the normal axis
+
+        if self.boundary_condition == "periodic":
+            return jnp.pad(u, [(0, 0)] + pad, mode="wrap")
+        else:
+            # In the future, support other types of BCs too.
+            raise NotImplementedError(self.boundary_condition)
+
+    def stencil_shape(self, normal_axis: int) -> tuple[int, ...]:
+        """Per-axis stencil sizes when `normal_axis` is the normal direction."""
+        w = [self.transverse_stencil_width] * self.num_spatial_dims
+        w[normal_axis] = self.normal_stencil_width
+        return tuple(w)
+
+    def _per_stencil_shift_scale(
+        self, x: Float[Array, " *grids"], normal_axis: int
+    ) -> tuple[Float[Array, " *grids_out"], Float[Array, " *grids_out"]]:
+        window_dims = self.stencil_shape(normal_axis)
+        strides = (1,) * self.num_spatial_dims
+        x_max = jax.lax.reduce_window(
+            x, -jnp.inf, jax.lax.max, window_dims, strides, padding="VALID"
+        )
+        x_min = jax.lax.reduce_window(
+            x, jnp.inf, jax.lax.min, window_dims, strides, padding="VALID"
+        )
+        return 0.5 * (x_max + x_min), 0.5 * (x_max - x_min)
+
+    def _per_channel_reconstruction(
+        self, x: Float[Array, " *grids_padded"], normal_axis: int
+    ) -> Float[Array, " out_per_channel *faces"]:
+        shift, scale = self._per_stencil_shift_scale(x, normal_axis)
+        is_constant_patch = scale <= self.eps
+
+        w_patch: Float[Array, " hidden_channels *grids_out"] = (
+            jax.lax.conv_general_dilated(
+                rearrange(x, "... -> 1 1 ..."),
+                jnp.moveaxis(self.weight, 2, 2 + normal_axis),
+                window_strides=(1,) * self.num_spatial_dims,
+                padding="VALID",
+            )[0]
+        )
+        shift_w: Float[Array, " hidden_channels *grids_out"] = jnp.einsum(
+            "i,...->i...", reduce(self.weight, "C ... -> C", "sum"), shift
+        )
+
+        scale_safe = jnp.where(is_constant_patch, 1.0, scale)
+
+        x1: Float[Array, " hidden_channels *grids_out"] = (
+            jnp.where(is_constant_patch, 0.0, (w_patch - shift_w) / scale_safe)
+            + self.bias
+        )
+        x1 = self.activation(x1)
+        x2 = jnp.einsum("ij,j...->i...", self.weight_out, x1) + self.bias_out
+        return scale * x2 + shift
+
+    def __call__(self, u: Float[Array, " in_channels *grids"], normal_axis: int):
+        u_ = self.pad_ghost_cells(u, normal_axis)
+        u_out: Float[Array, " in_channels*out_per_channel *grids"] = jax.vmap(
+            lambda x: self._per_channel_reconstruction(x, normal_axis)
+        )(u_)
+        return rearrange(u_out, "I O ... -> (I O) ...")
+
+
+class HyperNeuralOperatorv2(AbstractMultiphysicsOperator):
+    context_encoder: AbstractEncoder
+    hypernetwork_trunk: eqx.nn.MLP
+    hypernetwork_head: HypernetworkHead[AbstractTargetNetwork]
+    interface_reconstructor: InterfaceReconstructor
+
+    num_spatial_dims: int = eqx.field(static=True)
+    embedding_dim: int = eqx.field(static=True)
+    boundary_condition: Literal["periodic"] = eqx.field(static=True)
+    stack_grid: bool = eqx.field(static=True)
+    activation: Callable = eqx.field(static=True)
+
+    def __init__(
+        self,
+        num_spatial_dims: int,
+        in_channels: int,
+        in_timesteps: int | None,
+        embedding_dim: int,
+        encoder_type: Literal["ViT", "DPOT", "TRecViT"],
+        encoder_kwargs: dict[str, Any],
+        normal_stencil_halfwidths: tuple[int, int],
+        transverse_stencil_halfwidth: int,
+        reconstructions_per_channel: int,
+        depth_target: int = 1,
+        width_hyper: int = 128,
+        depth_hyper: int = 1,
+        blocks_hyper: int = 8,
+        hidden_dim: int = 64,
+        hypernet_init: Literal["default", "bias-hyperinit"] = "default",
+        activation: Callable = jax.nn.gelu,
+        stack_grid: bool = True,
+        boundary_condition: Literal["periodic"] = "periodic",
+        dtype=None,
+        *,
+        key: PRNGKeyArray,
+    ):
+        self.boundary_condition = boundary_condition
+
+        keys = jax.random.split(key, 5)
+
+        self.context_encoder = make_encoder(
+            encoder_type,
+            num_spatial_dims=num_spatial_dims,
+            in_channels=in_channels + num_spatial_dims if stack_grid else in_channels,
+            embedding_dim=embedding_dim,
+            in_timesteps=in_timesteps,
+            key=keys[0],
+            **encoder_kwargs,
+        )
+
+        self.hypernetwork_trunk = eqx.nn.MLP(
+            in_size=embedding_dim + in_channels,
+            out_size=embedding_dim,
+            width_size=width_hyper,
+            depth=depth_hyper,
+            activation=activation,
+            key=keys[1],
+        )
+
+        self.interface_reconstructor = InterfaceReconstructor(
+            num_spatial_dims=num_spatial_dims,
+            in_channels=in_channels,
+            out_per_channel=reconstructions_per_channel,
+            hidden_channels=hidden_dim,
+            normal_stencil_halfwidths=normal_stencil_halfwidths,
+            transverse_stencil_halfwidth=transverse_stencil_halfwidth,
+            boundary_condition=boundary_condition,
+            dtype=dtype,
+            key=keys[2],
+        )
+
+        target_network = ChannelwiseMLP(
+            num_spatial_dims=num_spatial_dims,
+            in_channels=in_channels * reconstructions_per_channel,
+            out_channels=num_spatial_dims * in_channels,
+            hidden_channels=hidden_dim,
+            depth=depth_target,
+            activation=activation,
+            dtype=dtype,
+            key=keys[3],
+        )
+
+        self.hypernetwork_head = HypernetworkHead(
+            in_size=embedding_dim,
+            target_network=target_network,
+            num_blocks=blocks_hyper,
+            initialization=hypernet_init,
+            key=keys[4],
+        )
+
+        self.num_spatial_dims = num_spatial_dims
+        self.stack_grid = stack_grid
+        self.embedding_dim = embedding_dim
+        self.activation = activation
+
+    def __call__(
+        self,
+        u: Float[Array, "time channels *grids"],
+        args: tuple[float, ...],
+        *,
+        key: PRNGKeyArray | None = None,
+        inference: bool | None = None,
+    ):
+        dt, *dxs = args
+
+        if self.stack_grid:
+            v: Float[Array, "time channels+num_spatial_dims *grids"] = jax.vmap(
+                append_grid_channels
+            )(u)
+        else:
+            v = u
+
+        context_embed: Float[Array, " embedding_dim"] = self.context_encoder(v, key=key)
+        context_scale = reduce(u, "T C ... -> C", scale)
+        context_embed = self.hypernetwork_trunk(
+            jnp.concatenate((context_embed, jnp.log(context_scale)))
+        )
+        target_network = self.hypernetwork_head(context_embed)
+
+        u_scale = rearrange(context_scale, "C -> C" + " 1" * self.num_spatial_dims)
+        u0: Float[Array, " channels *grids"] = u[-1] / u_scale
+
+        def flux_divergence(_u0):
+            div = jnp.zeros_like(_u0)
+            for i, dx in enumerate(dxs):
+                v_i = self.interface_reconstructor(_u0, normal_axis=i)
+                f_i = rearrange(
+                    target_network(v_i), "(d c) ... -> d c ...", d=self.num_spatial_dims
+                )[i]
+                div = div + jnp.diff(f_i, axis=i + 1) / dx
+            return div
+
+        u1 = (u0 - dt * flux_divergence(u0)) * u_scale
+        return u1, None
 
 
 class HyperNeuralOperator(AbstractMultiphysicsOperator):
@@ -69,7 +365,7 @@ class HyperNeuralOperator(AbstractMultiphysicsOperator):
         )
 
         self.hypernetwork_trunk = eqx.nn.MLP(
-            in_size=embedding_dim,
+            in_size=embedding_dim + in_channels,
             out_size=embedding_dim,
             width_size=width_hyper,
             depth=depth_hyper,
@@ -142,18 +438,26 @@ class HyperNeuralOperator(AbstractMultiphysicsOperator):
         key: PRNGKeyArray | None = None,
         inference: bool | None = None,
     ):
-        v: Float[Array, "time channels+num_spatial_dims *grids"] = jax.vmap(
-            append_grid_channels
-        )(u)
+        if self.stack_grid:
+            v: Float[Array, "time channels+num_spatial_dims *grids"] = jax.vmap(
+                append_grid_channels
+            )(u)
+        else:
+            v = u
 
         context_embed: Float[Array, " embedding_dim"] = self.context_encoder(v, key=key)
-        context_embed = self.hypernetwork_trunk(context_embed)
+        # Context scaling is optional. Currently have a non-scaled impl, but later will be merged into a single class with a boolean flag.
+        context_scale = reduce(u, "T C ... -> C", scale)
+        context_embed = self.hypernetwork_trunk(
+            jnp.concatenate((context_embed, jnp.log(context_scale)))
+        )
         target_network = self.hypernetwork_head(context_embed)
 
-        u0: Float[Array, " channels *grids"] = u[-1]
+        u_scale = rearrange(context_scale, "C -> C" + " 1" * self.num_spatial_dims)
+        u0: Float[Array, " channels *grids"] = u[-1] / u_scale
         v0 = self.lift_operator(u0)
         v1: Float[Array, " channels *grids"] = target_network(v0, args)
-        u1 = self.project_operator(v1)
+        u1 = self.project_operator(v1) * u_scale
         return u1, None
 
 

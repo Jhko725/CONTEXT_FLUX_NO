@@ -5,7 +5,7 @@ from collections.abc import Sequence
 from functools import cached_property
 from itertools import accumulate
 from pathlib import Path
-from typing import Any, Iterator, Literal, Protocol
+from typing import Any, Iterator, Literal, Protocol, TypeVar
 
 import fsspec
 import grain
@@ -46,22 +46,34 @@ class HierarchicalStorage(Protocol):
     def __contains__(self, key: str, /) -> bool: ...
 
 
-def filter_strings(
-    strings: Sequence[str],
-    include_filters: list[str] | None = None,
-    exclude_filters: list[str] | None = None,
-) -> list[str]:
-    # Logic from the original WellDataset code
-    if include_filters is not None:
-        retain_files = []
-        for include_string in include_filters:
-            retain_files += [f for f in strings if include_string in f]
-        strings = retain_files
-    if exclude_filters is not None:
-        for exclude_string in exclude_filters:
-            strings = [f for f in strings if exclude_string not in f]
-    return strings
+P = TypeVar("P", str, Path)
 
+
+def _as_filter_list(filters: str | Sequence[str] | None) -> list[str]:
+    if filters is None:
+        return []
+    if isinstance(filters, (str, os.PathLike)):  # a single string, not a list of chars
+        return [os.fspath(filters)]
+    return [os.fspath(f) for f in filters]
+
+
+def filter_paths(
+    paths: Sequence[P],
+    include_filters: str | Sequence[str] | None = None,
+    exclude_filters: str | Sequence[str] | None = None,
+) -> list[P]:
+    """Keep paths whose *file name* contains at least one include filter (if any
+    are given) and none of the exclude filters. Order preserved, no duplicates."""
+    include = _as_filter_list(include_filters)
+    exclude = _as_filter_list(exclude_filters)
+
+    def keep(path: P) -> bool:
+        name = os.path.basename(os.fspath(path))
+        if include and not any(s in name for s in include):
+            return False
+        return not any(s in name for s in exclude)
+
+    return [p for p in paths if keep(p)]
 
 class WellDatasetSourceBase(grain.sources.RandomAccessDataSource):
     well_base_path: Path
@@ -77,7 +89,7 @@ class WellDatasetSourceBase(grain.sources.RandomAccessDataSource):
     exclude_field_names: tuple[str, ...]
     file_index_offsets: list[int]
     restrict_trajectory_lengths_to: int | None
-    preload_cache: list[np.ndarray]|None
+    preload_cache: list[np.ndarray] | None
 
     def __init__(
         self,
@@ -103,13 +115,15 @@ class WellDatasetSourceBase(grain.sources.RandomAccessDataSource):
             well_base_path, well_dataset_name, "data", well_split_name
         )
         self.filesystem = fsspec.url_to_fs(dataset_dir)[0]
-        datapaths = self.get_datapaths()
-        datapaths = filter_strings(
-            datapaths, self.include_filters, self.exclude_filters
+        datapaths = sorted(
+            filter_paths(self.get_datapaths(), self.include_filters, self.exclude_filters),
+            key=os.fspath,
         )
-        if len(datapaths) == 0:
-            raise ValueError(f"""The given list does not contain any valid.hdf5
-                        extension files.""")
+        if not datapaths:
+            raise ValueError(
+                f"No HDF5 files left in {dataset_dir} after filtering "
+                f"(include={self.include_filters}, exclude={self.exclude_filters})."
+            )
 
         self.datapaths = datapaths
 
@@ -152,9 +166,9 @@ class WellDatasetSourceBase(grain.sources.RandomAccessDataSource):
                 self.metadata_common[stat_name] = np.concatenate(
                     [np.asarray(x).reshape(-1) for x in stats[stat_name].values()]
                 )
-        
+
         self.preload_cache = self._preload_into_ram() if preload_into_ram else None
-        
+
     @abc.abstractmethod
     def get_datapaths(self) -> list[str | Path]: ...
 
@@ -196,7 +210,12 @@ class WellDatasetSourceBase(grain.sources.RandomAccessDataSource):
                 )
                 # Check the time varying attribute?
                 metadata_common["field_names"].add(
-                    tuple([tuple(file[f"t{j}_fields"].keys()) for j in range(3)])
+                    tuple(
+                        [
+                            tuple(file[f"t{j}_fields"].attrs["field_names"])
+                            for j in range(3)
+                        ]
+                    )
                 )
 
                 t_grid = file["dimensions"]["time"]
@@ -210,10 +229,10 @@ class WellDatasetSourceBase(grain.sources.RandomAccessDataSource):
 
                 for metadata_name, val in metadata_common.items():
                     print(metadata_name, val, len(val))
-                    #assert (
-                    #    len(val) == 1
-                    #), f"""Multiple values of {metadata_name} found in specified path.
-                    #    """
+                    assert (
+                        len(val) == 1
+                    ), f"""Multiple values of {metadata_name} found in specified path.
+                       """
 
                 # Query varying metadata
                 metadata_varying["n_trajectories"].append(
@@ -226,15 +245,13 @@ class WellDatasetSourceBase(grain.sources.RandomAccessDataSource):
         return metadata_common, metadata_varying
 
     def _preload_into_ram(self) -> list[np.ndarray]:
-        cache=[]
+        cache = []
         for datapath in self.datapaths:
             with self.open_datapath(datapath) as file:
                 fields = []
                 for rank, field_names in enumerate(self.valid_field_names):
-                    fields += [
-                                            file[f"t{rank}_fields"][n][...] for n in field_names
-                                        ]
-                item = pack(fields, "b "+self._pack_pattern)[0]
+                    fields += [file[f"t{rank}_fields"][n][...] for n in field_names]
+                item = pack(fields, "b " + self._pack_pattern)[0]
                 cache.append(item)
         return cache
 
@@ -249,7 +266,9 @@ class WellDatasetSourceBase(grain.sources.RandomAccessDataSource):
         )
 
         if self.preload_cache is not None:
-            item = self.preload_cache[file_idx][idx_traj, idx_window : idx_window + self.window_size]
+            item = self.preload_cache[file_idx][
+                idx_traj, idx_window : idx_window + self.window_size
+            ]
         else:
             with self.open_datapath(self.datapaths[file_idx]) as file:
                 fields = []
@@ -309,7 +328,7 @@ class ZarrWellDatasetSource(WellDatasetSourceBase):
             use_normalization=False,  # TODO: compute stats for zarr datasets
             exclude_field_names=exclude_field_names,
             restrict_trajectory_lengths_to=restrict_trajectory_lengths_to,
-            preload_into_ram = preload_into_ram
+            preload_into_ram=preload_into_ram,
         )
 
     def get_datapaths(self) -> list[str | Path]:  # TODO: fix type annotation

@@ -13,17 +13,19 @@ encoder_kwargs:
   mlp_hidden_dim: 64
 target_network_type: NDFluxNO
 target_network_kwargs: 
-  stencil_widths: [12,12]
-  lift_dim: 64
-  hidden_dim: 64
+  normal_stencil_halfwidths: [8,8]
+  transverse_stencil_halfwidth: 6
+  lift_dim: 128
+  hidden_dim: 128
   depth: 4
+  stack_grid: false
 lift_dim: null
 width_hyper: 128
-blocks_hyper: 6
+blocks_hyper: 4
 activation:
   _target_: hydra.utils.get_method
   path: jax.nn.gelu
-stack_grid: true
+stack_grid: false
 hypernet_init: bias_hyperinit
 key:
   _target_: jax.random.PRNGKey

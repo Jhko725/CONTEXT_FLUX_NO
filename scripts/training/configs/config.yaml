@@ -12,7 +12,7 @@ wandb_kwargs:
   
 hydra:
   launcher: 
-    timeout_min: 8000
+    timeout_min: 2880
     tasks_per_node: 1
     gpus_per_node: 1
 

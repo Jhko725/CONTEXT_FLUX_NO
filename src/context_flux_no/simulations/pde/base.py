@@ -52,6 +52,7 @@ class AbstractHyperbolicConservationLaw(eqx.Module):
             if rank == 0:
                 field_data = np.squeeze(field_data, axis=-1)
             well_schema[f"t{rank}_fields"][f_name] = field_data
+            idx_start=idx_end
 
         for param_name, val in self.parameters.items():
             well_schema["scalars"][param_name] = val

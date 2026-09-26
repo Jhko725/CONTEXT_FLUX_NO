@@ -1,0 +1,8 @@
+name: step
+waveform:
+  _target_: context_flux_no.waveforms.step.PeriodicRandomStepFunction2D
+  channels: 4
+  num_regions_min: 2
+  num_regions_max: 8
+  value_min: [0.6, -0.8, -0.8, 0.6]
+  value_max: [1.4, 0.8, 0.8, 1.4]

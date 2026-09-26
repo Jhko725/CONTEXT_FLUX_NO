@@ -1,3 +1,5 @@
+from typing import Sequence
+
 import equinox as eqx
 import jax
 import jax.numpy as jnp
@@ -96,3 +98,212 @@ class MultichannelWaveform(eqx.Module):
         return jnp.concatenate(
             [wave.sample(x, k) for wave, k in zip(self.waveforms, keys)], axis=0
         )
+
+
+# ============================================================
+# 1. Periodic Voronoi random step function
+# ============================================================
+
+
+def generate_periodic_random_step_function_2d(
+    x: Float[Array, " Nx"],
+    y: Float[Array, " Ny"],
+    key: PRNGKeyArray,
+    *,
+    channels: int = 1,
+    num_regions_min: int = 2,
+    num_regions_max: int = 8,
+    value_min: float = -1.0,
+    value_max: float = 1.0,
+) -> Float[Array, "C Nx Ny"]:
+    """
+    Generate a periodic piecewise-constant random field on a 2D domain.
+
+    The domain is partitioned using a Voronoi tessellation on a torus.
+    Therefore:
+
+        - discontinuities can have arbitrary orientations,
+        - left/right boundaries are periodic,
+        - top/bottom boundaries are periodic,
+        - all channels share the same discontinuity geometry.
+
+    Each Voronoi region is assigned an independent C-dimensional
+    constant state.
+
+    Args:
+        x:
+            Cell-center x coordinates, shape (Nx,).
+        y:
+            Cell-center y coordinates, shape (Ny,).
+        key:
+            JAX random key.
+        channels:
+            Number of physical/state channels.
+        num_regions_min:
+            Minimum number of Voronoi regions.
+        num_regions_max:
+            Maximum number of Voronoi regions.
+        value_min:
+            Minimum state value.
+        value_max:
+            Maximum state value.
+
+    Returns:
+        u0:
+            Initial condition, shape (C, Nx, Ny).
+    """
+    nx = x.shape[0]
+    ny = y.shape[0]
+
+    if nx < 2 or ny < 2:
+        raise ValueError("2D grid requires Nx >= 2 and Ny >= 2.")
+
+    if channels < 1:
+        raise ValueError("channels must be >= 1.")
+
+    if num_regions_min < 1:
+        raise ValueError("num_regions_min must be >= 1.")
+
+    if num_regions_max < num_regions_min:
+        raise ValueError("num_regions_max must be >= num_regions_min.")
+
+    key_n, key_seed, key_value = jax.random.split(key, 3)
+
+    # --------------------------------------------------------
+    # Recover periodic physical domain from cell centers
+    # --------------------------------------------------------
+
+    dx = x[1] - x[0]
+    dy = y[1] - y[0]
+
+    lx = dx * nx
+    ly = dy * ny
+
+    x_left = x[0] - 0.5 * dx
+    y_left = y[0] - 0.5 * dy
+
+    # Grid:
+    # X, Y -> (Nx, Ny)
+    X, Y = jnp.meshgrid(x, y, indexing="ij")
+
+    # --------------------------------------------------------
+    # Number of active Voronoi regions
+    #
+    # num_regions is dynamic, but all arrays have static size
+    # num_regions_max so that this remains JIT-friendly.
+    # --------------------------------------------------------
+
+    num_regions = jax.random.randint(
+        key_n,
+        shape=(),
+        minval=num_regions_min,
+        maxval=num_regions_max + 1,
+    )
+
+    active = jnp.arange(num_regions_max) < num_regions
+
+    # --------------------------------------------------------
+    # Uniformly sample Voronoi centers on the periodic domain
+    # --------------------------------------------------------
+
+    seeds_unit = jax.random.uniform(
+        key_seed,
+        shape=(num_regions_max, 2),
+        minval=0.0,
+        maxval=1.0,
+    )
+
+    seed_x = x_left + lx * seeds_unit[:, 0]
+    seed_y = y_left + ly * seeds_unit[:, 1]
+
+    # --------------------------------------------------------
+    # Periodic Euclidean distance
+    # --------------------------------------------------------
+
+    dist_x = jnp.abs(X[..., None] - seed_x[None, None, :])
+    dist_y = jnp.abs(Y[..., None] - seed_y[None, None, :])
+
+    dist_x = jnp.minimum(dist_x, lx - dist_x)
+    dist_y = jnp.minimum(dist_y, ly - dist_y)
+
+    dist_sq = dist_x**2 + dist_y**2
+
+    # Ignore inactive seeds.
+    dist_sq = jnp.where(active[None, None, :], dist_sq, jnp.inf)
+
+    # (Nx, Ny)
+    region = jnp.argmin(dist_sq, axis=-1)
+
+    # --------------------------------------------------------
+    # Random state vector assigned to every region
+    #
+    # region_values:
+    #   (num_regions_max, C)
+    #
+    # This means all channels share the same region geometry.
+    # --------------------------------------------------------
+
+    region_values = jax.random.uniform(
+        key_value, shape=(num_regions_max, channels), minval=value_min, maxval=value_max
+    )
+
+    # (Nx, Ny, C)
+    u0 = region_values[region]
+    # -> (C, Nx, Ny)
+    u0 = jnp.moveaxis(u0, -1, 0)
+
+    return u0
+
+
+# ============================================================
+# 2. Equinox initial-condition module
+# ============================================================
+
+
+class PeriodicRandomStepFunction2D(eqx.Module):
+    channels: int = eqx.field(static=True)
+    num_regions_min: int = eqx.field(static=True)
+    num_regions_max: int = eqx.field(static=True)
+    value_min: tuple[float, ...] = eqx.field(static=True)
+    value_max: tuple[float, ...] = eqx.field(static=True)
+
+    def __init__(
+        self,
+        channels: int,
+        num_regions_min: int = 1,
+        num_regions_max: int = 8,
+        value_min: float | Sequence[float] = -1.0,
+        value_max: float | Sequence[float] = 1.0,
+    ):
+        self.channels = channels
+        self.num_regions_min = num_regions_min
+        self.num_regions_max = num_regions_max
+        self.value_min = (
+            (value_min,) if isinstance(value_min, float) else tuple(value_min)
+        )
+        self.value_max = (
+            (value_max,) if isinstance(value_max, float) else tuple(value_max)
+        )
+
+    def sample(
+        self,
+        xs: tuple[Float[Array, " #Nx"], ...],
+        key: PRNGKeyArray,
+    ) -> Float[Array, "C Nx Ny"]:
+        return generate_periodic_random_step_function_2d(
+            *xs,
+            key,
+            channels=self.channels,
+            num_regions_min=self.num_regions_min,
+            num_regions_max=self.num_regions_max,
+            value_min=jnp.asarray(self.value_min),
+            value_max=jnp.asarray(self.value_max),
+        )
+
+    def __call__(
+        self,
+        grid,
+        key: PRNGKeyArray,
+    ) -> Float[Array, "C Nx Ny"]:
+        x, y = grid
+        return self.sample(x, y, key)
