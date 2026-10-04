@@ -12,7 +12,8 @@ wheels/
 # PyClaw outputs
 _output/
 temp/
-*/pyclaw.log
+pyclaw.log
+**/pyclaw.log
 
 # Datasets
 /data/
@@ -29,3 +30,15 @@ checkpoints/
 
 # Figures
 /figures/
+
+# Hypothesis example database
+.hypothesis/
+
+# Binary data files (datasets live under /data/, fixtures must not be tracked)
+*.h5
+*.hdf5
+*.zarr/
+!tests/**/*.npz
+
+# Tooling
+.ruff_cache/
