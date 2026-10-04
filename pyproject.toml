@@ -1,7 +1,7 @@
 [project]
 name = "context-flux-no"
 version = "0.1.0"
-description = "Add your description here"
+description = "HFluxNO: in-context learning of finite-volume solvers for families of hyperbolic conservation laws (hypernetwork + flux neural operator)"
 readme = "README.md"
 authors = [
     { name = "Joon-Hyuk Ko", email = "jhko725@kias.re.kr" }
@@ -22,7 +22,7 @@ dependencies = [
     "hydra-core>=1.3.2",
     "hydra-submitit-launcher>=1.2.0",
     "ipykernel>=6.29.5",
-    "jax[cuda13]>=0.9.0.1",
+    "jax>=0.9.0.1",
     "jaxtyping>=0.3.2",
     "matplotlib>=3.10.3",
     "more-itertools>=10.7.0",
@@ -42,8 +42,8 @@ dependencies = [
     "zarr>=3.3.0",
 ]
 
-[project.scripts]
-context-flux-no = "context_flux_no:main"
+[project.optional-dependencies]
+cuda = ["jax[cuda13]>=0.9.0.1"]
 
 [build-system]
 requires = ["hatchling"]
@@ -51,12 +51,19 @@ build-backend = "hatchling.build"
 
 [tool.ruff]
 extend-include = ["*.ipynb"]
+extend-exclude = ["icon", "third_party", "notebooks"]  # vendored baseline; notebooks re-enabled in Phase 6 once thinned
 src = []
 fix = true
+line-length = 88
+
+[tool.ruff.format]
+docstring-code-format = true
 
 [tool.ruff.lint]
 fixable = ["I001", "F401"]
-ignore = ["E402", "E721", "E731", "E741", "F722"]
+# E501: ruff format governs line length; long strings/comments are allowed.
+# F722/F821: jaxtyping shape strings (Float[Array, "channels *grids"]) are not forward references.
+ignore = ["E402", "E501", "E721", "E731", "E741", "F722", "F821"]
 select = ["E", "F", "I001"]
 
 [tool.ruff.lint.isort]
@@ -67,4 +74,17 @@ order-by-type = false
 [dependency-groups]
 dev = [
     "pytest>=9.0.2",
+    "hypothesis>=6.100",
+    "chex>=0.1.86",
+    "pre-commit>=4.0",
+    "ty",
+    "nbstripout>=0.8",
 ]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "regression: needs the ICLR checkpoints; run on CPU (JAX_PLATFORMS=cpu) with --checkpoints-root",
+    "slow: verification suite (x64, oracle-based); excluded from the fast tiers",
+]
+addopts = "-m 'not regression and not slow'"

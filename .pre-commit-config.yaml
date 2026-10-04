@@ -1,0 +1,19 @@
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.14.0
+    hooks:
+      - id: ruff
+        args: [--fix]
+      - id: ruff-format
+  - repo: https://github.com/kynan/nbstripout
+    rev: 0.9.1
+    hooks:
+      - id: nbstripout
+  - repo: local
+    hooks:
+      - id: check-docs
+        name: check docs bookkeeping
+        entry: uv run python scripts/check_docs.py
+        language: system
+        pass_filenames: false
+        files: ^(docs/|CLAUDE\.md)
