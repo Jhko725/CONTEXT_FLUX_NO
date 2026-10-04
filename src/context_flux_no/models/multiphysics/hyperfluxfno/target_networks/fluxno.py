@@ -15,13 +15,13 @@ from .base import AbstractTargetNetwork
 class NDNeuralNetworkFlux(eqx.Module):
     """An N-D version of the Flux NO that uses full ND hyperrectangular finite volume
     stencil, instead of using dimensional splitting.
- 
+
     For the flux along `normal_axis`, the stencil spans (a + 1, b) cells to the
     left/right of each face along the normal axis, and is centered with halfwidth s
     along every transverse axis. The same lift kernel is shared across directions and
     is oriented so that its first spatial axis lies along the normal axis.
     """
- 
+
     num_spatial_dims: int = eqx.field(static=True)
     in_channels: int = eqx.field(static=True)
     out_channels: int = eqx.field(static=True)
@@ -30,10 +30,10 @@ class NDNeuralNetworkFlux(eqx.Module):
     lift_dim: int = eqx.field(static=True)
     hidden_dim: int = eqx.field(static=True)
     depth: int = eqx.field(static=True)
- 
+
     lift_layer: eqx.nn.Conv
     mlp: ChannelwiseMLP
- 
+
     def __init__(
         self,
         num_spatial_dims: int,
@@ -61,12 +61,12 @@ class NDNeuralNetworkFlux(eqx.Module):
         self.lift_dim = lift_dim
         self.hidden_dim = hidden_dim
         self.depth = depth
- 
+
         keys = jax.random.split(key, 2)
         # Kernel layout: (normal, transverse, ..., transverse).
-        kernel_size = (self.normal_stencil_width,) + (self.transverse_stencil_width,) * (
-            num_spatial_dims - 1
-        )
+        kernel_size = (self.normal_stencil_width,) + (
+            self.transverse_stencil_width,
+        ) * (num_spatial_dims - 1)
         self.lift_layer = eqx.nn.Conv(
             num_spatial_dims=num_spatial_dims,
             in_channels=in_channels,
@@ -85,26 +85,26 @@ class NDNeuralNetworkFlux(eqx.Module):
             dtype=dtype,
             key=keys[1],
         )
- 
+
     @property
     def normal_stencil_width(self) -> int:
         return sum(self.normal_stencil_halfwidths) + 1
- 
+
     @property
     def transverse_stencil_width(self) -> int:
         return 2 * self.transverse_stencil_halfwidth + 1
- 
+
     def pad_ghost_cells(
         self, u: Float[Array, " in_channels *grids"], normal_axis: int
     ) -> Float[Array, " in_channels *grids_padded"]:
         a, b = self.normal_stencil_halfwidths
         s = self.transverse_stencil_halfwidth
- 
+
         pad = [(s, s)] * self.num_spatial_dims
         pad[normal_axis] = (a + 1, b)  # N+1 faces along the normal axis
         # Need to change mode if not periodic boundary condition
         return jnp.pad(u, [(0, 0)] + pad, mode="wrap")
- 
+
     def __call__(
         self,
         u: Float[Array, " in_channels *grids"],
@@ -127,16 +127,16 @@ class NDNeuralNetworkFlux(eqx.Module):
         return rearrange(f, "(D C) ... -> D C ...", D=self.num_spatial_dims)[
             normal_axis
         ]
- 
- 
+
+
 class NDFluxNOTargetNetwork(AbstractTargetNetwork):
     num_spatial_dims: int = eqx.field(static=True)
     in_channels: int = eqx.field(static=True)
     out_channels: int = eqx.field(static=True)
     stack_grid: bool = eqx.field(static=True)
- 
+
     fluxes: NDNeuralNetworkFlux
- 
+
     def __init__(
         self,
         num_spatial_dims: int,
@@ -171,7 +171,7 @@ class NDFluxNOTargetNetwork(AbstractTargetNetwork):
         self.in_channels = in_channels
         self.out_channels = out_channels
         self.stack_grid = stack_grid
- 
+
     def __call__(
         self,
         u: Float[Array, " in_channels *spatial_dims"],
@@ -182,14 +182,14 @@ class NDFluxNOTargetNetwork(AbstractTargetNetwork):
     ) -> Float[Array, " out_channels *spatial_dims"]:
         del key, inference
         dt, *dxs = args
- 
+
         # All directional fluxes are evaluated at the same (un-updated) state v.
         v = append_grid_channels(u) if self.stack_grid else u
         for i, dx in enumerate(dxs):
             f_i: Float[Array, " out_channels *faces"] = self.fluxes(v, normal_axis=i)
             u = u - dt * jnp.diff(f_i, axis=i + 1) / dx
         return u
-        
+
 
 class NeuralNetworkFlux(eqx.Module):
     in_channels: int = eqx.field(static=True)

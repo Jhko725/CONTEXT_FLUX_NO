@@ -32,7 +32,7 @@ class AbstractMultiphysicsOperator(eqx.Module):
         """Return the prediction for the next time step and auxiliary outputs."""
         pass
 
-    #@abc.abstractmethod
+    # @abc.abstractmethod
     def encode_context(
         self,
         u: Float[Array, "time channels *grids"],

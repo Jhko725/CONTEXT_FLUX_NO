@@ -148,8 +148,13 @@ class ConvTranspose(Module):
             ```python
             cnn = eqx.Conv(...)
             cnn_t = eqx.ConvTranspose(...)
-            cnn_t = eqx.tree_at(lambda x: x.weight, cnn_t, jnp.flip(cnn.weight,
-                                axis=tuple(range(2, cnn.weight.ndim))).swapaxes(0, 1))
+            cnn_t = eqx.tree_at(
+                lambda x: x.weight,
+                cnn_t,
+                jnp.flip(cnn.weight, axis=tuple(range(2, cnn.weight.ndim))).swapaxes(
+                    0, 1
+                ),
+            )
             ```
 
         !!! warning

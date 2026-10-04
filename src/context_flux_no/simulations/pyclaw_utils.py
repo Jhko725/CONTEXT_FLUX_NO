@@ -1,5 +1,5 @@
-from typing import Sequence
 from collections.abc import Callable
+from typing import Sequence
 
 import numpy as np
 from clawpack import pyclaw

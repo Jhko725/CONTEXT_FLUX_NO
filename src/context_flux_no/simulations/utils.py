@@ -9,7 +9,6 @@ import jax.numpy as jnp
 import numpy as np
 import zarr
 from jaxtyping import Array, PRNGKeyArray
-from more_itertools import mark_ends
 from tqdm import tqdm
 
 from context_flux_no.simulations.dataset import ZarrWellDataset

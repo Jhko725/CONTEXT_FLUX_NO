@@ -75,6 +75,7 @@ def filter_paths(
 
     return [p for p in paths if keep(p)]
 
+
 class WellDatasetSourceBase(grain.sources.RandomAccessDataSource):
     well_base_path: Path
     well_dataset_name: str
@@ -116,7 +117,9 @@ class WellDatasetSourceBase(grain.sources.RandomAccessDataSource):
         )
         self.filesystem = fsspec.url_to_fs(dataset_dir)[0]
         datapaths = sorted(
-            filter_paths(self.get_datapaths(), self.include_filters, self.exclude_filters),
+            filter_paths(
+                self.get_datapaths(), self.include_filters, self.exclude_filters
+            ),
             key=os.fspath,
         )
         if not datapaths:

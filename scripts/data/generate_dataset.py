@@ -32,7 +32,7 @@ def main(cfg: DictConfig) -> None:
         seed=cfg.seed,
         savedir=cfg.savedir,
         filename=cfg.savename,
-        **solve_kwargs
+        **solve_kwargs,
     )
 
 

@@ -25,11 +25,20 @@ import sys
 from datetime import date
 from pathlib import Path
 
+
 ROOT = Path(__file__).resolve().parents[1]
 DOCS = ROOT / "docs"
 ALLOWED_STATUS = {
-    "current", "planned", "in-progress", "landed", "merged",
-    "agreed", "accepted", "amended", "tentative", "historical",
+    "current",
+    "planned",
+    "in-progress",
+    "landed",
+    "merged",
+    "agreed",
+    "accepted",
+    "amended",
+    "tentative",
+    "historical",
 }
 FRONTMATTER = re.compile(r"\A---\n(.*?)\n---\n", re.S)
 
@@ -97,7 +106,9 @@ def check_done_ledger(problems: list[str]) -> None:
         if m:
             dates.append(m.group(1))
     if dates != sorted(dates):
-        problems.append("docs/roadmap.md Done ledger is not chronological (append at the end)")
+        problems.append(
+            "docs/roadmap.md Done ledger is not chronological (append at the end)"
+        )
 
 
 def git(*args: str) -> str:
@@ -111,7 +122,9 @@ def check_files_vs_diff(problems: list[str], base: str) -> None:
         return
     docs = sorted(DOCS.glob(f"changes/*-{branch}.md"))
     if not docs:
-        problems.append(f"no change document for branch `{branch}` (docs/changes/<date>-{branch}.md)")
+        problems.append(
+            f"no change document for branch `{branch}` (docs/changes/<date>-{branch}.md)"
+        )
         return
     change_doc = docs[-1]
     text = change_doc.read_text(encoding="utf-8")
@@ -125,13 +138,25 @@ def check_files_vs_diff(problems: list[str], base: str) -> None:
     # a file is "listed" if its path or its basename appears in the document
     for path in sorted(changed):
         if path not in text and Path(path).name not in text:
-            problems.append(f"{change_doc.relative_to(ROOT)}: changed file not listed in Files: {path}")
+            problems.append(
+                f"{change_doc.relative_to(ROOT)}: changed file not listed in Files: {path}"
+            )
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--files", action="store_true", help="also check the change document against git diff")
-    ap.add_argument("--base", default="origin/main", help="base ref for --files (default origin/main)")
+    ap = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
+    ap.add_argument(
+        "--files",
+        action="store_true",
+        help="also check the change document against git diff",
+    )
+    ap.add_argument(
+        "--base",
+        default="origin/main",
+        help="base ref for --files (default origin/main)",
+    )
     args = ap.parse_args()
 
     problems: list[str] = []
