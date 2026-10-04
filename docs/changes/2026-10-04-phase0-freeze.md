@@ -36,16 +36,17 @@ Claude's part (this commit series):
 - `docs/changes/2026-10-04-phase0-freeze.md` (this file), `docs/changes/2026-10-04-phase1-prune.md` (planned).
 - `scripts/check_docs.py` — new: frontmatter, index coverage, Done-ledger order, Files-vs-diff check.
 - `.gitignore` — fixed patterns; `pyclaw.log`, `*/pyclaw.log`, `.hypothesis/`, `*.h5`/`*.hdf5` (tests' `.npz` allowed).
-- `icon/__pycache__/*.pyc`, `pyclaw.log`, `icon/test_traj_seq.h5` — untracked (0.3).
-- `.gitattributes` — nbstripout filter (0.4); all `notebooks/**/*.ipynb` and `icon/TEST.IPYNB` stripped.
+- `icon/__pycache__/*.pyc`, `pyclaw.log`, `icon/test_traj_seq.h5` — untracked (0.3); `icon/__pycache__/*` removed from the index.
+- `.gitattributes` — nbstripout filter (0.4); outputs stripped from all `notebooks/**/*.ipynb` and `icon/TEST.IPYNB`.
 - `pyproject.toml` — dev group (`hypothesis`, `chex`, `pre-commit`, `ty`, `nbstripout`); `jax` CUDA moved to
-  `[project.optional-dependencies] cuda`; ruff format settings; pytest markers; description; hello-world script removed (0.9, 0.10).
+  `[project.optional-dependencies] cuda`; ruff `line-length`, format settings, `extend-exclude = [icon, third_party, notebooks]`, `E501`/`F821` ignored (format governs length; jaxtyping strings); pytest markers + `addopts`; description; hello-world script removed (0.9, 0.10).
 - `uv.lock` — regenerated.
 - `.pre-commit-config.yaml` — ruff check/format, nbstripout.
 - `.github/workflows/test.yml` — CPU job: ruff + `pytest -m "not regression and not slow"`.
 - `README.md` — install, the three commands, test tiers, layout, link to `docs/`.
 - `scripts/training/README.md` — `model=` values corrected.
 - `src/context_flux_no/__init__.py` — `main()` stub removed.
+- `src/context_flux_no/{data/sources,models/multiphysics/abstract,models/multiphysics/hyperfluxfno/target_networks/fluxno,nn/convtranspose,simulations/pde/__init__,simulations/pde/base,simulations/pyclaw_utils,simulations/utils}.py`, `scripts/data/generate_dataset.py` — `ruff format` only, plus one unused import (`mark_ends`) removed; isolated in the `style:` commit.
 
 Joon's part *(planned)*:
 
@@ -69,6 +70,11 @@ Joon's part *(planned)*:
   project (two sources of truth).
 - **Per-phase branches** (`phase0-freeze`, `phase1-prune`, …) rather than one `cleanup` branch,
   so each change document maps to exactly one branch and one PR.
+- **ruff scope** — `icon/` and `third_party/` are vendored and excluded; `notebooks/` excluded until
+  Phase 6 thins them (ruff `--fix` was rewriting notebook import cells, which is not this branch's
+  business). `E501` ignored because `ruff format` governs line length; `F821` ignored because
+  jaxtyping shape strings (`Float[Array, "channels *grids"]`) trip it. Rejected: per-file `noqa`
+  on ~80 lines.
 - **CUDA as an optional extra** so CI and the regression tier can use the CPU wheel; GPU machines
   run `uv sync --extra cuda`. Rejected: separate lock files.
 - **Tags** — `iclr2027-submission` and `pre-nbstripout` are created locally by Claude but the
@@ -112,7 +118,8 @@ tier (`JAX_PLATFORMS=cpu uv run pytest tests/regression --checkpoints-root ./che
 | `scripts/check_docs.py` | | |
 | `.gitignore`, untracked files | | |
 | `.gitattributes` + stripped notebooks | | |
-| `pyproject.toml`, `uv.lock` — dev deps, cuda extra, markers | | |
+| `pyproject.toml`, `uv.lock` — dev deps, cuda extra, markers, ruff scope | | |
+| `style:` commit — ruff format over 10 source files, one unused import | | |
 | `.pre-commit-config.yaml` | | |
 | `.github/workflows/test.yml` | | |
 | `README.md`, `scripts/training/README.md` | | |

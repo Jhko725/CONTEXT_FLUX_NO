@@ -5,9 +5,11 @@ Checks (all under docs/):
   2. `status` is one of the allowed values; a change document also has `branch`;
   3. docs/index.md links every document (by relative path);
   4. the Done ledger in docs/roadmap.md is chronological (dates non-decreasing);
-  5. --files: the current branch's change document lists every file in
-     `git diff --stat <base>...HEAD` (names only) and vice versa, ignoring the
-     change document itself.
+  5. --files: every file in `git diff --name-only <base>...HEAD` is covered by a
+     backtick-quoted entry in the change document's `## Files` section. Entries may
+     be exact paths, basenames, directory prefixes, or globs with `*`, `**`, `…`
+     and `{a,b}` brace lists (e.g. `docs/decisions/0001…0009-*.md`,
+     `notebooks/**/*.ipynb`).
 
 Usage:
   uv run python scripts/check_docs.py            # 1-4
@@ -19,6 +21,7 @@ Exit status 1 on any problem; problems are printed one per line.
 from __future__ import annotations
 
 import argparse
+import fnmatch
 import re
 import subprocess
 import sys
@@ -115,6 +118,42 @@ def git(*args: str) -> str:
     return subprocess.check_output(["git", *args], cwd=ROOT, text=True)
 
 
+def _expand_braces(token: str) -> list[str]:
+    m = re.search(r"\{([^{}]*)\}", token)
+    if not m:
+        return [token]
+    out: list[str] = []
+    for alt in m.group(1).split(","):
+        out.extend(_expand_braces(token[: m.start()] + alt.strip() + token[m.end() :]))
+    return out
+
+
+def _listed_patterns(change_doc_text: str) -> list[str]:
+    """Backtick-quoted tokens in the `## Files` section, with {a,b} expanded and … → *."""
+    if "## Files" not in change_doc_text:
+        return []
+    section = change_doc_text.split("## Files", 1)[1].split("\n## ", 1)[0]
+    patterns: list[str] = []
+    for token in re.findall(r"`([^`]+)`", section):
+        token = token.strip().replace("…", "*")
+        patterns.extend(_expand_braces(token))
+    return patterns
+
+
+def _is_listed(path: str, patterns: list[str]) -> bool:
+    name = Path(path).name
+    for pat in patterns:
+        if "*" in pat or "?" in pat:
+            if fnmatch.fnmatch(path, pat) or fnmatch.fnmatch(name, pat):
+                return True
+            # allow a directory prefix pattern such as `notebooks/**/*.ipynb` or `docs/decisions/*`
+            if fnmatch.fnmatch(path, pat.replace("**/", "")):
+                return True
+        elif pat == path or pat == name or path.startswith(pat.rstrip("/") + "/"):
+            return True
+    return False
+
+
 def check_files_vs_diff(problems: list[str], base: str) -> None:
     branch = git("rev-parse", "--abbrev-ref", "HEAD").strip()
     if branch in {"main", "HEAD"}:
@@ -127,7 +166,7 @@ def check_files_vs_diff(problems: list[str], base: str) -> None:
         )
         return
     change_doc = docs[-1]
-    text = change_doc.read_text(encoding="utf-8")
+    patterns = _listed_patterns(change_doc.read_text(encoding="utf-8"))
     try:
         diff = git("diff", "--name-only", f"{base}...HEAD")
     except subprocess.CalledProcessError:
@@ -135,9 +174,8 @@ def check_files_vs_diff(problems: list[str], base: str) -> None:
         return
     changed = {p for p in diff.split() if p}
     changed.discard(change_doc.relative_to(ROOT).as_posix())
-    # a file is "listed" if its path or its basename appears in the document
     for path in sorted(changed):
-        if path not in text and Path(path).name not in text:
+        if not _is_listed(path, patterns):
             problems.append(
                 f"{change_doc.relative_to(ROOT)}: changed file not listed in Files: {path}"
             )

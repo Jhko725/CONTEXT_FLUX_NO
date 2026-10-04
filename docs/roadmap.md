@@ -55,8 +55,8 @@ substantive ones (0.2, 0.5–0.8) by Joon.
 |---|---|---|---|
 | 0.1 | Tag `iclr2027-submission` at `5f67a31`; branch `phase0-freeze` | tag on origin | tag local only (proxy blocks tag pushes) — Joon pushes |
 | 0.2 | Reproduce the five breakages (assessment §3) | each failure seen once | |
-| 0.3 | Untrack `.pyc`, `pyclaw.log`, `icon/test_traj_seq.h5`; fix `.gitignore` | `git ls-files` shows none | |
-| 0.4 | Tag `pre-nbstripout`; install `nbstripout` filter; strip outputs | `notebooks/` < 1 MB | |
+| 0.3 | Untrack `.pyc`, `pyclaw.log`, `icon/test_traj_seq.h5`; fix `.gitignore` | `git ls-files` shows none | done (`bfc5a40`) |
+| 0.4 | Tag `pre-nbstripout`; install `nbstripout` filter; strip outputs | `notebooks/` < 1 MB | done (`8392757`, 16 MB → 440 KB); tag local — Joon pushes |
 | 0.5 | `icon/` → `third_party/icon` submodule (upstream if unmodified) | `git submodule status` lists it | |
 | 0.6a | `bias_hyperinit → bias-hyperinit` in 10 yamls; runtime check; default `bias-hyperinit` (decision D15); unit test | `grep bias_hyperinit` empty; test passes | |
 | 0.6b | Delete 3 `HyperFluxFNO` configs + `train_multiphysics_2d.py` | `grep HyperFluxFNO\b` empty | |
@@ -65,9 +65,9 @@ substantive ones (0.2, 0.5–0.8) by Joon.
 | 0.6e | `scripts/check_configs.py`; census → `docs/config_census_phase0.txt` | no Import/Attribute/init-string failures | |
 | 0.7 | Bias-HyperInit audit of wandb runs → `findings.md` | conclusion recorded | |
 | 0.8 | Regression harness: cases, inputs, goldens (CPU), tests green twice | `pytest tests/regression` green ×2 | |
-| 0.9 | Tooling: dev deps, ruff format, pre-commit, CUDA as optional extra, CPU CI, pytest markers | CI green | |
-| 0.10 | README, `pyproject` metadata, hello-world removed, training README fixed | — | |
-| 0.11 | `docs/` tree, `CLAUDE.md`, `scripts/check_docs.py` | `check_docs.py` passes | |
+| 0.9 | Tooling: dev deps, ruff format, pre-commit, CUDA as optional extra, CPU CI, pytest markers | CI green | done (`fbeb7a8`, `2a65dfc`); CI result pending first push |
+| 0.10 | README, `pyproject` metadata, hello-world removed, training README fixed | — | done (`7325817`) |
+| 0.11 | `docs/` tree, `CLAUDE.md`, `scripts/check_docs.py` | `check_docs.py` passes | done (`0b0fd68`) |
 
 Exit: `pytest -m "not regression"` green; regression tier green on CPU; `check_configs.py`
 has no import/attribute/init-string failures; `train_multiphysics.py
@@ -181,3 +181,7 @@ IMEX) — see `design/fv-conventions.md` §Extensibility.
 | When | Branch | What | Record |
 |---|---|---|---|
 | 2026-10-04 | `phase0-freeze` | 0.11: `docs/` tree (roadmap, architecture, index, verification, findings, glossary, assessment, ADR-0001…0009, `design/fv-conventions.md`, change documents for Phases 0–1), `CLAUDE.md`, `scripts/check_docs.py` | `changes/2026-10-04-phase0-freeze.md` |
+| 2026-10-04 | `phase0-freeze` | 0.3: bytecode, log and `.h5` fixture untracked; `.gitignore` fixed | `changes/2026-10-04-phase0-freeze.md` |
+| 2026-10-04 | `phase0-freeze` | 0.4: notebook outputs stripped (16 MB → 440 KB); `nbstripout` filter; `pre-nbstripout` tag (local) | `changes/2026-10-04-phase0-freeze.md` |
+| 2026-10-04 | `phase0-freeze` | 0.9: dev deps (hypothesis, chex, ty, pre-commit, nbstripout); CUDA optional extra; pytest markers; ruff format + excludes; pre-commit; CPU CI; `style:` commit isolating the reformat | `changes/2026-10-04-phase0-freeze.md` |
+| 2026-10-04 | `phase0-freeze` | 0.10: README; training README model names; hello-world stub removed | `changes/2026-10-04-phase0-freeze.md` |
