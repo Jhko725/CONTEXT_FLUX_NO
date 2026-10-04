@@ -6,20 +6,20 @@ To train multiphysics neural operator models (HyperFluxFNO, DPOT, DISCO), run th
 
 (Running in the current terminal)
 ```bash
-.venv/bin/python ./scripts/training/train_multiphysics.py model=hyperfluxfno
+uv run python ./scripts/training/train_multiphysics.py model=hyperfluxno
 ```
 Note that the `--multirun` flag is need to submit the training as a slurm job.
 (Submitting as a slurm job)
 ```bash
-.venv/bin/python ./scripts/training/train_multiphysics.py model=hyperfluxfno --multirun
+uv run python ./scripts/training/train_multiphysics.py model=hyperfluxno --multirun
 ```
 If submitting to a particular partition, or modifying any other sbatch arguments, use the hydra.launcher keyword:
 
 (Submitting to a partition named h100)
 ```bash
-.venv/bin/python ./scripts/training/train_multiphysics.py model=hyperfluxfno hydra.launcher.partition=h100 --multirun
+uv run python ./scripts/training/train_multiphysics.py model=hyperfluxno hydra.launcher.partition=h100 --multirun
 ```
-Supported values for `model` are `hyperfluxfno`, `hyperfluxfno_local`, `dpot`, and `disco`.
+Supported values for `model` are the file names under `scripts/training/configs/model/` (e.g. `hyperfluxno`, `hyperfluxno_2d_euler_v2`, `dpot`, `disco`); run `uv run python scripts/check_configs.py` to see which model × data pairings instantiate.
 
 Additional parameters can be passed to alter the model configuration. Alternatively, one can change the yaml files in scripts/training/configs to change default configuration values.
 
