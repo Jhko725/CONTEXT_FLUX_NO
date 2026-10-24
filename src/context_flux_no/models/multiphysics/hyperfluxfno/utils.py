@@ -4,13 +4,12 @@ from typing import Literal
 import jax.nn as jnn
 from jaxtyping import PRNGKeyArray
 
-from .encoders import AbstractEncoder, DPOTEncoder, TRecViTEncoder, ViTEncoder
+from .encoders import AbstractEncoder, TRecViTEncoder, ViTEncoder
 from .target_networks import (
     AbstractTargetNetwork,
     ConvNeXtV2TargetNetwork,
     FluxNOTargetNetwork,
     FNOTargetNetwork,
-    LSKFluxNOTargetNetwork,
     NDFluxNOTargetNetwork,
     UNetTargetNetwork,
 )
@@ -27,7 +26,7 @@ def _get_activation(name: str):
 
 
 def make_encoder(
-    encoder_type: Literal["ViT", "DPOT", "TRecViT"],
+    encoder_type: Literal["ViT", "TRecViT"],
     num_spatial_dims: int,
     in_channels: int,
     embedding_dim: int,
@@ -57,17 +56,6 @@ def make_encoder(
                 **encoder_kwargs,
                 key=key,
             )
-        case "DPOT":
-            if in_timesteps is None:
-                raise ValueError("DPOTEncoder does not support variable in_timesteps.")
-            encoder = DPOTEncoder(
-                num_spatial_dims=num_spatial_dims,
-                in_channels=in_channels,
-                in_timesteps=in_timesteps,
-                embedding_dim=embedding_dim,
-                **encoder_kwargs,
-                key=key,
-            )
         case "TRecViT":
             if in_timesteps is not None:
                 warnings.warn(
@@ -92,15 +80,12 @@ TARGET_NETWORK_DICT = {
     "FNO": FNOTargetNetwork,
     "FluxNO": FluxNOTargetNetwork,
     "NDFluxNO": NDFluxNOTargetNetwork,
-    "LSKFluxNO": LSKFluxNOTargetNetwork,
     "ConvNextFluxNO": ConvNeXtV2TargetNetwork,
 }
 
 
 def make_target_network(
-    target_network_type: Literal[
-        "UNet", "FNO", "FluxNO", "NDFluxNO", "LSKFluxNO", "ConvNextFluxNO"
-    ],
+    target_network_type: Literal["UNet", "FNO", "FluxNO", "NDFluxNO", "ConvNextFluxNO"],
     num_spatial_dims: int,
     in_channels: int,
     out_channels: int,
