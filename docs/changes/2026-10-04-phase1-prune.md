@@ -34,7 +34,7 @@ Commit 0 — CI and test repair:
 - `.pre-commit-config.yaml` — ruff rev aligned to `v0.15.11`.
 - `scripts/import_all.py` — new: imports every package module; missing `clawpack` reported as skipped unless `--strict`.
 - `tests/test_nn_hypernetwork.py` — fixed keyword names (`in_size`, `target_network`, …); now also checks both valid initialisations build.
-- `src/context_flux_no/nn/hypernetwork.py`, `src/context_flux_no/models/multiphysics/disco/disco.py` — explicit `import jax.flatten_util` (see Bugs fixed).
+- `src/context_flux_no/nn/hypernetwork.py`, `src/context_flux_no/models/multiphysics/disco/disco.py` — `from jax import flatten_util` and `flatten_util.ravel_pytree(...)` (see Bugs fixed; review round 1 replaced the initial `import jax.flatten_util  # noqa` form).
 
 Commit 1 — dead symbols (ledger 1–11):
 - `src/context_flux_no/models/fluxfno.py` — deleted (`FluxFNO1D`).
@@ -148,6 +148,7 @@ Commit 6 — bookkeeping: this document, `docs/roadmap.md`, `docs/architecture.m
 | Commit 4 — PDE `solve` returns `(u, t, xs)`; `solution_to_dataset` removed | Confirmed. | None |
 | Commit 5 — key-reuse fixes (DISCO, HNO, both UNets); `tests/unit/test_key_hygiene.py`; missing assert | Looks good. | None |
 | Commit 6 — docs bookkeeping | Looks good. | None |
+| Review round 1 (`a`) — `from jax import flatten_util`, call sites `flatten_util.ravel_pytree`; no `noqa` | | |
 
 ---
 

@@ -4,9 +4,9 @@ from typing import Any
 import diffrax as dfx
 import equinox as eqx
 import jax
-import jax.flatten_util  # noqa: F401 — not an attribute of `jax` until imported
 import jax.numpy as jnp
 from einops import reduce
+from jax import flatten_util
 from jaxtyping import Array, Float, PRNGKeyArray, PyTree
 
 from ....nn.misc import destandardize, standardize
@@ -47,7 +47,7 @@ class HyperNetworkHead[NN: eqx.Module](eqx.Module):
         target_params, target_static = eqx.partition(
             target_subnetwork, eqx.is_inexact_array
         )
-        _, unflatten_fn = jax.flatten_util.ravel_pytree(target_params)
+        _, unflatten_fn = flatten_util.ravel_pytree(target_params)
         self.target_static: NN = target_static
         self.unflatten_fn = unflatten_fn
         self.where = where
