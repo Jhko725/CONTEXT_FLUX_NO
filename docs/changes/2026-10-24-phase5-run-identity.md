@@ -181,4 +181,4 @@ Joon's Review notes below; Claude's response per row:
 | `docs/roadmap.md`, `docs/architecture.md`, `docs/glossary.md`, `docs/index.md`, `docs/findings.md`, `scripts/training/README.md` | Confirmed | None |
 | Round 1: `orbax-checkpoint>=0.12.8`, typed-key wrapper removed, `save`/`load` | Looks good. | None |
 | Round 1: `runs/` package (`record`, `run` + `RunLayout`, `index`, `wandb_mirror`), `experiment.py` at package top with the config builders; `training/` building blocks only | Confirmed. `wandb_mirror` is also mostly `cfg` based instantiation. Reason to keep separate from `experiments.py`? | To be discussed with Claude. |
-| Round 2: `wandb_mirror.py` folded into `experiment.py`; `runs/` = `record`, `run`, `index` | | |
+| Round 2: `wandb_mirror.py` folded into `experiment.py`; `runs/` = `record`, `run`, `index` | Looks good. | None |
