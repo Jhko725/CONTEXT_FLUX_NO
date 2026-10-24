@@ -4,6 +4,7 @@ from typing import Any
 import diffrax as dfx
 import equinox as eqx
 import jax
+import jax.flatten_util  # noqa: F401 — not an attribute of `jax` until imported
 import jax.numpy as jnp
 from einops import reduce
 from jaxtyping import Array, Float, PRNGKeyArray, PyTree

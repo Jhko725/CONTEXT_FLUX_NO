@@ -3,6 +3,7 @@ from typing import Literal
 
 import equinox as eqx
 import jax
+import jax.flatten_util  # noqa: F401 — `jax.flatten_util` is not an attribute of `jax` until imported
 import jax.numpy as jnp
 from einops import rearrange
 from jaxtyping import Array, Float, PRNGKeyArray
