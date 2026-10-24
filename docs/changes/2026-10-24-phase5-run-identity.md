@@ -173,5 +173,5 @@ Joon's Review notes below; Claude's response per row:
 | `tests/unit/test_run_record.py`, `test_run.py`, `test_experiment.py`, `test_backfill_run_records.py` | Had a lookthrough. Will scrutinize later. | None for now. |
 | `docs/decisions/0010-run-identity.md`, `docs/design/run-identity.md` | Looks good. | None |
 | `docs/roadmap.md`, `docs/architecture.md`, `docs/glossary.md`, `docs/index.md`, `docs/findings.md`, `scripts/training/README.md` | Confirmed | None |
-| Round 1: `orbax-checkpoint>=0.12.8`, typed-key wrapper removed, `save`/`load` | | |
-| Round 1: `runs/` package (`record`, `run` + `RunLayout`, `index`, `wandb_mirror`), `experiment.py` at package top with the config builders; `training/` building blocks only | | |
+| Round 1: `orbax-checkpoint>=0.12.8`, typed-key wrapper removed, `save`/`load` | Looks good. | None |
+| Round 1: `runs/` package (`record`, `run` + `RunLayout`, `index`, `wandb_mirror`), `experiment.py` at package top with the config builders; `training/` building blocks only | Confirmed. `wandb_mirror` is also mostly `cfg` based instantiation. Reason to keep separate from `experiments.py`? | To be discussed with Claude. |
