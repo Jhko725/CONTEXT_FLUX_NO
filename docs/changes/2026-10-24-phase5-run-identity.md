@@ -1,7 +1,7 @@
 ---
 type: change
 status: landed
-updated: 2026-10-24
+updated: 2026-10-25
 branch: phase5-run-identity
 roadmap: Phase 5
 base: phase1-prune
@@ -81,6 +81,8 @@ Commit 6 — review round 1, structure:
 - `scripts/training/train_*.py`, `scripts/backfill_run_records.py`, `tests/unit/test_run.py`, `test_run_record.py`, `test_experiment.py`, `test_backfill_run_records.py` — imports.
 - `docs/architecture.md`, `docs/design/run-identity.md`, `docs/roadmap.md`, `docs/decisions/0010-run-identity.md`, `scripts/training/README.md` — paths.
 
+Commit 7 — review round 2: `src/context_flux_no/experiment.py` (+ wandb mirror section), `src/context_flux_no/runs/wandb_mirror.py` deleted, `training/loggers.py` + `trainer.py` docstring refs, `docs/architecture.md`, `docs/decisions/0010-run-identity.md`, `docs/design/run-identity.md`.
+
 Commit 4 — docs:
 - `docs/decisions/0010-run-identity.md`, `docs/design/run-identity.md` — new.
 - `docs/changes/2026-10-24-phase5-run-identity.md` — this document.
@@ -149,6 +151,10 @@ Joon's Review notes below; Claude's response per row:
 - `run.py` constants — `RunLayout(config_file, metadata_file, checkpoint_dir)` frozen dataclass with `DEFAULT_LAYOUT`; `Run(...)`, `Run.from_config/open/exists` and `runs.iter_runs/index` take `layout=`.
 - Naming and the `training` split — **`training/` keeps building blocks only** (trainer, loss, loggers, checkpoint, legacy loader/io; imports nothing from the other two); **`runs/`** holds run identity (`record.py`, `run.py`, `index.py`, `wandb_mirror.py`; `runs.Run`, `runs.RunRecord`, `runs.index/select/load_run/load_state`); **`experiment.py`** at package top holds config → objects (`build_model`, `build_optimizer`, `state_template`, the shared script assembly). `runs.load_state` imports `experiment.state_template` lazily to keep the direction `training ← runs ← experiment`. `wandb_mirror` rather than `wandb` so the module never shadows the package.
 
+## Review round 2 (2026-10-25)
+
+- `wandb_mirror` vs `experiment.py` — agreed: `build_wandb_run`/`finish_wandb_run`/`wandb_group` are config-driven assembly, so they moved into `experiment.py` (wandb-mirror section) and `runs/wandb_mirror.py` is gone. The read side, `runs.from_wandb`, stays in `runs/index.py`. `runs/` is now `record`, `run`, `index` only.
+
 ## Review notes
 
 | Change | Thoughts | Modifications |
@@ -175,3 +181,4 @@ Joon's Review notes below; Claude's response per row:
 | `docs/roadmap.md`, `docs/architecture.md`, `docs/glossary.md`, `docs/index.md`, `docs/findings.md`, `scripts/training/README.md` | Confirmed | None |
 | Round 1: `orbax-checkpoint>=0.12.8`, typed-key wrapper removed, `save`/`load` | Looks good. | None |
 | Round 1: `runs/` package (`record`, `run` + `RunLayout`, `index`, `wandb_mirror`), `experiment.py` at package top with the config builders; `training/` building blocks only | Confirmed. `wandb_mirror` is also mostly `cfg` based instantiation. Reason to keep separate from `experiments.py`? | To be discussed with Claude. |
+| Round 2: `wandb_mirror.py` folded into `experiment.py`; `runs/` = `record`, `run`, `index` | | |

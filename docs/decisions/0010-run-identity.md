@@ -2,7 +2,7 @@
 type: decision
 id: ADR-0010
 status: accepted
-updated: 2026-10-24
+updated: 2026-10-25
 verified_by: joon (ledger confirmed 2026-10-24, "Looks good. Go ahead")
 sources: deep_isochron training/checkpoint.py, loggers.py, experiment/run.py, ADR-0011 §6; orbax-checkpoint 0.11 v1 API docs; JAX training cookbook (RecordWriter)
 ---
@@ -95,9 +95,11 @@ explicit resume semantics. Joon asked to study it and adopt what fits.
 ## Where the code lives (review round 1)
 
 `training/` — building blocks (trainer, losses, loggers, checkpoint), importing nothing from the
-other two; `runs/` — run identity (`record`, `run` + `RunLayout`, `index`, `wandb_mirror`);
+other two; `runs/` — run identity (`record`, `run` + `RunLayout`, `index`);
 `experiment.py` — config → objects (`build_model`, `build_optimizer`, `state_template`, the
-shared script assembly). Dependency direction `training ← runs ← experiment`.
+wandb mirror `build_wandb_run`/`finish_wandb_run`, the shared script assembly; review round 2
+moved the wandb functions here from `runs/wandb_mirror.py` since they are config-driven
+assembly too). Dependency direction `training ← runs ← experiment`.
 
 ## Consequences
 

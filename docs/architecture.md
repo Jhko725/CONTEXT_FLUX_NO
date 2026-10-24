@@ -1,7 +1,7 @@
 ---
 type: architecture
 status: current
-updated: 2026-10-24
+updated: 2026-10-25
 sources: [code]
 ---
 
@@ -44,9 +44,8 @@ src/context_flux_no/
 ├── training/                    building blocks only (ADR-0010; imports nothing from runs/ or experiment): trainer.py (pure loop, injected side effects),
 │                                loggers.py, checkpoint.py (OrbaxCheckpointer, whole TrainerState), loss.py (OneStep/Denoising/Pushforward),
 │                                loader.py (DEPRECATED: SegmentLoaderBackground only, until Phase 4), io.py (legacy load_model)  (~~dataset.py~~, ~~batching.py~~)
-├── runs/                        run identity: record.py (RunRecord, index columns), run.py (Run directory, RunLayout), index.py (index/select/load_run/load_state),
-│                                wandb_mirror.py (wandb as a mirror)
-├── experiment.py                config → objects: build_model/build_optimizer/state_template, what the training scripts share (Run in Hydra's dir, resume/warm_start)
+├── runs/                        run identity: record.py (RunRecord, index columns), run.py (Run directory, RunLayout), index.py (index/select/load_run/load_state/from_wandb)
+├── experiment.py                config → objects: build_model/build_optimizer/state_template, wandb mirror (build/finish_wandb_run), what the training scripts share (Run in Hydra's dir, resume/warm_start)
 ├── provenance.py                git_state(), package_version()
 ├── data/                        sources.py: WellDatasetSourceBase · ZarrWellDatasetSource (current) · TheWellDataSource (re-implements base)  (~~transforms.py~~)
 ├── simulations/                 pde/{burgers, cubic, euler, shallow_water, sine_1d, base}: 2 classes on AbstractHyperbolicConservationLaw,
@@ -90,8 +89,8 @@ src/context_flux_no/
   models/incontext/  Phase 3  InContextOperator ⊃ InContextFluxOperator; conditioners; encoders
   models/baselines/  DISCO · DPOT · NaiveFNO …
   training/      Phase 5 ✓ Trainer · losses · loggers · checkpoint   (building blocks)
-  runs/          Phase 5 ✓ RunRecord · Run · index · wandb mirror     (run identity)
-  experiment.py  Phase 5 ✓ config → objects; Phase 3/7 build() lands here
+  runs/          Phase 5 ✓ RunRecord · Run · index                  (run identity)
+  experiment.py  Phase 5 ✓ config → objects incl. the wandb mirror; Phase 3/7 build() lands here
   evaluation/    Phase 6  rollout · metrics · tables · figures
   configs/       Phase 3/7  dataclass configs + ConfigStore
 reference/trixi/  Julia project, one elixir per family (reference oracle, fallback generator)

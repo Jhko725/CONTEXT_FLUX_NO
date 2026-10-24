@@ -1,7 +1,7 @@
 ---
 type: roadmap
 status: current
-updated: 2026-10-24
+updated: 2026-10-25
 sources: [joon, claude]
 ---
 
@@ -210,3 +210,4 @@ IMEX) — see `design/fv-conventions.md` §Extensibility.
 | 2026-10-24 | `phase5-run-identity` | 5.1, 5.3: `RunRecord`, `Run` directory object with refuse/resume/warm-start semantics, `runs.index/select/load_run/load_state/from_wandb`, `WellDatasetSourceBase.dataset_id`, `pandas` declared | `changes/2026-10-24-phase5-run-identity.md` |
 | 2026-10-24 | `phase5-run-identity` | 5.2 (run side), 5.4 script, 5.5: `wandb_run.py` (mirror), `experiment.py`, Hydra `runs/<date>/<time>` run dir, `wandb=disabled|offline|online`, scripts on the new API, the_well optimizer chain in config, `backfill_run_records.py`; ADR-0010, `design/run-identity.md` | `changes/2026-10-24-phase5-run-identity.md` |
 | 2026-10-24 | `phase5-run-identity` | review round 1: `orbax-checkpoint>=0.12.8` (typed-key wrapper gone); `runs/` package + `experiment.py` at package top, `training/` = building blocks; `RunLayout`; `block` removed | `changes/2026-10-24-phase5-run-identity.md` |
+| 2026-10-25 | `phase5-run-identity` | review round 2: wandb mirror functions moved from `runs/wandb_mirror.py` into `experiment.py` (config-driven assembly); `runs/` = `record`, `run`, `index` | `changes/2026-10-24-phase5-run-identity.md` |
