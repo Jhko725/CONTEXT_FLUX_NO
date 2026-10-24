@@ -3,7 +3,7 @@ from pathlib import Path
 import grain
 import hydra
 import jax
-from context_flux_no.data.sources import WellDatasetSourceBase, ZarrWellDatasetSource
+from context_flux_no.data import WellDatasetSourceBase, ZarrWellDatasetSource
 from context_flux_no.training.loss import PushforwardOneStepLoss
 from context_flux_no.training.trainer import Trainer
 from omegaconf import DictConfig, OmegaConf

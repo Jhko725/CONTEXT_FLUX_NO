@@ -11,6 +11,7 @@ from context_flux_no.utils import is_floating_array, num_parameters
 
 from .structured_linear import BlockDiagonalLinear
 
+_INITIALIZATIONS = ("default", "bias-hyperinit")
 
 class HypernetworkHead[NN: eqx.Module](eqx.Module):
     """Hypernetwork head module for a prespecified target neural network model.
@@ -64,6 +65,14 @@ class HypernetworkHead[NN: eqx.Module](eqx.Module):
 
         linears = []
         unflatten_fns = []
+
+        # Check if valid initialization is given
+        if initialization not in _INITIALIZATIONS:
+            raise ValueError(
+                f"Unknown hypernetwork initialization {initialization!r}; "
+                f"expected one of {_INITIALIZATIONS}."
+            )
+
         # Handle floating and complex parameters separately
         for target_, k in zip(eqx.partition(target_params, is_floating_array), keys):
             l, unflat_fn = self._make_linear_layer(target_, initialization, key=k)
