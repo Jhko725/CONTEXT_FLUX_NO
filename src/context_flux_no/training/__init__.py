@@ -21,4 +21,6 @@ from .loss import (
     OneStepLoss as OneStepLoss,
     PushforwardOneStepLoss as PushforwardOneStepLoss,
 )
+from .run import Run as Run
+from .run_record import index_from_config as index_from_config, RunRecord as RunRecord
 from .trainer import Trainer as Trainer, TrainerState as TrainerState

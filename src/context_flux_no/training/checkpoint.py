@@ -113,6 +113,7 @@ class OrbaxCheckpointer(Checkpointer):
             )
         self.directory = Path(directory).resolve()  # orbax wants absolute paths
         self.metric = metric
+        self.maximize = maximize
         self._ckptr = ocp.training.Checkpointer(
             str(self.directory),
             save_decision_policy=cast(
@@ -168,6 +169,25 @@ class OrbaxCheckpointer(Checkpointer):
         """The most recent saved step, `None` when the directory holds none."""
         latest = self._ckptr.latest
         return None if latest is None else int(latest.step)
+
+    @property
+    def best(self) -> tuple[int, float] | None:
+        """`(step, metric)` of the best checkpoint still on disk by `metric`, `None` when
+        there is no metric or no checkpoint carries it."""
+        if self.metric is None:
+            return None
+        scored = [
+            (int(c.step), float(c.metrics[self.metric]))
+            for c in self._ckptr.checkpoints
+            if c.metrics and self.metric in c.metrics
+        ]
+        if not scored:
+            return None
+        return (
+            max(scored, key=lambda s: s[1])
+            if self.maximize
+            else min(scored, key=lambda s: s[1])
+        )
 
     @property
     def custom_metadata(self) -> dict[str, Any]:
