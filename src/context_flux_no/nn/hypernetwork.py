@@ -11,7 +11,9 @@ from context_flux_no.utils import is_floating_array, num_parameters
 
 from .structured_linear import BlockDiagonalLinear
 
+
 _INITIALIZATIONS = ("default", "bias-hyperinit")
+
 
 class HypernetworkHead[NN: eqx.Module](eqx.Module):
     """Hypernetwork head module for a prespecified target neural network model.
