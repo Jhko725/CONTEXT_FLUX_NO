@@ -130,23 +130,23 @@ Not tested here: a real `wandb.init` (network); `scripts/check_configs.py` still
 
 | Change | Thoughts | Modifications |
 |---|---|---|
-| `src/context_flux_no/provenance.py` — `git_state`, `package_version` | | |
-| `src/context_flux_no/training/loggers.py` — Logger protocol and six implementations | | |
-| `src/context_flux_no/training/checkpoint.py` — Checkpointer protocol, `OrbaxCheckpointer` (whole state, typed keys, `best`) | | |
-| `src/context_flux_no/training/trainer.py` — pure loop with injected logger/checkpointer/evaluate; forced final save; non-finite stop | | |
-| `src/context_flux_no/training/__init__.py` — exports | | |
-| `src/context_flux_no/training/run_record.py` — `RunRecord`, `INDEX_COLUMNS`, `index_from_config` | | |
-| `src/context_flux_no/training/run.py` — `Run` directory object, resume semantics, `config_changes` | | |
-| `src/context_flux_no/training/runs.py` — `index`/`select`/`load_run`/`load_state`/`from_wandb` | | |
-| `src/context_flux_no/data/sources.py` — `dataset_id` | | |
-| `src/context_flux_no/training/wandb_run.py` — wandb as mirror | | |
-| `src/context_flux_no/training/experiment.py` — shared script assembly, `resume`/`warm_start` | | |
-| `scripts/training/train_multiphysics.py`, `scripts/training/train_the_well.py` — on the new API | | |
-| `scripts/training/configs/config.yaml`, `configs/wandb/*.yaml`, `configs/training/{default,the_well}.yaml`, `configs/config_the_well.yaml` — run dir, wandb group, cadence, optimizer chain | | |
-| `scripts/backfill_run_records.py` — legacy records | | |
-| `.gitignore` — wandb pattern narrowed, `/runs/` added | | |
-| `pyproject.toml`, `uv.lock` — pandas | | |
-| `tests/unit/test_loggers.py`, `test_checkpoint.py`, `test_trainer.py` | | |
-| `tests/unit/test_run_record.py`, `test_run.py`, `test_experiment.py`, `test_backfill_run_records.py` | | |
-| `docs/decisions/0010-run-identity.md`, `docs/design/run-identity.md` | | |
-| `docs/roadmap.md`, `docs/architecture.md`, `docs/glossary.md`, `docs/index.md`, `docs/findings.md`, `scripts/training/README.md` | | |
+| `src/context_flux_no/provenance.py` — `git_state`, `package_version` | Looks good. | None |
+| `src/context_flux_no/training/loggers.py` — Logger protocol and six implementations | Looks good. `block` could easily be generalized into `tree_block_until_ready` via `jax.tree.map`. Would be need such generalization in the codebase? | To be discussed with Claude |
+| `src/context_flux_no/training/checkpoint.py` — Checkpointer protocol, `OrbaxCheckpointer` (whole state, typed keys, `best`) | Currently random key array is being handled via additional logic involving `_unwrap_key` and `_rewrap_key`. Modern version of `orbax.checkpoint` should natively be able to handle this. How about upgrading the checkpoint version dependency? Alternatively, can one register custom PyTree nodes to getaround this? A third option is not to have `PRNGKeyArray` in the pytrees we are saving. Where are the `keys` currently? Could change to a integer seed value instead and wrap with `jax.random.key(seed)`, no? | To be discussed with Claude. |
+| `src/context_flux_no/training/trainer.py` — pure loop with injected logger/checkpointer/evaluate; forced final save; non-finite stop | Looks good for now. Will revisit in the future (after the new dataset generation) to optimize trainer performance. Having an extra evaluator interface around validation dataloader also seems a bit bloated, but will be deferring for now. In the future, this may make more sense with the need for additional evalutions during training. | None |
+| `src/context_flux_no/training/__init__.py` — exports | Trivial changes. | None |
+| `src/context_flux_no/training/run_record.py` — `RunRecord`, `INDEX_COLUMNS`, `index_from_config` | Looks good for now. | None |
+| `src/context_flux_no/training/run.py` — `Run` directory object, resume semantics, `config_changes` | Currently, the files 'Run' point to are determined by the module level constants `CONFIG_FILE`, `METADATA_FILE`, and `CHECKPOINT_DIR`. Seems better to make these default constructor arguments (and instance attributes) to avoid rigid hardcoded behavior. | To be discussed with Claude. |
+| `src/context_flux_no/training/runs.py` — `index`/`select`/`load_run`/`load_state`/`from_wandb` | Contents look okay for now. The problem is that haveing `run.py`, `runs.py` and `run_record.py` is very confusing. Need better names and/or a `training/runs` (or a `src/runs`) (sub)module. | To be discussed with Claude.|
+| `src/context_flux_no/data/sources.py` — `dataset_id` | Looks good. | None |
+| `src/context_flux_no/training/wandb_run.py` — wandb as mirror | Likewise, will need to be grouped with the other `run` related functionalities. | To be discussed with Claude. |
+| `src/context_flux_no/training/experiment.py` — shared script assembly, `resume`/`warm_start` | Look good, but seems like that `training` has two types of files - those representing the building blocks to be used in training, and helper functionalities that instantiate these objects from config. Feels like `training` should be split into two to deflect this dichotomy. | To be discussed with Claude. |
+| `scripts/training/train_multiphysics.py`, `scripts/training/train_the_well.py` — on the new API | Scripts look lean, which is good. Don't like renaming `experiments` into `common` | Deferred to Claude for change. |
+| `scripts/training/configs/config.yaml`, `configs/wandb/*.yaml`, `configs/training/{default,the_well}.yaml`, `configs/config_the_well.yaml` — run dir, wandb group, cadence, optimizer chain | Looks good. What is maant be cadence? | None |
+| `scripts/backfill_run_records.py` — legacy records | Had a lookthrough. Will need to run once cluster comes back to properly confirm. | None for now. |
+| `.gitignore` — wandb pattern narrowed, `/runs/` added | Confirmed. | None |
+| `pyproject.toml`, `uv.lock` — pandas | Confirmed. | None |
+| `tests/unit/test_loggers.py`, `test_checkpoint.py`, `test_trainer.py` | Looks good. | None |
+| `tests/unit/test_run_record.py`, `test_run.py`, `test_experiment.py`, `test_backfill_run_records.py` | Had a lookthrough. Will scrutinize later. | None for now. |
+| `docs/decisions/0010-run-identity.md`, `docs/design/run-identity.md` | Looks good. | None |
+| `docs/roadmap.md`, `docs/architecture.md`, `docs/glossary.md`, `docs/index.md`, `docs/findings.md`, `scripts/training/README.md` | Confirmed | None |
