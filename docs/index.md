@@ -1,7 +1,7 @@
 ---
 type: index
 status: current
-updated: 2026-10-24
+updated: 2026-10-25
 ---
 
 # `context_flux_no` documentation — index
@@ -37,6 +37,7 @@ document is listed here and has frontmatter.
 |---|---|---|
 | [`fv-conventions.md`](design/fv-conventions.md) | agreed | grid/face/stencil conventions, ghost cells and BCs, N-D handling, the three-part numerical flux, integrators, the `PDEFamily` tiers, analytic solutions, extensibility table |
 | [`run-identity.md`](design/run-identity.md) | agreed | run directory layout, `RunRecord` fields and index columns, finding/loading runs, training/resume/warm-start commands, what the trainer sees |
+| [`fv-core-plan.md`](design/fv-core-plan.md) | tentative | Phase 2b/2c for Joon: reading path (LeVeque, Shu, GST, Hesthaven, Clawpack, JAX/Hypothesis), module specs with invariants and tests for `stencil`/`boundary`/`divergence`/`split`/`integrate`/`analytic`, build order |
 | `weno5.md` | — (Phase 2, [R]) | derivation of the WENO5 stencil coefficients, smoothness indicators, LF splitting, next to the code |
 
 ## Decision records (`decisions/`)
@@ -65,6 +66,7 @@ recorded in the roadmap tables and the change documents that implement them.
 | `phase0-freeze` | landed on `main` (0.7 run and 0.8 goldens pending) | [`2026-10-04-phase0-freeze.md`](changes/2026-10-04-phase0-freeze.md) |
 | `phase1-prune` | landed (merge gated on the regression tier) | [`2026-10-04-phase1-prune.md`](changes/2026-10-04-phase1-prune.md) |
 | `phase5-run-identity` | landed (based on `phase1-prune`; merge after it) | [`2026-10-24-phase5-run-identity.md`](changes/2026-10-24-phase5-run-identity.md) |
+| `phase2a-pyclaw-backend` | planned (ledger awaiting Joon) | [`2026-10-25-phase2a-pyclaw-backend.md`](changes/2026-10-25-phase2a-pyclaw-backend.md) |
 
 ## Historical
 
