@@ -12,6 +12,9 @@ working here (including for Claude) are in [`CLAUDE.md`](CLAUDE.md).
 
 ## Install
 
+PyClaw/Clawpack compiles Fortran Riemann solvers during `uv sync`, so a compiler toolchain must be
+present first (Debian/Ubuntu: `sudo apt update && sudo apt install build-essential gfortran`).
+
 ```bash
 uv sync --group dev                 # CPU JAX; add --extra cuda on a GPU machine
 uv run nbstripout --install         # once per clone: notebook outputs never reach git

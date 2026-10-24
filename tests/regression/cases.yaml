@@ -1,0 +1,50 @@
+# One entry per regression case. `checkpoint` is relative to --checkpoints-root and points at the
+# directory that contains the orbax step folders (the trainer writes
+# <data.name>/<ModelClass>/<LossClass>/seed=<n>/<yy-mm-dd-HH_MM_SS>/). Fill in the timestamps
+# from `ls checkpoints/*/*/*/seed=0/`. `input` names a file under inputs/ produced by
+# make_inputs.py from the dataset given in `dataset`.
+#
+# Add a case for every model class the Phase 2–3 refactors will touch; the baselines are what the
+# migration must NOT change.
+
+- name: hyperfluxno_local_cubic1d
+  checkpoint: cubicflux_1d/HyperFluxFNOLocal/PushforwardOneStepLoss/seed=0/<TIMESTAMP>
+  input: cubic1d
+  dataset: {well_base_path: ./data/datasets, well_dataset_name: cubic_1d, split: test}
+  rollout_steps: 5
+
+- name: hno_euler2d
+  checkpoint: euler_2d/HyperNeuralOperator/PushforwardOneStepLoss/seed=0/<TIMESTAMP>
+  input: euler2d
+  dataset: {well_base_path: ./data/datasets, well_dataset_name: euler_2d, split: test}
+  rollout_steps: 5
+
+- name: hno_v2_euler2d
+  checkpoint: euler_2d/HyperNeuralOperatorv2/PushforwardOneStepLoss/seed=0/<TIMESTAMP>
+  input: euler2d
+  dataset: {well_base_path: ./data/datasets, well_dataset_name: euler_2d, split: test}
+  rollout_steps: 5
+
+- name: disco_cubic1d
+  checkpoint: cubicflux_1d/DISCO/PushforwardOneStepLoss/seed=0/<TIMESTAMP>
+  input: cubic1d
+  dataset: {well_base_path: ./data/datasets, well_dataset_name: cubic_1d, split: test}
+  rollout_steps: 5
+
+- name: dpot_cubic1d
+  checkpoint: cubicflux_1d/DPOT/PushforwardOneStepLoss/seed=0/<TIMESTAMP>
+  input: cubic1d
+  dataset: {well_base_path: ./data/datasets, well_dataset_name: cubic_1d, split: test}
+  rollout_steps: 5
+
+- name: disco_euler2d
+  checkpoint: euler_2d/DISCO/PushforwardOneStepLoss/seed=0/<TIMESTAMP>
+  input: euler2d
+  dataset: {well_base_path: ./data/datasets, well_dataset_name: euler_2d, split: test}
+  rollout_steps: 5
+
+- name: dpot_euler2d
+  checkpoint: euler_2d/DPOT/PushforwardOneStepLoss/seed=0/<TIMESTAMP>
+  input: euler2d
+  dataset: {well_base_path: ./data/datasets, well_dataset_name: euler_2d, split: test}
+  rollout_steps: 5

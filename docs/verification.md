@@ -1,7 +1,7 @@
 ---
 type: verification
 status: current
-updated: 2026-10-04
+updated: 2026-10-24
 sources: [claude]
 ---
 
@@ -35,7 +35,7 @@ row is unverified. Tiers: `property` (fast, every commit) or `verification` (`-m
 | V19 | Three-way: own WENO5 vs SharpClaw vs Trixi | `…::test_three_way` | as V18 | as V18 | verification | planned [R] |
 | V20 | 2D Euler vs JAX-Fluids on one Lax–Liu configuration | `…::test_jaxfluids_euler` | JAX-Fluids | as V18 | verification | planned [R] |
 | V21 | `vmap` == Python loop; `jit` == eager, for every `FluxPredictor` | `tests/property/test_transforms.py` | each other | `rtol 1e-6` | property | planned |
-| V22 | ICLR checkpoints reproduce their recorded forward pass and 5-step rollout | `tests/regression/test_regression.py` | goldens | `rtol 1e-5, atol 1e-6` (CPU) | regression | planned (Phase 0.8) |
+| V22 | ICLR checkpoints reproduce their recorded forward pass and 5-step rollout | `tests/regression/test_regression.py` | goldens | `rtol 1e-5, atol 1e-6` (CPU) | regression | machinery landed 2026-10-24; goldens pending (cluster) |
 | V23 | Mandatory statement: all of V1–V21 hold at N = 1, 2 and (tiny) 3 | parametrised | — | — | both | planned |
 
 ## Tolerance notes

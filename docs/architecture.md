@@ -1,7 +1,7 @@
 ---
 type: architecture
 status: current
-updated: 2026-10-04
+updated: 2026-10-24
 sources: [code]
 ---
 
@@ -56,8 +56,8 @@ scripts/
 │              train_multiphysics_2d.py (broken import); configs/ (26 model yamls, 2 data schemas)
 └── data/      generate_dataset.py; configs/
 notebooks/    data_generation/ evaluation/ misc/ nn/ training/ — evaluation logic (compute_metrics ×7, metrics_long_rollout ×4) lives here
-tests/        5 files: DISCO/DPOT blocks, a few nn utils. Nothing on the method, loss, trainer, data, simulations.
-icon/         vendored ICON baseline (own pyproject, tracked bytecode)                → third_party/icon submodule (Phase 0.5)
+tests/        5 example files (DISCO/DPOT blocks, nn utils) + test_nn_hypernetwork.py; tests/regression/ machinery (goldens pending)
+third_party/icon   submodule → Jhko725/icon-baseline (upstream ICON + Joon's HDF5 data path); not imported by src   [0.5 done]
 ```
 
 Full evidence: `assessment-2026-09-26.md`.
