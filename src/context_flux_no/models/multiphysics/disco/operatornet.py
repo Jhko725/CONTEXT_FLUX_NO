@@ -291,7 +291,7 @@ class OperatorNetwork(eqx.Module):
                     in_channels=hidden_channels_base * channel_multipliers[-1] * 4,
                     out_channels=hidden_channels_base * channel_multipliers[-1] * 2,
                     **conv_bottle_kwargs,
-                    key=keys_bot[0],
+                    key=keys_bot[1],
                 ),
             ]
         )

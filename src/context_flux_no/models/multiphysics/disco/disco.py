@@ -115,7 +115,7 @@ class DISCO(AbstractMultiphysicsOperator):
         *,
         key: PRNGKeyArray,
     ):
-        keys = jax.random.split(key, 3)
+        keys = jax.random.split(key, 4)
         # For now, will consider fixed spatial dimensions
         # TODO: Do I need to specify padding mode based on boundary conditions?
         self.hypernet = HyperNetwork(

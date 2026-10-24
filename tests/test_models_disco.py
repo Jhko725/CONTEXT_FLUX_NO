@@ -283,4 +283,4 @@ def test_operatornetwork():
     )
     test_arr_3d = jnp.ones((4, 21, 32, 18))
     # Test 3D with odd/multiple of 16/even but non-multiple of 16 dimensions
-    eqx.filter_jit(opnet_3d)(test_arr_3d).shape == test_arr_3d.shape
+    assert eqx.filter_jit(opnet_3d)(test_arr_3d).shape == test_arr_3d.shape
