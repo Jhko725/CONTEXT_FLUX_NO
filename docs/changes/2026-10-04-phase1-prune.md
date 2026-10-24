@@ -141,13 +141,13 @@ Commit 6 — bookkeeping: this document, `docs/roadmap.md`, `docs/architecture.m
 
 | Change | Thoughts | Modifications |
 |---|---|---|
-| Commit 0 — `ruff` dev pin, pre-commit rev, `scripts/import_all.py`, hypernetwork test fix, `jax.flatten_util` imports | | |
-| Commit 1 — dead symbols (ledger 1–11) | | |
-| Commit 2 — `DPOTEncoder`, `LSKFluxNOTargetNetwork`, `make_encoder`/`TARGET_NETWORK_DICT` | | |
-| Commit 3 — legacy loaders/script/configs/notebooks; `SegmentLoaderBackground` DEPRECATED; `Trainer.loss_fn: AbstractTrainLoss` | | |
-| Commit 4 — PDE `solve` returns `(u, t, xs)`; `solution_to_dataset` removed | | |
-| Commit 5 — key-reuse fixes (DISCO, HNO, both UNets); `tests/unit/test_key_hygiene.py`; missing assert | | |
-| Commit 6 — docs bookkeeping | | |
+| Commit 0 — `ruff` dev pin, pre-commit rev, `scripts/import_all.py`, hypernetwork test fix, `jax.flatten_util` imports | Mostly looks good. One thing - meybe to an `from jax import flatten_util` and replace `jax.flatten_util` with `flatten_util`? This would remove the need for #noqas. | Deferred to discussions with Claude. |
+| Commit 1 — dead symbols (ledger 1–11) | Confirmed. | None |
+| Commit 2 — `DPOTEncoder`, `LSKFluxNOTargetNetwork`, `make_encoder`/`TARGET_NETWORK_DICT` | Confirmed. | None |
+| Commit 3 — legacy loaders/script/configs/notebooks; `SegmentLoaderBackground` DEPRECATED; `Trainer.loss_fn: AbstractTrainLoss` | Confirmed. | None |
+| Commit 4 — PDE `solve` returns `(u, t, xs)`; `solution_to_dataset` removed | Confirmed. | None |
+| Commit 5 — key-reuse fixes (DISCO, HNO, both UNets); `tests/unit/test_key_hygiene.py`; missing assert | Looks good. | None |
+| Commit 6 — docs bookkeeping | Looks good. | None |
 
 ---
 
