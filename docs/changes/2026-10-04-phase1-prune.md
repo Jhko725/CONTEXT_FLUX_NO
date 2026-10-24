@@ -1,7 +1,7 @@
 ---
 type: change
 status: planned
-updated: 2026-10-04
+updated: 2026-10-24
 branch: phase1-prune
 roadmap: Phase 1
 ---
@@ -52,6 +52,9 @@ end of 1.1 and 1.2.
 ## Open issues
 
 - Burgers / shallow-water / 2D-cubic *training* is unavailable between Phase 1 and the Phase 4 regen.
+- **Merge gate**: this branch is not merged until `tests/regression` is green on the ICLR goldens
+  (Phase 0.8, deferred while the cluster is down). The work itself does not depend on them — see
+  the roadmap's Phase 1 note — so the branch can be completed and self-reviewed first.
 
 ## Review notes
 
