@@ -190,16 +190,13 @@ Review-notes rows for the second pass (for Joon to fill in):
 
 | Change | Thoughts | Modifications |
 |---|---|---|
-| `tests/regression/*` — harness machinery, three skip modes, CPU-only goldens | | |
-| `scripts/audit_bias_hyperinit.py` | | |
-| `pyproject.toml`, `uv.lock` — `the-well` removed (drops `torch`); `pythonpath` | | |
-| `README.md` — PyClaw build prerequisites | | |
-| Design entry on `icon/` → `icon-baseline` | | |
+| `tests/regression/*` — harness machinery, three skip modes, CPU-only goldens | Confirmed. | None |
+| `scripts/audit_bias_hyperinit.py` | Confirmed. | None |
+| `pyproject.toml`, `uv.lock` — `the-well` removed (drops `torch`); `pythonpath` | Confirmed. | None |
+| `README.md` — PyClaw build prerequisites | Looks good. | None |
+| Design entry on `icon/` → `icon-baseline` | Confirmed. | None |
 
-### Changes by Joon
-| Change | Thoughts | Modifications |
-|---|---|---|
-| 0.0 Prerequisites | <ul><li>Setting up `pyclaw` requires `sudo apt update` and `sudo apt install build-essential gfortran`. Maybe include in the docs somewhere? <li> Current dependencies include `torch`, which may be artifacts from the earlier prototyping phase. May need to clean up required packages. <li> `uv run pytest tests -q` passes with 1 warning regarding an escape sequence in the docstring of `wrapper.py`. <ul> | Offending docstring changed to a raw string |
+
 ---
 
 ## Steps (plan of record for Joon's part)
