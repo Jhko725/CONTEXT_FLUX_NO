@@ -38,6 +38,7 @@ document is listed here and has frontmatter.
 | [`fv-conventions.md`](design/fv-conventions.md) | agreed | grid/face/stencil conventions, ghost cells and BCs, N-D handling, the three-part numerical flux, integrators, the `PDEFamily` tiers, analytic solutions, extensibility table |
 | [`run-identity.md`](design/run-identity.md) | agreed | run directory layout, `RunRecord` fields and index columns, finding/loading runs, training/resume/warm-start commands, what the trainer sees |
 | [`fv-core-plan.md`](design/fv-core-plan.md) | tentative | Phase 2b/2c for Joon: reading path (LeVeque, Shu, GST, Hesthaven, Clawpack, JAX/Hypothesis), module specs with invariants and tests for `stencil`/`boundary`/`divergence`/`split`/`integrate`/`analytic`, build order |
+| [`python-julia-repo.md`](design/python-julia-repo.md) | tentative | how Julia/Trixi.jl lives in the uv repo: juliapkg as installer + committed Project/Manifest, subprocess vs juliacall assessed, recommended layout |
 | `weno5.md` | — (Phase 2, [R]) | derivation of the WENO5 stencil coefficients, smoothness indicators, LF splitting, next to the code |
 
 ## Decision records (`decisions/`)

@@ -124,7 +124,7 @@ Conventions: `design/fv-conventions.md`. Decisions: ADR-0001 (tiered coupling), 
 
 | # | Track | Item | Done when |
 |---|---|---|---|
-| 2a | C | `sim/pyclaw.py::PyClawBackend` (Classic + SharpClaw) and `reference/trixi/` + `sim/trixi.py::TrixiBackend`; both write Well-schema files for every family | backend-agreement test green |
+| 2a | C | `simulations/pyclaw.py::PyClawBackend` (Classic + SharpClaw) and `reference/trixi/` + `simulations/trixi.py::TrixiBackend`; both write Well-schema files for every family | backend-agreement test green |
 | 2b | C | `fv/stencil.py`, `boundary.py` (Periodic, Extrapolate, Reflective, Dirichlet, Inflow), `divergence.py`, `split.py` | property tests green at N = 1, 2, 3 |
 | 2c | C | `fv/integrate.py`: `RHS(hyperbolic, parabolic, source)`, ForwardEuler, SSPRK2/3, `CFLAdaptive` stub; `fv/analytic.py` | — |
 | 2d | C | `FluxPredictor` with `requires`; `NumericalFlux(reconstruction, base, dissipation)`; `StencilMLPFlux` (Fused), `NDStencilFlux` | — |
@@ -156,7 +156,7 @@ Exit: `hyperfluxfno.py` deleted; conditioner ablation is a one-key config change
 | 4.4 | M | Regen cubic 1D · sine · Burgers · SW · cubic 2D via reference backends (backend: ____); Euler stays on Clawpack | datasets on disk with `dataset.json` |
 | 4.5 | M | `TheWellDataSource` folded into base; `SegmentLoaderBackground` deleted; xarray/h5netcdf/netcdf4/dask gone from `src` | `grep xarray src` empty |
 | 4.6 | M | `bench_loader.py`; GC/prefetch fixes into the loader factory (P3) | before/after numbers in change doc |
-| 4.7 | R | `sim/jax.py::JaxBackend`; second regen with verified WENO5 (new `DatasetRecord` version) | cross-code agreement |
+| 4.7 | R | `simulations/jax.py::JaxBackend`; second regen with verified WENO5 (new `DatasetRecord` version) | cross-code agreement |
 | 4.8 | R | Baselines under non-periodic data (FNO padding; DISCO mask) | — |
 
 ## Phase 6 — Evaluation module  [M] / [R]

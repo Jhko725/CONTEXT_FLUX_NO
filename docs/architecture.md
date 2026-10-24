@@ -85,7 +85,7 @@ src/context_flux_no/
                           analytic · riemann · flux/{base (FluxPredictor, NumericalFlux), classical, neural}
   pde/           Phase 4  PDEFamily (tiered: flux, max_wave_speed, reflect, conversions | eigensystem… | riemann_flux | viscous_flux)
   ic/            Phase 4  InitialCondition samplers over waveforms/
-  sim/           Phase 2/4  SolverBackend: PyClawBackend · TrixiBackend · JaxBackend; dataset writer; DatasetRecord
+  simulations/   Phase 2/4  SolverBackend: PyClawBackend · TrixiBackend · JaxBackend; dataset writer; DatasetRecord
   models/incontext/  Phase 3  InContextOperator ⊃ InContextFluxOperator; conditioners; encoders
   models/baselines/  DISCO · DPOT · NaiveFNO …
   training/      Phase 5 ✓ Trainer · losses · loggers · checkpoint   (building blocks)
