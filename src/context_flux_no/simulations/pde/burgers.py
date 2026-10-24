@@ -4,51 +4,38 @@ from typing import ClassVar, Literal
 import equinox as eqx
 import jax.numpy as jnp
 import numpy as np
-from clawpack import pyclaw, riemann
+from clawpack import riemann
 from jaxtyping import Float
 
-from ..pdesolve import pdesolve_pyclaw
+from context_flux_no.simulations.pde.base import AbstractHyperbolicConservationLaw
+from context_flux_no.simulations.pyclaw import PyClawSpec
 
 
-class Burgers1D(eqx.Module):
-    n_dim: ClassVar[int] = 1
-    n_eqns: ClassVar[int] = 1
+class Burgers1D(AbstractHyperbolicConservationLaw):
+    """Inviscid Burgers through Clawpack's compiled `riemann.burgers_1D` (entropy fix on by
+    default), van Leer limiter."""
+
+    n_spatial_dims: ClassVar[int] = 1
+    field_rank_names: ClassVar[tuple[tuple[int, str], ...]] = ((0, "u"),)
     nu: float = eqx.field(static=True, default=0.0)
     entropy_fix: bool = eqx.field(static=True, default=True)
 
     @property
-    def coeffs(self) -> dict[str, float]:
+    def parameters(self) -> dict[str, float]:
         return {"nu": self.nu}
 
-    def solve(
-        self,
-        ic_factory: Callable[[Float[np.ndarray, " Nx"]], Float[np.ndarray, " Nx"]],
-        x_span: tuple[float, float],
-        Nx: int,
-        t_span: tuple[float, float],
-        Nt: int,
-        bc: Literal["periodic"],
-        **pdesolve_kwargs,
-    ):
-        solver = pyclaw.ClawSolver1D(riemann.burgers_1D)
-        solver.limiters = pyclaw.limiters.tvd.vanleer
-
-        problem_data = {"efix": self.entropy_fix}
-        u, t, x_grid = pdesolve_pyclaw(
-            solver,
-            problem_data,
-            ic_factory,
-            x_span,
-            Nx,
-            t_span,
-            Nt,
-            bc,
-            **pdesolve_kwargs,
+    @property
+    def pyclaw_spec(self) -> PyClawSpec:
+        return PyClawSpec(
+            riemann_solver=riemann.burgers_1D,
+            num_waves=1,
+            kernel_language="Fortran",
+            problem_data={"efix": self.entropy_fix},
+            classic_options={"limiters": "vanleer"},
         )
-        return u, t, x_grid
 
 
-class ViscousBurgers1D(eqx.Module):
+class ViscousBurgers1D(AbstractHyperbolicConservationLaw):
     """
     Parametric viscous Burgers-type equation:
 
@@ -66,8 +53,8 @@ class ViscousBurgers1D(eqx.Module):
     This solver assumes periodic boundary conditions.
     """
 
-    n_dim: ClassVar[int] = 1
-    n_eqns: ClassVar[int] = 1
+    n_spatial_dims: ClassVar[int] = 1
+    field_rank_names: ClassVar[tuple[tuple[int, str], ...]] = ((0, "u"),)
 
     a: float = eqx.field(static=True)
     b: float = eqx.field(static=True)
@@ -77,11 +64,8 @@ class ViscousBurgers1D(eqx.Module):
         self.b = b
 
     @property
-    def coeffs(self) -> dict[str, float]:
-        return {
-            "a": self.a,
-            "b": self.b,
-        }
+    def parameters(self) -> dict[str, float]:
+        return {"a": self.a, "b": self.b}
 
     def flux(
         self,

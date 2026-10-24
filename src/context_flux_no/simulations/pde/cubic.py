@@ -1,16 +1,15 @@
 from collections.abc import Callable
 from math import ceil
-from typing import ClassVar, Literal
+from typing import ClassVar
 
 import equinox as eqx
 import jax
 import jax.numpy as jnp
 import numpy as np
-from clawpack import pyclaw
 from jaxtyping import Array, Float
 
-from ..pdesolve import pdesolve_pyclaw
-from .base import AbstractHyperbolicConservationLaw
+from context_flux_no.simulations.pde.base import AbstractHyperbolicConservationLaw
+from context_flux_no.simulations.pyclaw import PyClawSpec
 
 
 def riemann_cubic_1D(
@@ -38,7 +37,8 @@ def riemann_cubic_1D(
     f_l = ((a * q_l + b) * q_l + c) * q_l
     s_default = (3 * a * q_l + 2 * b) * q_l + c
 
-    s = np.where(np.abs(dq) > 1e-14, (f_r - f_l) / dq, s_default)
+    with np.errstate(divide="ignore", invalid="ignore"):  # masked by the where
+        s = np.where(np.abs(dq) > 1e-14, (f_r - f_l) / dq, s_default)
     wave = np.expand_dims(dq, axis=1)
     amdq = np.clip(s, max=0.0) * dq
     apdq = np.clip(s, min=0.0) * dq
@@ -46,8 +46,11 @@ def riemann_cubic_1D(
 
 
 class CubicFlux1D(AbstractHyperbolicConservationLaw):
+    """`u_t + (a u³ + b u² + c u)_x = 0`; Classic PyClaw with the Roe-speed Python Riemann
+    solver above and the MC limiter (the ICLR `cubic_1d` setting)."""
+
     n_spatial_dims: ClassVar[int] = 1
-    field_rank_names: ClassVar[tuple[tuple[int, str]]] = ((0, "u"),)
+    field_rank_names: ClassVar[tuple[tuple[int, str], ...]] = ((0, "u"),)
 
     a: float = eqx.field(static=True)
     b: float = eqx.field(static=True)
@@ -62,47 +65,30 @@ class CubicFlux1D(AbstractHyperbolicConservationLaw):
     def parameters(self) -> dict[str, float]:
         return {"a": self.a, "b": self.b, "c": self.c}
 
-    def solve(
-        self,
-        ic_factory: Callable[[Float[np.ndarray, " Nx"]], Float[np.ndarray, " Nx"]],
-        x_span: tuple[float, float],
-        Nx: int,
-        t_span: tuple[float, float],
-        Nt: int,
-        bc: Literal["periodic"],  # TODO: extend to other types as well
-        **pdesolve_kwargs,
-    ) -> tuple[
-        Float[np.ndarray, "time dim x_grid"],
-        Float[np.ndarray, " time"],
-        Float[np.ndarray, " x_grid"],
-    ]:
-        solver = pyclaw.ClawSolver1D(riemann_cubic_1D)
-        solver.limiters = pyclaw.limiters.tvd.MC
-        solver.num_eqn = self.n_eqns
-        solver.num_waves = 1
-        solver.kernel_language = "Python"
-        solver.cfl_desired = 0.5
-        solver.cfl_max = 0.9
-        solver.fwave = False
+    def flux(self, u):
+        return ((self.a * u + self.b) * u + self.c) * u
 
-        problem_data = {"a": self.a, "b": self.b, "c": self.c}
-        u, t, x_grid = pdesolve_pyclaw(
-            solver,
-            problem_data,
-            ic_factory,
-            x_span,
-            Nx,
-            t_span,
-            Nt,
-            bc,
-            **pdesolve_kwargs,
+    def flux_speed(self, u):
+        return (3 * self.a * u + 2 * self.b) * u + self.c
+
+    @property
+    def pyclaw_spec(self) -> PyClawSpec:
+        return PyClawSpec(
+            riemann_solver=riemann_cubic_1D,
+            num_waves=1,
+            kernel_language="Python",
+            problem_data=self.parameters,
+            classic_options={"limiters": "MC", "cfl_desired": 0.5, "cfl_max": 0.9},
         )
-        return u, t, x_grid
 
 
-class CubicFlux2D(eqx.Module):
-    n_dim: ClassVar[int] = 2
-    n_eqns: ClassVar[int] = 1
+class CubicFlux2D(AbstractHyperbolicConservationLaw):
+    """2-D cubic flux with the same `f` along both axes; **own first-order Rusanov stepper**
+    (F8), not PyClaw — PyClaw has no compiled Riemann solver for it and runs only Fortran
+    kernels in 2-D. Regenerated through a reference backend in Phase 4.4."""
+
+    n_spatial_dims: ClassVar[int] = 2
+    field_rank_names: ClassVar[tuple[tuple[int, str], ...]] = ((0, "u"),)
     a: float = eqx.field(static=True)
     b: float = eqx.field(static=True)
     c: float = eqx.field(static=True)
@@ -113,7 +99,7 @@ class CubicFlux2D(eqx.Module):
         self.c = c
 
     @property
-    def coeffs(self) -> dict[str, float]:
+    def parameters(self) -> dict[str, float]:
         return {"a": self.a, "b": self.b, "c": self.c}
 
     def flux(self, u: Float[Array, "x y"]) -> Float[Array, "x y"]:
@@ -169,10 +155,13 @@ class CubicFlux2D(eqx.Module):
         Nxs: tuple[int, int],
         t_span: tuple[float, float],
         Nt: int,
+        bc: str = "periodic",
         *,
         cfl: float = 0.4,
         **kwargs,
     ):
+        if bc != "periodic":
+            raise NotImplementedError("CubicFlux2D's own stepper is periodic only")
         Nx, Ny = Nxs
         x_span, y_span = x_spans
         dx = (x_span[1] - x_span[0]) / Nx
