@@ -9,7 +9,7 @@ import numpy as np
 from clawpack import pyclaw
 from jaxtyping import Array, Float
 
-from ..pdesolve import pdesolve_pyclaw, solution_to_dataset
+from ..pdesolve import pdesolve_pyclaw
 from .base import AbstractHyperbolicConservationLaw
 
 
@@ -98,7 +98,6 @@ class CubicFlux1D(AbstractHyperbolicConservationLaw):
             **pdesolve_kwargs,
         )
         return u, t, x_grid
-        # return solution_to_dataset(u, t, (x_grid,), self.parameters)
 
 
 class CubicFlux2D(eqx.Module):
@@ -209,4 +208,4 @@ class CubicFlux2D(eqx.Module):
         )
         U = jax.image.resize(U, (len(t), *U.shape[1:]), method="cubic")
         U = jnp.expand_dims(U, axis=1)  # Add scalar channel dimension
-        return solution_to_dataset(U, t, (x, y), self.coeffs)
+        return U, t, (x, y)

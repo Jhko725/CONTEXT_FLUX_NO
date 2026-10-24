@@ -6,7 +6,7 @@ import numpy as np
 from clawpack import pyclaw
 from jaxtyping import Float
 
-from ..pdesolve import pdesolve_pyclaw, solution_to_dataset
+from ..pdesolve import pdesolve_pyclaw
 
 
 def riemann_sine_1D(q_l, q_r, aux_l, aux_r, problem_data):
@@ -83,4 +83,4 @@ class SineFlux1D(eqx.Module):
             bc,
             **pdesolve_kwargs,
         )
-        return solution_to_dataset(u, t, x_grid, self.coeffs)
+        return u, t, x_grid

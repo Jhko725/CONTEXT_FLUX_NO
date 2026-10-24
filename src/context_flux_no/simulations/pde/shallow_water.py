@@ -6,7 +6,7 @@ import numpy as np
 from clawpack import pyclaw
 from jaxtyping import Float
 
-from ..pdesolve import pdesolve_pyclaw, solution_to_dataset
+from ..pdesolve import pdesolve_pyclaw
 
 
 def riemann_param_shallow_water_1D(
@@ -197,4 +197,4 @@ class ParametrizedShallowWater1D(eqx.Module):
             **pdesolve_kwargs,
         )
 
-        return solution_to_dataset(u, t, (x_grid,), self.coeffs)
+        return u, t, x_grid
