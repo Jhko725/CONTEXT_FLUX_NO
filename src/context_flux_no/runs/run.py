@@ -1,4 +1,4 @@
-"""`Run`: a training run as a directory (ADR-0010).
+"""`Run`: a training run as a directory (ADR-0010); `RunLayout` names the files inside.
 
     <run_dir>/
         config.yaml      the resolved Hydra config — the latest truth (a resume rewrites it)
@@ -20,18 +20,27 @@ continuation through grain's iterator state is a follow-up (roadmap Phase 5, ope
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
 from omegaconf import DictConfig, OmegaConf
 
+from context_flux_no.runs.record import index_from_config, RunRecord
 from context_flux_no.training.checkpoint import OrbaxCheckpointer
-from context_flux_no.training.run_record import index_from_config, RunRecord
 
 
-CONFIG_FILE = "config.yaml"
-METADATA_FILE = "metadata.json"
-CHECKPOINT_DIR = "checkpoints"
+@dataclass(frozen=True)
+class RunLayout:
+    """The file names inside a run directory. One object so that `Run` and the index
+    walker (`runs.index`) agree on what to look for; pass `layout=` to change it."""
+
+    config_file: str = "config.yaml"
+    metadata_file: str = "metadata.json"
+    checkpoint_dir: str = "checkpoints"
+
+
+DEFAULT_LAYOUT = RunLayout()
 
 
 def _flatten(d: Any, prefix: str = "") -> dict[str, Any]:
@@ -60,27 +69,35 @@ class Run:
     """See the module docstring. Construct with `from_config` (new or resumed run) or
     `open` (an existing run, for analysis)."""
 
-    def __init__(self, directory: str | Path, record: RunRecord, config: DictConfig):
+    def __init__(
+        self,
+        directory: str | Path,
+        record: RunRecord,
+        config: DictConfig,
+        *,
+        layout: RunLayout = DEFAULT_LAYOUT,
+    ):
         self.directory = Path(directory).resolve()
         self.record = record
         self.config = config
+        self.layout = layout
 
     # ------------------------------------------------------------ paths ----------
     @property
     def config_path(self) -> Path:
-        return self.directory / CONFIG_FILE
+        return self.directory / self.layout.config_file
 
     @property
     def metadata_path(self) -> Path:
-        return self.directory / METADATA_FILE
+        return self.directory / self.layout.metadata_file
 
     @property
     def checkpoint_dir(self) -> Path:
-        return self.directory / CHECKPOINT_DIR
+        return self.directory / self.layout.checkpoint_dir
 
     @staticmethod
-    def exists(directory: str | Path) -> bool:
-        return (Path(directory) / METADATA_FILE).exists()
+    def exists(directory: str | Path, *, layout: RunLayout = DEFAULT_LAYOUT) -> bool:
+        return (Path(directory) / layout.metadata_file).exists()
 
     # ------------------------------------------------------------ construction ---
     @classmethod
@@ -94,19 +111,20 @@ class Run:
         metric_name: str | None = "valid_loss",
         resume: bool = False,
         extra: dict[str, Any] | None = None,
+        layout: RunLayout = DEFAULT_LAYOUT,
     ) -> Run:
         """Start a run in `directory`, writing `config.yaml` and `metadata.json`. An
         existing run there raises `FileExistsError` unless `resume=True`, which keeps the
         record (and `run_id`), notes `resumed={"from_step", "config_changes"}` and rewrites
         `config.yaml` with `cfg`."""
         directory = Path(directory)
-        if cls.exists(directory):
+        if cls.exists(directory, layout=layout):
             if not resume:
                 raise FileExistsError(
-                    f"{directory} already holds a run (metadata.json); pass resume=True "
-                    "to continue it or choose another directory."
+                    f"{directory} already holds a run ({layout.metadata_file}); pass "
+                    "resume=True to continue it or choose another directory."
                 )
-            previous = cls.open(directory)
+            previous = cls.open(directory, layout=layout)
             changes = config_changes(previous.config, cfg)
             record = previous.record.replace(
                 status="running",
@@ -129,22 +147,24 @@ class Run:
                 metric_name=metric_name,
                 extra=extra,
             )
-        run = cls(directory, record, cfg)
+        run = cls(directory, record, cfg, layout=layout)
         OmegaConf.save(cfg, run.config_path, resolve=True)
         record.write(run.metadata_path)
         return run
 
     @classmethod
-    def open(cls, directory: str | Path) -> Run:
+    def open(cls, directory: str | Path, *, layout: RunLayout = DEFAULT_LAYOUT) -> Run:
         directory = Path(directory)
-        if not cls.exists(directory):
-            raise FileNotFoundError(f"{directory} holds no run (no {METADATA_FILE}).")
-        record = RunRecord.read(directory / METADATA_FILE)
-        config_path = directory / CONFIG_FILE
+        if not cls.exists(directory, layout=layout):
+            raise FileNotFoundError(
+                f"{directory} holds no run (no {layout.metadata_file})."
+            )
+        record = RunRecord.read(directory / layout.metadata_file)
+        config_path = directory / layout.config_file
         config = (
             OmegaConf.load(config_path) if config_path.exists() else OmegaConf.create()
         )
-        return cls(directory, record, config)  # ty: ignore[invalid-argument-type]
+        return cls(directory, record, config, layout=layout)  # ty: ignore[invalid-argument-type]
 
     # ------------------------------------------------------------ record ---------
     def update(self, **changes: Any) -> RunRecord:

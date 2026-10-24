@@ -13,7 +13,7 @@ host until that step's computation is done, so the loop never does it directly:
   also when the loop raised.
 
 `NullLogger` is for tests, `ListLogger` for tests and notebooks, `PrintLogger` for the
-terminal, `WandbLogger` wraps a `wandb` run created by the caller (`training.wandb_run`)."""
+terminal, `WandbLogger` wraps a `wandb` run created by the caller (`runs.wandb_mirror`)."""
 
 from __future__ import annotations
 

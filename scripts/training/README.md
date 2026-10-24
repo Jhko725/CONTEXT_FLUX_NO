@@ -42,7 +42,7 @@ uv run python ./scripts/training/train_multiphysics.py resume=runs/2026-10-24/14
 uv run python ./scripts/training/train_multiphysics.py warm_start=runs/2026-10-24/14-03-12 model.key.seed=1
 ```
 
-To list and load trained runs from Python: `from context_flux_no.training import runs` —
+To list and load trained runs from Python: `from context_flux_no import runs` —
 `runs.index("runs")`, `runs.select(...)`, `runs.load_run(run_dir)`. Checkpoints from before
 this layout (`checkpoints/<data>/<Model>/...`) are indexed after
 `uv run python scripts/backfill_run_records.py --root ./checkpoints`.

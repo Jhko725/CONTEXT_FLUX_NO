@@ -6,14 +6,14 @@
     uv run python scripts/training/train_multiphysics.py warm_start=runs/2026-10-24/12-00-00 model.key.seed=1
 
 The run lives in Hydra's output directory (`runs/<date>/<time>`): `config.yaml`,
-`metadata.json`, `checkpoints/`, `.hydra/` and (if enabled) `wandb/`. See `training.run`.
+`metadata.json`, `checkpoints/`, `.hydra/` and (if enabled) `wandb/`. See `runs.run`.
 """
 
 import grain
 import hydra
 import jax
+from context_flux_no import experiment
 from context_flux_no.data import WellDatasetSourceBase, ZarrWellDatasetSource
-from context_flux_no.training import experiment
 from omegaconf import DictConfig
 
 

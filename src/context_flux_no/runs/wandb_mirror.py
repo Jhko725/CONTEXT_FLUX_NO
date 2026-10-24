@@ -17,7 +17,7 @@ from typing import Any
 
 from omegaconf import DictConfig
 
-from context_flux_no.training.run import Run
+from context_flux_no.runs.run import Run
 
 
 INDEX_TAGS = ("model", "encoder", "target_network", "conditioning", "data", "loss")

@@ -8,7 +8,8 @@ from pathlib import Path
 
 import equinox as eqx
 import jax
-from context_flux_no.training import Run, runs
+from context_flux_no import runs
+from context_flux_no.runs import Run
 from orbax.checkpoint import v1 as ocp
 
 

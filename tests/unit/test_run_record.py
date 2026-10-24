@@ -2,7 +2,7 @@
 
 import json
 
-from context_flux_no.training.run_record import (
+from context_flux_no.runs.record import (
     INDEX_COLUMNS,
     index_from_config,
     new_run_id,

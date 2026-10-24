@@ -30,7 +30,7 @@ dependencies = [
     "netcdf4>=1.7.3",
     "numpy>=2.3.0",
     "optax>=0.2.5",
-    "orbax-checkpoint==0.11.25",
+    "orbax-checkpoint>=0.12.8",
     "pandas>=2.2",
     "psutil>=7.2.2",
     "pyyaml>=6.0.3",

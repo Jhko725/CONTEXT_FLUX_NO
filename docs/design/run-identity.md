@@ -24,7 +24,7 @@ runs/2026-10-24/14-03-12/              ← hydra.run.dir  (sweep: runs/multirun/
 └── wandb/                             only with wandb=offline|online
 ```
 
-`training.run.Run` is the object over this directory: `Run.from_config(cfg, dir, dataset_id=…)`
+`runs.Run` is the object over this directory: `Run.from_config(cfg, dir, dataset_id=…)`
 creates it (refusing an existing run unless `resume=True`), `Run.open(dir)` reads it,
 `run.checkpointer(save_every=…)` gives the trainer its `OrbaxCheckpointer`, `run.restore(template,
 step)` the `TrainerState`, `run.finish(status=…)` closes the record with final/best step.
@@ -60,7 +60,7 @@ samples would collide — `DatasetRecord` will carry a content hash].
 ## Finding and loading runs
 
 ```python
-from context_flux_no.training import runs
+from context_flux_no import runs
 
 table = runs.index("runs")                       # pandas.DataFrame, one row per metadata.json
 best = runs.select(table, model="HyperFluxFNOLocal", data="cubicflux_1d", status="finished")
@@ -91,7 +91,7 @@ uv run python scripts/training/train_multiphysics.py warm_start=runs/2026-10-24/
 uv run python scripts/training/train_multiphysics.py -m model=hyperfluxno,disco model.key.seed=0,1,2   # sweep → one group
 ```
 
-`training.experiment.train(cfg, model=…, loss_fn=…, loaders…, dataset_id=…)` is the shared
+`experiment.train(cfg, model=…, loss_fn=…, loaders…, dataset_id=…)` is the shared
 assembly; the scripts only build the data source and loaders. Cadence keys in
 `configs/training/*.yaml`: `eval_every` (one-batch validation; 1 as in the ICLR loop),
 `save_every` (checkpoint offer; 100; the final step is always saved), `log_every` (wandb).

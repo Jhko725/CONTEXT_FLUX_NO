@@ -18,12 +18,9 @@ from pathlib import Path
 from typing import Any, TYPE_CHECKING
 
 import equinox as eqx
-import hydra
-import jax
-from omegaconf import DictConfig
 
-from context_flux_no.training.run import METADATA_FILE, Run
-from context_flux_no.training.run_record import RunRecord
+from context_flux_no.runs.record import RunRecord
+from context_flux_no.runs.run import DEFAULT_LAYOUT, Run, RunLayout
 from context_flux_no.training.trainer import TrainerState
 
 
@@ -31,24 +28,26 @@ if TYPE_CHECKING:
     import pandas as pd
 
 
-def iter_runs(root: str | Path) -> Iterator[Path]:
-    """Every directory under `root` (inclusive) holding a `metadata.json`, sorted."""
+def iter_runs(
+    root: str | Path, *, layout: RunLayout = DEFAULT_LAYOUT
+) -> Iterator[Path]:
+    """Every directory under `root` (inclusive) holding a run's metadata file, sorted."""
     root = Path(root)
-    if (root / METADATA_FILE).exists():
+    if (root / layout.metadata_file).exists():
         yield root
-    for meta in sorted(root.rglob(METADATA_FILE)):
+    for meta in sorted(root.rglob(layout.metadata_file)):
         if meta.parent != root:
             yield meta.parent
 
 
-def index(root: str | Path) -> pd.DataFrame:
+def index(root: str | Path, *, layout: RunLayout = DEFAULT_LAYOUT) -> pd.DataFrame:
     """One row per run under `root`; the `run_dir` column points back at the directory."""
     import pandas as pd
 
     rows = []
-    for run_dir in iter_runs(root):
+    for run_dir in iter_runs(root, layout=layout):
         try:
-            record = RunRecord.read(run_dir / METADATA_FILE)
+            record = RunRecord.read(run_dir / layout.metadata_file)
         except (
             ValueError,
             TypeError,
@@ -78,35 +77,26 @@ def select(table: pd.DataFrame, **where: Any) -> pd.DataFrame:
     return table if mask is None else table[mask]
 
 
-def build_model(cfg: DictConfig) -> eqx.Module:
-    return hydra.utils.instantiate(cfg.model)
-
-
-def build_optimizer(cfg: DictConfig):
-    return hydra.utils.instantiate(cfg.training.optimizer)
-
-
-def state_template(cfg: DictConfig) -> TrainerState:
-    """A `TrainerState` with the structure the run checkpointed, built from its config:
-    the model and optimizer from `cfg.model` / `cfg.training.optimizer` (the optimizer
-    **must** be fully described by the config — chains included — since the opt-state
-    structure has to match). The PRNG key is a placeholder overwritten on restore."""
-    return TrainerState.init(
-        build_model(cfg), build_optimizer(cfg), key=jax.random.key(0)
-    )
-
-
 def load_state(
-    run_dir: str | Path, step: int | None = None
+    run_dir: str | Path,
+    step: int | None = None,
+    *,
+    template: TrainerState | None = None,
 ) -> tuple[TrainerState, Run]:
-    """The checkpointed `TrainerState` at `step` (latest if `None`) and its `Run`."""
+    """The checkpointed `TrainerState` at `step` (latest if `None`) and its `Run`. The
+    structure to restore into is `template`, or `experiment.state_template(run.config)`
+    (the run's own config rebuilds model and optimizer) when not given."""
     run = Run.open(run_dir)
     if run.record.status == "legacy":
         raise ValueError(
             f"{run_dir} is a legacy ICLR checkpoint: it holds model weights only, "
             "use load_run (or training.io.load_model)."
         )
-    return run.restore(state_template(run.config), step), run
+    if template is None:
+        from context_flux_no.experiment import state_template  # config → objects
+
+        template = state_template(run.config)
+    return run.restore(template, step), run
 
 
 def load_run(

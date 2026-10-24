@@ -4,7 +4,8 @@ wandb disabled) on a tiny MLP, driven through Hydra's compose API with a fake ou
 import jax
 import jax.numpy as jnp
 import pytest
-from context_flux_no.training import experiment, Run, runs
+from context_flux_no import experiment, runs
+from context_flux_no.runs import Run
 from hydra.core.hydra_config import HydraConfig
 from omegaconf import OmegaConf, open_dict
 
@@ -37,7 +38,7 @@ def _train(cfg, num_steps):
     cfg.training.max_steps = num_steps
     return experiment.train(
         cfg,
-        model=runs.build_model(cfg),
+        model=experiment.build_model(cfg),
         loss_fn=_Loss(),
         loss_args=None,
         train_loader=_loader(100, seed=3),
@@ -91,7 +92,7 @@ def test_failure_marks_record_failed(hydra_output_dir):
     with pytest.raises(FloatingPointError):
         experiment.train(
             cfg,
-            model=runs.build_model(cfg),
+            model=experiment.build_model(cfg),
             loss_fn=Boom(),
             loss_args=None,
             train_loader=_loader(10),

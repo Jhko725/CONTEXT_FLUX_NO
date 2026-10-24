@@ -1,5 +1,5 @@
 """Where this code came from: the git state of the checkout the package is imported from
-and the installed package version. Recorded in run metadata (`training.run`) and, from
+and the installed package version. Recorded in run metadata (`runs.run`) and, from
 Phase 4, in dataset metadata. Ported from `deep_isochron.utils.provenance`."""
 
 from __future__ import annotations

@@ -56,7 +56,7 @@ explicit resume semantics. Joon asked to study it and adopt what fits.
 4. **Whole `TrainerState` is checkpointed** [code] — model, optimizer state, step, PRNG key —
    under `LatestN(1) + BestN(1 by valid_loss)`; the final step is always saved (`force=True`),
    so `Run.restore()` with no step is the trained state whatever `save_every` is. Typed PRNG
-   keys are stored as key data and rewrapped on restore (orbax cannot serialise them). The
+   keys restore natively on orbax ≥ 0.12.8 (0.11 could not; the pin was raised in review round 1). The
    record and the model config are also written to orbax `custom_metadata`, so a
    `checkpoints/` directory alone identifies its run.
 
@@ -91,6 +91,13 @@ explicit resume semantics. Joon asked to study it and adopt what fits.
   is not restored; a resumed run restores the state exactly and *restarts* the stream with a
   seed derived from the step. Honest version shipped; exact continuation via grain iterator
   checkpoints is an open item (roadmap Phase 5).
+
+## Where the code lives (review round 1)
+
+`training/` — building blocks (trainer, losses, loggers, checkpoint), importing nothing from the
+other two; `runs/` — run identity (`record`, `run` + `RunLayout`, `index`, `wandb_mirror`);
+`experiment.py` — config → objects (`build_model`, `build_optimizer`, `state_template`, the
+shared script assembly). Dependency direction `training ← runs ← experiment`.
 
 ## Consequences
 

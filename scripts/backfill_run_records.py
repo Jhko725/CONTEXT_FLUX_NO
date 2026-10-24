@@ -24,8 +24,7 @@ import re
 from pathlib import Path
 from typing import Any
 
-from context_flux_no.training.run import METADATA_FILE
-from context_flux_no.training.run_record import index_from_config, RunRecord
+from context_flux_no.runs import DEFAULT_LAYOUT, index_from_config, RunRecord
 from orbax.checkpoint import v1 as ocp
 
 
@@ -80,7 +79,7 @@ def match_audit(
 def backfill(
     ckpt_dir: Path, audit: list[dict[str, str]], *, force: bool, dry_run: bool
 ) -> str:
-    target = ckpt_dir / METADATA_FILE
+    target = ckpt_dir / DEFAULT_LAYOUT.metadata_file
     if target.exists() and not force:
         return "skip (exists)"
     data_name, model_cls, loss_cls, seed_part, ts = ckpt_dir.parts[-5:]

@@ -4,8 +4,9 @@ import equinox as eqx
 import jax
 import jax.numpy as jnp
 import pytest
-from context_flux_no.training import ListLogger, Run, RunRecord, runs, Trainer
-from context_flux_no.training.run import config_changes
+from context_flux_no import experiment, runs
+from context_flux_no.runs import config_changes, Run, RunRecord
+from context_flux_no.training import ListLogger, Trainer
 from omegaconf import OmegaConf
 
 
@@ -49,8 +50,8 @@ def _cfg(seed=0, lr=1e-2):
 
 def _train(run: Run, num_steps, state=None, seed=0):
     cfg = run.config
-    trainer = Trainer(runs.build_optimizer(cfg), _Loss())
-    start = state if state is not None else runs.build_model(cfg)
+    trainer = Trainer(experiment.build_optimizer(cfg), _Loss())
+    start = state if state is not None else experiment.build_model(cfg)
     with run.checkpointer(save_every=2) as ckpt:
         out = trainer.train(
             start,

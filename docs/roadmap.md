@@ -110,7 +110,7 @@ Exit: `import_all.py` and `ruff check` clean ✔; fast tier green (33 tests) ✔
 |---|---|---|---|
 | 5.1 | `RunRecord` (`metadata.json`): locally generated `run_id`, git SHA + dirty, package version, `x64`, `dataset_id`, index columns, model config, status, best/final step, resume notes | dataclass + Hypothesis round trip | done |
 | 5.2 | `Run` directory = Hydra output dir; record written to `metadata.json`, orbax `custom_metadata` and wandb (`config` = index columns only; full config as file; `group`/`job_type`/`tags`); trainer loses wandb/orbax (injected `Logger`/`Checkpointer`), checkpoints whole `TrainerState`, final step forced | one training run shows all three; 28 CPU tests | done (wandb path untested against the service) |
-| 5.3 | `training/runs.py`: `index(root) → DataFrame`, `select`, `load_run`, `load_state`, `from_wandb` | notebooks lose `CHECKPOINT_DICT` | code done; notebooks switch in Phase 6 |
+| 5.3 | `runs/index.py`: `index(root) → DataFrame`, `select`, `load_run`, `load_state`, `from_wandb` | notebooks lose `CHECKPOINT_DICT` | code done; notebooks switch in Phase 6 |
 | 5.4 | Backfill `metadata.json` for ICLR checkpoints (`scripts/backfill_run_records.py`, wandb match via the F1 audit CSV) | run once on the cluster | script + test done; **run pending** (with 0.7/0.8) |
 | 5.5 | One line of design so `Trainer` does not preclude `jax.sharding` | — | done (`mesh` argument; loop never reads device values) |
 | 5.6 | Exact data-stream continuation on resume (grain iterator state in the checkpoint) | resumed run bit-equal to an uninterrupted one | open; the stream restarts today (ADR-0010 §5) |
@@ -186,7 +186,7 @@ IMEX) — see `design/fv-conventions.md` §Extensibility.
 - Multi-device training — single GPU assumed throughout; Phase 5.5 only keeps the door open.
 - Nonconservative products, incompressible Navier–Stokes — out of `fv/` scope (ADR-0001 §Extensibility).
 - `CFLAdaptive` implementation (`scan` with bounded substeps vs diffrax controller) — when first needed.
-- `orbax-checkpoint==0.11.25` pin — Phase 5 built on its v1 API (`ocp.training.Checkpointer`); re-saving the ICLR checkpoints under the shim is still deferred to the regression gate.
+- ~~`orbax-checkpoint==0.11.25` pin~~ — upgraded to `>=0.12.8` in Phase 5 (review round 1; typed PRNG keys restore natively). Whether 0.12 reads the 0.11.25 ICLR checkpoints is checked by the regression tier; re-save under the shim if not.
 - Whether `TrixiBackend` remains a permanent generator after WENO5 is verified.
 
 ---
@@ -209,3 +209,4 @@ IMEX) — see `design/fv-conventions.md` §Extensibility.
 | 2026-10-24 | `phase5-run-identity` | 5.2 (trainer side): `training/loggers.py`, `training/checkpoint.py`, `provenance.py`; `Trainer` without wandb/orbax, whole-`TrainerState` checkpoints, forced final save, non-finite stop | `changes/2026-10-24-phase5-run-identity.md` |
 | 2026-10-24 | `phase5-run-identity` | 5.1, 5.3: `RunRecord`, `Run` directory object with refuse/resume/warm-start semantics, `runs.index/select/load_run/load_state/from_wandb`, `WellDatasetSourceBase.dataset_id`, `pandas` declared | `changes/2026-10-24-phase5-run-identity.md` |
 | 2026-10-24 | `phase5-run-identity` | 5.2 (run side), 5.4 script, 5.5: `wandb_run.py` (mirror), `experiment.py`, Hydra `runs/<date>/<time>` run dir, `wandb=disabled|offline|online`, scripts on the new API, the_well optimizer chain in config, `backfill_run_records.py`; ADR-0010, `design/run-identity.md` | `changes/2026-10-24-phase5-run-identity.md` |
+| 2026-10-24 | `phase5-run-identity` | review round 1: `orbax-checkpoint>=0.12.8` (typed-key wrapper gone); `runs/` package + `experiment.py` at package top, `training/` = building blocks; `RunLayout`; `block` removed | `changes/2026-10-24-phase5-run-identity.md` |

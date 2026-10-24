@@ -6,7 +6,7 @@ PRNG key — and is what gets checkpointed. `Trainer(optimizer, loss_fn)` owns t
 checkpointing and evaluation are injected (`training.loggers`, `training.checkpoint`), so a
 test runs the loop with `ListLogger()` and a temporary `OrbaxCheckpointer`, and a notebook
 can run it with anything. The experiment script (`scripts/training/train_multiphysics.py`)
-assembles the run directory (`training.run.Run`), the wandb run (`training.wandb_run`) and
+assembles the run directory (`runs.Run`), the wandb run (`runs.wandb_mirror`) and
 the loaders around it.
 
 Design, inspired by Levanter's `TrainerState` and `deep_isochron.training.trainer`:

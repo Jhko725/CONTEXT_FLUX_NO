@@ -3,13 +3,13 @@
     uv run python scripts/training/train_the_well.py data=well_euler_2d model=hyperfluxno_2d_euler_v2
 
 Uses `training=the_well` (gradient clipping in the optimizer chain) unless overridden. The run
-lives in Hydra's output directory; see `training.run` and `train_multiphysics.py`.
+lives in Hydra's output directory; see `runs.run` and `train_multiphysics.py`.
 """
 
 import grain
 import hydra
+from context_flux_no import experiment
 from context_flux_no.data import TheWellDataSource
-from context_flux_no.training import experiment
 from omegaconf import DictConfig
 
 

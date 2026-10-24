@@ -16,20 +16,39 @@ import jax
 from hydra.core.hydra_config import HydraConfig
 from omegaconf import DictConfig
 
+from context_flux_no.runs import Run
+from context_flux_no.runs.wandb_mirror import build_wandb_run, finish_wandb_run
 from context_flux_no.training import (
     DelayedLogger,
     MultiLogger,
     PrintLogger,
-    Run,
     Trainer,
     TrainerState,
     WandbLogger,
 )
 from context_flux_no.training.loss import PushforwardOneStepLoss
-from context_flux_no.training.wandb_run import build_wandb_run, finish_wandb_run
 
 
 log = logging.getLogger(__name__)
+
+
+def build_model(cfg: DictConfig) -> eqx.Module:
+    return hydra.utils.instantiate(cfg.model)
+
+
+def build_optimizer(cfg: DictConfig):
+    return hydra.utils.instantiate(cfg.training.optimizer)
+
+
+def state_template(cfg: DictConfig) -> TrainerState:
+    """A `TrainerState` with the structure a run checkpointed, built from its config: the
+    model and optimizer from `cfg.model` / `cfg.training.optimizer` (the optimizer **must**
+    be fully described by the config — chains included — since the opt-state structure has
+    to match). The PRNG key is a placeholder overwritten on restore. Used by
+    `runs.load_state` / `runs.load_run`."""
+    return TrainerState.init(
+        build_model(cfg), build_optimizer(cfg), key=jax.random.key(0)
+    )
 
 
 def select_device(cfg: DictConfig) -> None:
@@ -110,10 +129,10 @@ def train(
     optimizer: Any | None = None,
 ) -> TrainerState:
     """Assemble the run and train. `optimizer` defaults to `cfg.training.optimizer`;
-    anything else (a clipping chain, say) must also be what `runs.state_template` can
+    anything else (a clipping chain, say) must also be what `experiment.state_template` can
     rebuild from the config, so put it in the config rather than passing it here."""
     run = start_run(cfg, dataset_id=dataset_id)
-    optimizer = optimizer or hydra.utils.instantiate(cfg.training.optimizer)
+    optimizer = optimizer or build_optimizer(cfg)
     trainer = Trainer(optimizer, loss_fn, loss_args=loss_args)
     start = initial_state(cfg, run, trainer, model)
 
