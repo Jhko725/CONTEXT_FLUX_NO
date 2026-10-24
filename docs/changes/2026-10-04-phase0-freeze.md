@@ -1,7 +1,7 @@
 ---
 type: change
 status: in-progress
-updated: 2026-10-04
+updated: 2026-10-24
 branch: phase0-freeze
 roadmap: Phase 0
 ---
@@ -48,17 +48,25 @@ Claude's part (this commit series):
 - `src/context_flux_no/__init__.py` — `main()` stub removed.
 - `src/context_flux_no/{data/sources,models/multiphysics/abstract,models/multiphysics/hyperfluxfno/target_networks/fluxno,nn/convtranspose,simulations/pde/__init__,simulations/pde/base,simulations/pyclaw_utils,simulations/utils}.py`, `scripts/data/generate_dataset.py` — `ruff format` only, plus one unused import (`mark_ends`) removed; isolated in the `style:` commit.
 
-Joon's part *(planned)*:
+Joon's part (landed on `main`, merged back into this branch 2026-10-24):
 
 - `scripts/training/configs/model/*.yaml` — `bias_hyperinit → bias-hyperinit` (0.6a).
-- `src/context_flux_no/nn/hypernetwork.py` — runtime check on the init string; `tests/test_nn_hypernetwork.py` (0.6a).
-- `src/context_flux_no/models/multiphysics/hyperfluxfno/hyperfluxfno.py` — `hypernet_init` default → `"bias-hyperinit"` (D15).
-- `scripts/training/configs/model/{hyperfluxfno_ViT,hyperfluxno_2d_scalar_global,hyperfluxno_2d_euler_global,hyperfluxno_2d_euler_lskflux}.yaml`, `scripts/training/train_multiphysics_2d.py` — deleted (0.6b, 0.6d).
-- `src/context_flux_no/data/__init__.py` — exports (0.6c).
-- `scripts/check_configs.py`, `docs/config_census_phase0.txt` (0.6e).
-- `docs/bias_hyperinit_audit.csv`; `docs/findings.md` F1 appended with the conclusion (0.7).
-- `tests/regression/{conftest.py,cases.yaml,make_goldens.py,test_regression.py,inputs/,goldens/}` (0.8).
-- `third_party/icon` submodule; `icon/` removed (0.5).
+- `src/context_flux_no/nn/hypernetwork.py` — `_INITIALIZATIONS` guard raising on unknown strings; `tests/test_nn_hypernetwork.py` (0.6a).
+- `src/context_flux_no/models/multiphysics/hyperfluxfno/hyperfluxfno.py` — `hypernet_init` default → `"bias-hyperinit"` in all three classes (D15).
+- `scripts/training/configs/model/{hyperfluxfno_ViT,hyperfluxno_2d_scalar_global,hyperfluxno_2d_euler_global}.yaml`, `scripts/training/train_multiphysics_2d.py` — deleted (0.6b); `hyperfluxno_2d_euler_lskflux.yaml` → `hyperfluxno_2d_euler_convnext.yaml` (0.6d, it selected ConvNeXt).
+- `src/context_flux_no/data/__init__.py` — exports `TheWellDataSource`, `WellDatasetSourceBase`, `ZarrWellDatasetSource` (0.6c); `scripts/training/train_multiphysics.py` imports from the package.
+- `scripts/check_configs.py` — config census (0.6e).
+- `src/context_flux_no/models/multiphysics/wrapper.py` — docstring made a raw string (escape-sequence warning).
+- `icon/` — removed; `.gitmodules`, `third_party/icon` — submodule → `Jhko725/icon-baseline` @ `7ac3fb6` (0.5).
+
+Claude's second pass (2026-10-24):
+
+- `tests/__init__.py`, `tests/regression/{__init__,common,conftest,make_inputs,make_goldens,test_regression}.py`, `tests/regression/{README.md,cases.yaml}`, `tests/regression/{inputs,goldens}/.gitkeep` — regression-tier machinery (0.8); goldens deferred.
+- `scripts/audit_bias_hyperinit.py` — the 0.7 audit as a script, run when the cluster is back.
+- `pyproject.toml`, `uv.lock` — `pythonpath = ["."]` for pytest; `the-well` removed (unused; it pulled in `torch`).
+- `scripts/check_configs.py`, `src/context_flux_no/nn/hypernetwork.py`, `tests/test_nn_hypernetwork.py` — `ruff format` only (`style:` commit).
+- `README.md` — PyClaw build prerequisites.
+- `docs/roadmap.md`, `docs/architecture.md`, `docs/verification.md`, this document — bookkeeping.
 
 ## Design
 
@@ -77,9 +85,33 @@ Joon's part *(planned)*:
   on ~80 lines.
 - **CUDA as an optional extra** so CI and the regression tier can use the CPU wheel; GPU machines
   run `uv sync --extra cuda`. Rejected: separate lock files.
-- **Tags** — `iclr2027-submission` and `pre-nbstripout` are created locally by Claude but the
-  session proxy refuses tag pushes (git and API); Joon pushes them:
-  `git push origin iclr2027-submission pre-nbstripout`.
+- **Tags** — created locally by Claude; the session proxy refuses tag pushes (git and API), so Joon
+  pushed `iclr2027-submission` (→ `5f67a31`) and `pre-nbstripout` (→ `bfc5a40`) on 2026-10-24.
+- **`icon/` is a modified copy, so it got its own repository (0.5).** Compared against
+  `LiuYangMage/in-context-operator-networks`, whose `icon/` subfolder is unchanged since its first
+  commit `484a104` (2023-06-16). A raw `diff` shows ~2,300 changed lines, but after `ruff format` +
+  import sorting on both sides the real delta is: two new modules `h5loader.py` (861 lines) and
+  `run_h5py.py` (528) — an HDF5 data path replacing upstream's TFRecord pipeline; `jax.tree_map →
+  jax.tree_util.tree_map` in `run.py`; a few unused imports removed; upstream's `data_generation/`
+  dropped; plus junk (bytecode, `h5loader copy.py`, `TEST.IPYNB`, an `.h5` fixture, a `uv init`
+  stub). Hence `Jhko725/icon-baseline`, built with `git filter-repo --subdirectory-filter icon` on
+  the upstream clone so the history is upstream's three commits plus one commit of Joon's edits
+  (`7ac3fb6`), and added as `third_party/icon`. Rejected: submodule to upstream (loses the HDF5
+  path); keeping the folder in-tree (own `pyproject`/`uv.lock`, tracked bytecode, never imported
+  by `src`). Not imported by `src`; excluded from ruff.
+- **Regression harness without goldens (0.8).** The cluster holding checkpoints and datasets is
+  unavailable, so the machinery lands now and the goldens later. Three skip modes keep CI green:
+  no `--checkpoints-root`/`CFNO_CHECKPOINTS`; a case whose checkpoint path still holds the
+  `<TIMESTAMP>` placeholder; a missing input or golden file. `make_inputs.py` extracts one context
+  window per dataset through `ZarrWellDatasetSource` (so normalisation and channel packing match
+  training) and records `loss_args = (dt, *dx)` exactly as `train_multiphysics.get_loss_args`;
+  inputs are committed so tests never need the datasets. `make_goldens.py` refuses non-CPU
+  backends and never overwrites without `--force`. A fixed `jax.random.key(0)` is passed to the
+  model in inference mode; if any model's output changes with the key under `inference_mode`,
+  that is a bug to log in `findings.md`. `test_cases_are_well_formed` runs in the fast tier.
+- **`the-well` removed from dependencies.** Only referenced in a comment crediting the origin of
+  a helper in `data/sources.py`; it pulled in `torch` (Joon's review note on 0.0). `uv.lock` −216
+  lines. `TheWellDataSource` reads The Well's HDF5 files directly and is unaffected.
 
 ## Bugs fixed
 
@@ -97,8 +129,12 @@ tier (`JAX_PLATFORMS=cpu uv run pytest tests/regression --checkpoints-root ./che
 
 ## Open issues
 
-- `icon/` upstream check (is it an unmodified copy of the ICON release?) decides whether the
-  submodule points at upstream or at a new `Jhko725/icon-baseline` repository.
+- 0.7 (Bias-HyperInit audit) and 0.8 goldens are deferred until the cluster is back; the
+  script and the harness are in place. Until then the regression tier skips and Phase 1 must not
+  start (Principle 2: refactor only behind the harness).
+- `prek` as the pre-commit runner (Joon's review note) — see *Responses to review*.
+- `third_party/icon/pyproject.toml`/`uv.lock` and the upstream `data_generation/` folder came along
+  into `icon-baseline`; whether to keep them is a question for that repository.
 - The paper figures exist only as notebook outputs until Phase 6's `scripts/figures/`; the
   `pre-nbstripout` tag preserves them.
 
@@ -135,6 +171,31 @@ tier (`JAX_PLATFORMS=cpu uv run pytest tests/regression --checkpoints-root ./che
 | 0.6b-e | None | Performed the bug fixes. |
 | 0.5 icon submodule | Will need Claude to write the relevant documentation regarding this change. | Used Claude to check whether `icon` is identical to the original repo, or have been changed. Created a new `icon-baseline` repo and made `icon` a git submodule |
 | 0.7, 0.8 | Currently cluster holding the dataset and checkpoints is under maintenance. Would like Claude to set up the structure of the regression harness. The actual audit and generation of the golden files will be deferred to next week when the cluster is back online. | Deferred to discussions with Claude. |
+### Responses to review (Claude, 2026-10-24)
+
+- **prek.** `prek` is a Rust reimplementation of pre-commit that reads the same
+  `.pre-commit-config.yaml`, needs no Python environment per hook and runs noticeably faster
+  [deduced from its README; not verified in this session]. Switching is `uv add --dev prek`,
+  `uv run prek install`, and nothing else changes — the config file is shared. Benefit is small on
+  a repo this size; the cost is one more tool. Recommendation: switch when the hook set grows (e.g.
+  when `ty` and `check_docs.py --files` join it in Phase 2), not now. Left as is.
+- **PyClaw build prerequisites** (`build-essential`, `gfortran`) — added to the README install
+  section; `uv sync` compiles Clawpack's Fortran Riemann solvers.
+- **`torch` in the environment** — came from `the-well`, which was unused; removed (see Design).
+- **`wrapper.py` docstring** — fine as a raw string; the module is deleted in Phase 1 anyway.
+- **0.7 / 0.8** — script and harness landed; the runs on the cluster are the remaining work, and
+  the roadmap marks Phase 1 as blocked on 0.8.
+
+Review-notes rows for the second pass (for Joon to fill in):
+
+| Change | Thoughts | Modifications |
+|---|---|---|
+| `tests/regression/*` — harness machinery, three skip modes, CPU-only goldens | | |
+| `scripts/audit_bias_hyperinit.py` | | |
+| `pyproject.toml`, `uv.lock` — `the-well` removed (drops `torch`); `pythonpath` | | |
+| `README.md` — PyClaw build prerequisites | | |
+| Design entry on `icon/` → `icon-baseline` | | |
+
 ---
 
 ## Steps (plan of record for Joon's part)

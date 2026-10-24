@@ -1,7 +1,7 @@
 ---
 type: roadmap
 status: current
-updated: 2026-10-04
+updated: 2026-10-24
 sources: [joon, claude]
 ---
 
@@ -46,26 +46,26 @@ its one-week time-box alongside Phase 3.
 
 ---
 
-## Phase 0 — Freeze, safety net, hygiene  [C]  (current; branch `phase0-freeze`)
+## Phase 0 — Freeze, safety net, hygiene  [C]  (current; branch `phase0-freeze`; remaining: 0.7 run, 0.8 goldens)
 
 Change document: `changes/2026-10-04-phase0-freeze.md`. Mechanical items by Claude; the
 substantive ones (0.2, 0.5–0.8) by Joon.
 
 | # | Item | Done when | Status |
 |---|---|---|---|
-| 0.1 | Tag `iclr2027-submission` at `5f67a31`; branch `phase0-freeze` | tag on origin | tag local only (proxy blocks tag pushes) — Joon pushes |
-| 0.2 | Reproduce the five breakages (assessment §3) | each failure seen once | |
+| 0.1 | Tag `iclr2027-submission` at `5f67a31`; branch `phase0-freeze` | tag on origin | done (Joon pushed both tags 2026-10-24) |
+| 0.2 | Reproduce the five breakages (assessment §3) | each failure seen once | done |
 | 0.3 | Untrack `.pyc`, `pyclaw.log`, `icon/test_traj_seq.h5`; fix `.gitignore` | `git ls-files` shows none | done (`bfc5a40`) |
-| 0.4 | Tag `pre-nbstripout`; install `nbstripout` filter; strip outputs | `notebooks/` < 1 MB | done (`8392757`, 16 MB → 440 KB); tag local — Joon pushes |
-| 0.5 | `icon/` → `third_party/icon` submodule (upstream if unmodified) | `git submodule status` lists it | |
-| 0.6a | `bias_hyperinit → bias-hyperinit` in 10 yamls; runtime check; default `bias-hyperinit` (decision D15); unit test | `grep bias_hyperinit` empty; test passes | |
-| 0.6b | Delete 3 `HyperFluxFNO` configs + `train_multiphysics_2d.py` | `grep HyperFluxFNO\b` empty | |
-| 0.6c | `data/__init__` exports | `from context_flux_no.data import TheWellDataSource` works | |
-| 0.6d | Delete/rename the misnamed `lskflux` config | a ConvNeXt config still exists | |
-| 0.6e | `scripts/check_configs.py`; census → `docs/config_census_phase0.txt` | no Import/Attribute/init-string failures | |
-| 0.7 | Bias-HyperInit audit of wandb runs → `findings.md` | conclusion recorded | |
+| 0.4 | Tag `pre-nbstripout`; install `nbstripout` filter; strip outputs | `notebooks/` < 1 MB | done (`8392757`, 16 MB → 440 KB); tag pushed |
+| 0.5 | `icon/` → `third_party/icon` submodule (upstream if unmodified) | `git submodule status` lists it | done (`5fa64f2`): modified copy → `Jhko725/icon-baseline` @ `7ac3fb6` |
+| 0.6a | `bias_hyperinit → bias-hyperinit` in 10 yamls; runtime check; default `bias-hyperinit` (decision D15); unit test | `grep bias_hyperinit` empty; test passes | done (`25c7494`) |
+| 0.6b | Delete 3 `HyperFluxFNO` configs + `train_multiphysics_2d.py` | `grep HyperFluxFNO\b` empty | done (`25c7494`) |
+| 0.6c | `data/__init__` exports | `from context_flux_no.data import TheWellDataSource` works | done (`25c7494`) |
+| 0.6d | Delete/rename the misnamed `lskflux` config | a ConvNeXt config still exists | done (`25c7494`) |
+| 0.6e | `scripts/check_configs.py`; census → `docs/config_census_phase0.txt` | no Import/Attribute/init-string failures | done (`25c7494`) |
+| 0.7 | Bias-HyperInit audit of wandb runs → `findings.md` | conclusion recorded | script ready (`scripts/audit_bias_hyperinit.py`); run deferred — cluster down |
 | 0.8 | Regression harness: cases, inputs, goldens (CPU), tests green twice | `pytest tests/regression` green ×2 | |
-| 0.9 | Tooling: dev deps, ruff format, pre-commit, CUDA as optional extra, CPU CI, pytest markers | CI green | done (`fbeb7a8`, `2a65dfc`); CI result pending first push |
+| 0.9 | Tooling: dev deps, ruff format, pre-commit, CUDA as optional extra, CPU CI, pytest markers | CI green | done (`fbeb7a8`, `2a65dfc`); `the-well`/`torch` dropped 2026-10-24 |
 | 0.10 | README, `pyproject` metadata, hello-world removed, training README fixed | — | done (`7325817`) |
 | 0.11 | `docs/` tree, `CLAUDE.md`, `scripts/check_docs.py` | `check_docs.py` passes | done (`0b0fd68`) |
 
@@ -156,7 +156,7 @@ Exit: `hyperfluxfno.py` deleted; conditioner ablation is a one-key config change
 | # | Item | Done when |
 |---|---|---|
 | 7.1 | One `train.py`; component groups `model/{encoder,conditioner,target\|flux,integrator}`, `data/`, `ic/`, `training/`, `loss/`; `experiment/*` presets | `check_configs.py` → 0 failures |
-| 7.2 | Dependencies pruned; README final | — |
+| 7.2 | Dependencies pruned (`the-well` already gone; xarray/h5netcdf/netcdf4/dask after Phase 4; check `diffrax`, `tensorstore`, `fsspec`); README final | — |
 
 ## Research items waiting on the interfaces
 
@@ -185,3 +185,5 @@ IMEX) — see `design/fv-conventions.md` §Extensibility.
 | 2026-10-04 | `phase0-freeze` | 0.4: notebook outputs stripped (16 MB → 440 KB); `nbstripout` filter; `pre-nbstripout` tag (local) | `changes/2026-10-04-phase0-freeze.md` |
 | 2026-10-04 | `phase0-freeze` | 0.9: dev deps (hypothesis, chex, ty, pre-commit, nbstripout); CUDA optional extra; pytest markers; ruff format + excludes; pre-commit; CPU CI; `style:` commit isolating the reformat | `changes/2026-10-04-phase0-freeze.md` |
 | 2026-10-04 | `phase0-freeze` | 0.10: README; training README model names; hello-world stub removed | `changes/2026-10-04-phase0-freeze.md` |
+| 2026-10-24 | `phase0-freeze` (via `main`) | 0.1/0.4 tags pushed; 0.2 breakages confirmed; 0.6a–e: `bias-hyperinit` fixed + guarded + default, dangling configs and `train_multiphysics_2d.py` removed, `lskflux`→`convnext` config, `data/__init__` exports, `check_configs.py`; 0.5: `icon/` → `third_party/icon` submodule (`icon-baseline`) | `changes/2026-10-04-phase0-freeze.md` |
+| 2026-10-24 | `phase0-freeze` | 0.8 machinery: `tests/regression/` (cases, helpers, `make_inputs.py`, `make_goldens.py`, skip modes); 0.7 script `scripts/audit_bias_hyperinit.py`; `the-well` (and with it `torch`) removed; README build prerequisites | `changes/2026-10-04-phase0-freeze.md` |
