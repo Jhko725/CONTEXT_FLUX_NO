@@ -7,7 +7,7 @@ Checks (all under docs/):
   4. the Done ledger in docs/roadmap.md is chronological (dates non-decreasing);
   5. --files: every file in `git diff --name-only <base>...HEAD` is covered by a
      backtick-quoted entry in the change document's `## Files` section. Entries may
-     be exact paths, basenames, directory prefixes, or globs with `*`, `**`, `…`
+     be exact paths, basenames, path suffixes, directory prefixes, or globs with `*`, `**`, `…`
      and `{a,b}` brace lists (e.g. `docs/decisions/0001…0009-*.md`,
      `notebooks/**/*.ipynb`).
 
@@ -149,7 +149,12 @@ def _is_listed(path: str, patterns: list[str]) -> bool:
             # allow a directory prefix pattern such as `notebooks/**/*.ipynb` or `docs/decisions/*`
             if fnmatch.fnmatch(path, pat.replace("**/", "")):
                 return True
-        elif pat == path or pat == name or path.startswith(pat.rstrip("/") + "/"):
+        elif (
+            pat == path
+            or pat == name
+            or path.endswith("/" + pat)  # a path suffix such as `data/__init__.py`
+            or path.startswith(pat.rstrip("/") + "/")
+        ):
             return True
     return False
 

@@ -43,3 +43,4 @@ row is unverified. Tiers: `property` (fast, every commit) or `verification` (`-m
 - fp32 cannot demonstrate fifth order beyond ~2 refinements (error floor ~1e-7); verification uses `jax_enable_x64`.
 - Cross-code tolerances are set from a mutual convergence study (DG and FV dissipate differently near shocks), recorded here when measured.
 - Regression goldens are generated and compared on CPU (`JAX_PLATFORMS=cpu`) for determinism.
+| V24 | No PRNG key is consumed twice while constructing any model from its config (F5/F6 guard) | `tests/unit/test_key_hygiene.py` | identity of recorded keys | exact | property-style (unit) | green since `134dfdb` |

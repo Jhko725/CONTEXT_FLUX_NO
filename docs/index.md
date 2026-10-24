@@ -1,7 +1,7 @@
 ---
 type: index
 status: current
-updated: 2026-10-04
+updated: 2026-10-24
 ---
 
 # `context_flux_no` documentation — index
@@ -28,8 +28,8 @@ document is listed here and has frontmatter.
 
 | Document | What it holds |
 |---|---|
-| [`findings.md`](findings.md) | append-only: anything that bears on a *reported result* or constrains a later phase (F1–F8 so far) |
-| [`verification.md`](verification.md) | claim → test → oracle → tolerance → status, for every numerics claim (V1–V23) |
+| [`findings.md`](findings.md) | append-only: anything that bears on a *reported result* or constrains a later phase (F1–F9 so far) |
+| [`verification.md`](verification.md) | claim → test → oracle → tolerance → status, for every numerics claim (V1–V24) |
 
 ## Design documents (`design/`)
 
@@ -60,8 +60,8 @@ recorded in the roadmap tables and the change documents that implement them.
 
 | Branch | Status | Document |
 |---|---|---|
-| `phase0-freeze` | in-progress | [`2026-10-04-phase0-freeze.md`](changes/2026-10-04-phase0-freeze.md) |
-| `phase1-prune` | planned | [`2026-10-04-phase1-prune.md`](changes/2026-10-04-phase1-prune.md) |
+| `phase0-freeze` | landed on `main` (0.7 run and 0.8 goldens pending) | [`2026-10-04-phase0-freeze.md`](changes/2026-10-04-phase0-freeze.md) |
+| `phase1-prune` | landed (merge gated on the regression tier) | [`2026-10-04-phase1-prune.md`](changes/2026-10-04-phase1-prune.md) |
 
 ## Historical
 
