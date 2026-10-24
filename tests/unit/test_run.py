@@ -62,7 +62,7 @@ def _train(run: Run, num_steps, state=None, seed=0):
             evaluate=trainer.evaluator(_loader(100, seed=1)),
             eval_every=2,
         )
-        run.finish(ckpt)
+    run.finish()
     return out
 
 

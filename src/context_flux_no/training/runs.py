@@ -119,7 +119,7 @@ def load_run(
     if run.record.status == "legacy":
         from context_flux_no.training.io import load_model
 
-        ckpt_dir = Path(run.record.extra.get("checkpoint_dir", run.directory))
+        ckpt_dir = run.directory / run.record.extra.get("checkpoint_dir", ".")
         return load_model(ckpt_dir, step), run.record
     state, run = load_state(run_dir, step)
     return state.model, run.record

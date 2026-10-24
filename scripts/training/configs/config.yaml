@@ -3,15 +3,27 @@ defaults:
 - model: hyperfluxno
 - training: default
 - loss_fn: vanilla
+- wandb: disabled
 - override hydra/launcher: submitit_slurm
 - _self_
 
-wandb_kwargs:
-  entity: jhko725
-  project: hyperfluxfno_revised
-  
+# Optional: a name grouping the runs of one experiment (wandb group; see training.wandb_run).
+experiment: null
+
+# Resume semantics (ADR-0010):
+#   resume: null            start a new run in hydra.run.dir
+#   resume: <run_dir>       continue THAT run in place (same run_id; config changes recorded)
+#   warm_start: <run_dir>   start a new run here from that run's latest TrainerState
+resume: null
+warm_start: null
+
 hydra:
-  launcher: 
+  run:
+    dir: runs/${now:%Y-%m-%d}/${now:%H-%M-%S}
+  sweep:
+    dir: runs/multirun/${now:%Y-%m-%d}/${now:%H-%M-%S}
+    subdir: ${hydra.job.num}
+  launcher:
     timeout_min: 2880
     tasks_per_node: 1
     gpus_per_node: 1

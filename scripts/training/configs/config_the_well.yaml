@@ -1,0 +1,6 @@
+# train_the_well.py entry point: config.yaml with The Well data and training defaults.
+defaults:
+  - config
+  - override data: well_euler_2d
+  - override training: the_well
+  - _self_

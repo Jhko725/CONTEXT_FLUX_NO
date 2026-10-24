@@ -1,0 +1,26 @@
+# Training settings of train_the_well.py: default.yaml plus the gradient clipping that script
+# applied in code. The whole optimizer is in the config so that runs.state_template can rebuild
+# the checkpointed TrainerState from config.yaml alone (ADR-0010). Not derived from default.yaml
+# with a defaults list because OmegaConf merges would keep default's `learning_rate` key inside
+# the `optax.chain` node.
+context_length: 20
+batch_size: 256
+max_steps: 50000
+
+optimizer:
+  _target_: optax.chain
+  _args_:
+    - _target_: optax.clip_by_global_norm
+      max_norm: 0.1
+    - _target_: optax.adamw
+      learning_rate:
+        _target_: optax.schedules.warmup_cosine_decay_schedule
+        init_value: 0.0
+        peak_value: 5e-5
+        warmup_steps: 5000
+        decay_steps: 45000
+        end_value: 0.0
+
+eval_every: 1
+save_every: 100
+log_every: 1

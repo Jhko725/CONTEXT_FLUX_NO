@@ -153,15 +153,20 @@ class Run:
         self.record.write(self.metadata_path)
         return self.record
 
-    def finish(
-        self, checkpointer: OrbaxCheckpointer | None, *, status: str = "finished"
-    ) -> RunRecord:
-        """Close the record: status, final step and the best checkpoint by the
-        checkpointer's metric."""
+    def finish(self, *, status: str = "finished") -> RunRecord:
+        """Close the record: status, final step and the best checkpoint by the record's
+        metric. Opens its own view of `checkpoints/`, so it works after the training
+        checkpointer was closed."""
         changes: dict[str, Any] = {"status": status}
-        if checkpointer is not None:
-            changes["final_step"] = checkpointer.latest_step
-            best = checkpointer.best
+        if self.checkpoint_dir.exists():
+            ckpt = OrbaxCheckpointer(
+                self.checkpoint_dir, metric=self.record.metric_name
+            )
+            try:
+                changes["final_step"] = ckpt.latest_step
+                best = ckpt.best
+            finally:
+                ckpt.close()
             if best is not None:
                 changes["best_step"], changes["best_metric"] = best
         return self.update(**changes)

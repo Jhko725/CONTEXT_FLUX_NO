@@ -15,4 +15,8 @@ optimizer:
     warmup_steps: 5000
     decay_steps: 45000
     end_value: 0.0
-checkpoint_dir: ./checkpoints
+# checkpoints live in the run directory (hydra.run.dir/checkpoints); see training.run.Run
+eval_every: 1      # one-batch validation every N steps (the ICLR scripts validated every step)
+save_every: 100    # offer the TrainerState to the checkpointer every N steps; the final step is always
+                   # saved and the best (by valid_loss) among the saved ones is kept
+log_every: 1       # metrics to wandb every N steps

@@ -69,8 +69,21 @@ def index_from_config(cfg: Any, *, dataset_id: str | None = None) -> dict[str, A
                 return default
         return node
 
-    lr = get("training", "optimizer", "learning_rate")
-    peak_lr = lr.get("peak_value") if hasattr(lr, "get") else lr
+    def peak_lr_of(opt: Any) -> Any:
+        """`learning_rate` of an optimizer node — a number, a schedule's `peak_value`, or
+        the first one found inside an `optax.chain`'s `_args_`."""
+        if opt is None or not hasattr(opt, "get"):
+            return None
+        lr = opt.get("learning_rate")
+        if lr is not None:
+            return lr.get("peak_value") if hasattr(lr, "get") else lr
+        for part in opt.get("_args_") or []:
+            found = peak_lr_of(part)
+            if found is not None:
+                return found
+        return None
+
+    peak_lr = peak_lr_of(get("training", "optimizer"))
     return {
         "model": _tail(get("model", "_target_")),
         "encoder": get("model", "encoder_type"),
