@@ -48,17 +48,19 @@ src/context_flux_no/
 ├── experiment.py                config → objects: build_model/build_optimizer/state_template, wandb mirror (build/finish_wandb_run), what the training scripts share (Run in Hydra's dir, resume/warm_start)
 ├── provenance.py                git_state(), package_version()
 ├── data/                        sources.py: WellDatasetSourceBase · ZarrWellDatasetSource (current) · TheWellDataSource (re-implements base)  (~~transforms.py~~)
-├── simulations/                 pde/{burgers, cubic, euler, shallow_water, sine_1d, base}: 2 classes on AbstractHyperbolicConservationLaw,
-│                                5 plain eqx.Modules (~~Euler1D~~), all returning (u, t, xs); pdesolve.py (PyClaw wrapper); utils.generate_dataset;
-│                                dataset.py ZarrWellDataset (writer); pyclaw_utils.py
+├── simulations/                 reference solvers + data generation (ADR-0011): grid.py (Grid), backend.py (SolverBackend, BC names),
+│                                pyclaw.py (PyClawSpec, PyClawBackend classic|sharpclaw), record.py (DatasetRecord), writer.py (WellWriter,
+│                                Well boundary_conditions), generate.py (generate_dataset); pde/{base (minimal interface until 4.1), burgers,
+│                                cubic, euler, shallow_water, sine_1d} — 5 PyClaw families + CubicFlux2D/ViscousBurgers1D own steppers
+│                                (~~dataset.py~~, ~~utils.py~~, ~~pdesolve.py~~, ~~pyclaw_utils.py~~)
 ├── waveforms/                   GaussianRandomField{,1D,2D}, PeriodicRandomStepFunction{1D,2D}, MultichannelWaveform, TruncatedFourier1D
 ├── plotting/, metrics.py, utils.py, custom_types.py
 scripts/
 ├── training/  train_multiphysics.py (zarr) · train_the_well.py — data + loaders only, on experiment.train; configs/ (22 model, 3 data, 2 training, 3 wandb yamls; config.yaml + config_the_well.yaml)
 ├── backfill_run_records.py   legacy ICLR checkpoints → metadata.json
-└── data/      generate_dataset.py; configs/
+└── data/      generate_dataset.py (backend=default|classic|sharpclaw, bc=); configs/ (pde, initial_condition, backend)
 notebooks/    data_generation/ evaluation/ misc/ nn/ training/ — evaluation logic (compute_metrics ×7, metrics_long_rollout ×4) lives here; 5 legacy notebooks removed
-tests/        5 example files + test_nn_hypernetwork.py; tests/unit/ (key hygiene; loggers, checkpoint, trainer, run_record, run, experiment, backfill — 37 tests); tests/regression/ machinery (goldens pending)
+tests/        5 example files + test_nn_hypernetwork.py; tests/unit/ (key hygiene; training/runs; pyclaw backend + goldens_simulations/, backend agreement, generate — 59 tests); tests/verification/ (x64, -m slow: cross-code); tests/regression/ machinery (goldens pending)
 third_party/icon   submodule → Jhko725/icon-baseline (upstream ICON + Joon's HDF5 data path); not imported by src   [0.5 done]
 ```
 
@@ -85,7 +87,7 @@ src/context_flux_no/
                           analytic · riemann · flux/{base (FluxPredictor, NumericalFlux), classical, neural}
   pde/           Phase 4  PDEFamily (tiered: flux, max_wave_speed, reflect, conversions | eigensystem… | riemann_flux | viscous_flux)
   ic/            Phase 4  InitialCondition samplers over waveforms/
-  simulations/   Phase 2/4  SolverBackend: PyClawBackend · TrixiBackend · JaxBackend; dataset writer; DatasetRecord
+  simulations/   Phase 2a ✓ PyClawBackend · DatasetRecord · WellWriter · generate;  pending: TrixiBackend (2a-trixi) · JaxBackend (4.7) · PDEFamily (4.1)
   models/incontext/  Phase 3  InContextOperator ⊃ InContextFluxOperator; conditioners; encoders
   models/baselines/  DISCO · DPOT · NaiveFNO …
   training/      Phase 5 ✓ Trainer · losses · loggers · checkpoint   (building blocks)
@@ -136,4 +138,5 @@ evidence that each numerics claim is tested is `verification.md`.
 | Four-tier testing | ADR-0008 |
 | Tracks C/M/R | ADR-0009 |
 | Run identity: run directory, `RunRecord`, injected side effects, wandb as mirror, resume | ADR-0010, `design/run-identity.md` |
+| Reference solvers behind `SolverBackend`; `DatasetRecord`; agreement by mutual convergence | ADR-0011, `design/simulation-backends.md` |
 | Smaller decisions (D1–D4, D15, D16) | `roadmap.md` tables and change documents |

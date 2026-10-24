@@ -1,7 +1,7 @@
 ---
 type: verification
 status: current
-updated: 2026-10-24
+updated: 2026-10-25
 sources: [claude]
 ---
 
@@ -31,10 +31,12 @@ row is unverified. Tiers: `property` (fast, every commit) or `verification` (`-m
 | V15 | Cubic and sine flux Riemann problems produce the correct composite waves | `tests/verification/test_riemann.py::test_nonconvex` | Osher/convex-hull exact | as V14 | verification | planned |
 | V16 | Sod and Lax tubes (Euler); SW dam-break | `tests/verification/test_riemann.py` | Toro exact / SW exact | as V14 | verification | planned |
 | V17 | Non-periodic: inflow/outflow advection; Sod with extrapolation; wall shock reflection | `tests/verification/test_bc.py` | exact | as V14 | verification | planned |
-| V18 | Backend agreement: `PyClawBackend` vs `TrixiBackend` on every family | `tests/verification/test_crosscode.py::test_reference_backends` | each other | from mutual convergence study | verification | planned [C] |
+| V18a | Backend agreement within PyClaw: Classic vs SharpClaw converge to each other (L1 ratio per halving ≥ 1.5; measured ≈ 4) on every PyClaw family | `tests/unit/test_backend_agreement.py` (1-D) · `tests/verification/test_crosscode.py::test_euler_2d_classic_vs_sharpclaw` | each other | ratios 2026-10-25: cubic 3.0/4.2, sine 4.1/4.3, Burgers 3.5/4.1, SW 4.7/5.0, Euler-2D 8.3/3.5 | property-style (unit) / verification | **green** (`phase2a-pyclaw-backend`) |
+| V18 | Backend agreement: `PyClawBackend` vs `TrixiBackend` on every family | `tests/verification/test_crosscode.py::test_reference_backends` | each other | protocol of V18a | verification | planned [C]; Trixi pending |
 | V19 | Three-way: own WENO5 vs SharpClaw vs Trixi | `…::test_three_way` | as V18 | as V18 | verification | planned [R] |
 | V20 | 2D Euler vs JAX-Fluids on one Lax–Liu configuration | `…::test_jaxfluids_euler` | JAX-Fluids | as V18 | verification | planned [R] |
 | V21 | `vmap` == Python loop; `jit` == eager, for every `FluxPredictor` | `tests/property/test_transforms.py` | each other | `rtol 1e-6` | property | planned |
+| V25 | `PyClawBackend("classic")` is bit-identical to the pre-2a per-class `solve()` on every PyClaw family | `tests/unit/test_pyclaw_backend.py::test_classic_is_bit_identical_to_pre_2a_solve` | goldens at `1ff31bb` | exact | unit | **green** |
 | V22 | ICLR checkpoints reproduce their recorded forward pass and 5-step rollout | `tests/regression/test_regression.py` | goldens | `rtol 1e-5, atol 1e-6` (CPU) | regression | machinery landed 2026-10-24; goldens pending (cluster) |
 | V23 | Mandatory statement: all of V1–V21 hold at N = 1, 2 and (tiny) 3 | parametrised | — | — | both | planned |
 

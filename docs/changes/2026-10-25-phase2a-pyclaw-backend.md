@@ -1,6 +1,6 @@
 ---
 type: change
-status: planned
+status: landed
 updated: 2026-10-25
 branch: phase2a-pyclaw-backend
 roadmap: Phase 2a (PyClaw half), Phase 4.3
@@ -21,7 +21,7 @@ cannot be installed in Claude's container (download hosts are blocked), so `refe
 generation path is refactored behind a backend with the Classic scheme kept bit-identical (a test
 pins it), so existing datasets stay reproducible until Phase 4.4 regenerates them deliberately.
 
-## Ledger (to confirm before execution)
+## Ledger (confirmed 2026-10-25; all nine items landed)
 
 | # | Item | Done when |
 |---|---|---|
@@ -62,30 +62,107 @@ What `reference/trixi/` + `simulations/trixi.py::TrixiBackend` need, so it can b
 
 ## Files
 
-*(planned; filled in as the work lands)*
+Also on this branch before the code (docs commits `d95900a`, `1ff31bb`): `docs/design/fv-core-plan.md`
+(Phase 2b/2c plan for Joon), `docs/design/python-julia-repo.md` (Julia layout, juliacall assessment),
+`docs/index.md`, `docs/roadmap.md`, `docs/architecture.md` (`sim` → `simulations` naming).
+
+Commit 1 — `7f055c1` backend (ledger 1–4):
+- `src/context_flux_no/simulations/grid.py` — new: `Grid` (PyClaw's centre arithmetic, `dxs`, `axis_names`, `to_dict`).
+- `src/context_flux_no/simulations/backend.py` — new: `SolverBackend` ABC, `BCName`/`BCs`, `normalize_bcs`, `check_inputs`.
+- `src/context_flux_no/simulations/pyclaw.py` — new: `PyClawSpec`, `PyClawBackend(scheme, **solver_overrides)` (folds the old `pdesolve.py` + `pyclaw_utils.py`), `describe()`.
+- `src/context_flux_no/simulations/pde/base.py` — rewritten: minimal common interface + default `solve()` through a backend; `ICFactory`.
+- `src/context_flux_no/simulations/pde/{cubic,sine_1d,shallow_water,burgers,euler}.py` — the five PyClaw classes subclass the base, gain `parameters`/`field_rank_names`/`pyclaw_spec`, lose their hand-built solvers; `SineFlux1D.solve_pyclaw` → `solve`; `Euler2D.to_conserved`; `riemann_cubic_1D` silences its masked divide; `CubicFlux2D`/`ViscousBurgers1D` on the base too (own steppers kept, `backend=` refused).
+- `src/context_flux_no/simulations/pde/__init__.py` — exports all seven classes + base.
+- `tests/unit/goldens_simulations/{cubic_1d,sine_1d,burgers_1d,shallow_water_1d,euler_2d}.npz` — new: Classic output of the pre-2a `solve()` at `1ff31bb`.
+- `tests/unit/make_goldens_simulations.py` — new: the cases + regeneration script.
+- `tests/unit/test_pyclaw_backend.py` — new: bit identity (V25), SharpClaw on every family, `Grid`, `normalize_bcs`, input checks, non-periodic run.
+- `tests/unit/test_backend_agreement.py` — new: V18a, 1-D families.
+- `tests/verification/{__init__,conftest,test_crosscode}.py` — new: the verification tier scaffold (`x64`, `-m slow`) and V18a for 2-D Euler.
+
+Commit 2 — `db62a07` records and writer (ledger 5–8):
+- `src/context_flux_no/simulations/record.py` — new: `DatasetRecord`, `sidecar_path`.
+- `src/context_flux_no/simulations/writer.py` — new: `WellWriter` (replaces `simulations/dataset.py`; adds `boundary_conditions`, record in attrs + sidecar, `finalize(n_written, n_failed)`).
+- `src/context_flux_no/simulations/generate.py` — new: `generate_dataset(..., backend, ic_description)` + `sample_coefficients` (replaces `simulations/utils.py`).
+- `src/context_flux_no/simulations/__init__.py` — package exports.
+- `src/context_flux_no/simulations/{dataset,utils,pdesolve,pyclaw_utils}.py` — deleted.
+- `src/context_flux_no/data/sources.py` — `dataset_record_ids`; `dataset_id` prefers record ids.
+- `src/context_flux_no/waveforms/grf.py` — `means`/`scales` default to `None` (F11).
+- `src/context_flux_no/simulations/pde/burgers.py` — `ViscousBurgers1D.solve` takes `(x_spans, Nxs)`, writes the last frame, samples cell centres (F8).
+- `scripts/data/generate_dataset.py` — on `simulations.generate_dataset`; `backend`/`bc`; passes the IC config into the record.
+- `scripts/data/configs/config.yaml`, `scripts/data/configs/backend/{default,classic,sharpclaw}.yaml` — backend group, `bc` key.
+- `scripts/data/README.md` — families, ICs, backends, `dataset.json`.
+- `tests/unit/test_generate_dataset.py` — new.
+
+Commit 3 — docs:
+- `docs/decisions/0011-solver-backends-and-dataset-provenance.md`, `docs/design/simulation-backends.md` — new.
+- `docs/changes/2026-10-25-phase2a-pyclaw-backend.md` — this document.
+- `docs/roadmap.md` (2a split into 2a-pyclaw done / 2a-trixi pending, 4.3 done, 4.4 note, Done rows), `docs/architecture.md`, `docs/verification.md` (V18a, V25), `docs/findings.md` (F8 update, F11), `docs/glossary.md`, `docs/index.md`.
 
 ## Design
 
-*(planned)*
+- **`solve()` on the PDE class stays, the backend is an argument** rather than scripts calling backends directly: `generate_dataset`, the regression inputs and notebooks keep one call shape, and `backend=None` is exactly the old behaviour. Rejected: removing `solve()` from the classes (every caller changes for no gain before Phase 4.1).
+- **`PyClawSpec` carries per-scheme solver options** (`classic_options`, `sharpclaw_options`) so the Classic defaults each family had (MC + CFL 0.5/0.9, van Leer, transverse waves) survive bit for bit while SharpClaw gets PyClaw's own defaults; `PyClawBackend(**solver_overrides)` applies last. Rejected: one global option set (would have changed Classic output for some family).
+- **`Grid.centers` uses PyClaw's `lo + (i + ½) dx` arithmetic**, not `linspace` midpoints — the two differ in the last ulp and the goldens would not have matched.
+- **Interim base class, not `PDEFamily`** (ADR-0011 §3): ~40 lines, dies in 4.1; the alternative coupled 2a to the `fv/` flux interface Joon is about to write.
+- **BC names, not objects** (ADR-0011): strings are what PyClaw/Trixi consume and the record stores; objects arrive with ghost-cell padding in 2b.
+- **Agreement = mutual convergence** with a ratio threshold of 1.5 against a measured ≈ 4: loose enough not to flake on a different BLAS, tight enough to catch a wrong flux (a sign error gives O(1) distance that does not shrink).
+- **Record id is local, not a content hash** (ADR-0011): identity without reading the data; a digest can go in `extra` later.
+- **`boundary_conditions` per axis-side with masks** exactly as The Well's reader reconstructs them (`_padding_bcs`), one `*_periodic` group when periodic; `extrap` is stored as the Well's `open`.
+- **Trixi deferred, not stubbed**: no `simulations/trixi.py` placeholder — an untestable module is worse than a documented hand-off (this document §Trixi hand-off, `design/python-julia-repo.md`).
+- **`tests/verification/` created now** (conftest with `x64`) so the 2-D agreement case has a home; V10–V17 land there in 2f.
 
 ## Bugs fixed
 
-*(planned)*
+- `GaussianRandomField(means, scales)` required arguments since `b918750` while every 1-D IC config omits them: the data script could not build `grf`/`step` ICs. Defaults restored (F11).
+- `ViscousBurgers1D.solve` took `(x_span, Nx)` while `generate_dataset` passes sequences, so the `burgers_1d` config could not run; it also never wrote the last frame (`while save_idx < Nt`) and evaluated the IC on left edges (F8). Fixed; `CubicFlux2D`'s Rusanov stepper untouched.
+- Five of seven PDE classes did not implement the base the writer needs (`parameters`, `n_spatial_dims`, `field_rank_names`, `solution_to_well_schema`), so only `cubic_1d` and `euler_2d` could be generated. All seven conform now (`scripts/data/generate_dataset.py` verified on sine, cubic, Burgers, shallow water with N = 32).
+- `riemann_cubic_1D` raised a NumPy `invalid value` warning on every call from the division inside `np.where`; masked with `errstate` (no numerical change — the goldens still match).
 
 ## Findings
 
-*(planned)*
+- **F8 updated** — `ViscousBurgers1D` last-frame and centre bugs fixed here; regeneration of Burgers/2-D cubic still Phase 4.
+- **F11 (new)** — the `GaussianRandomField` signature change of 2026-08-29 broke the 1-D IC configs; no dataset in the paper is affected (all predate it), but any attempt to regenerate since then would have failed. Appended to `docs/findings.md`.
+- The Classic-vs-SharpClaw ratios (≈ 4) say the ICLR data are second-order Classic solutions; a future comparison against SharpClaw-generated data would see O(Δx²) differences near smooth features and scheme-dependent shock profiles — worth remembering when 4.4 switches backends (recorded in `design/simulation-backends.md` §Verification protocol).
 
 ## Tests
 
-*(planned)*
+Fast tier (`JAX_PLATFORMS=cpu uv run pytest tests/unit`, now 59 tests, ~65 s; the simulation ones need `clawpack`, which builds here after `apt-get install gfortran`):
+- `test_pyclaw_backend.py` — V25 bit identity on 5 families; SharpClaw runs on 5 families and starts from the identical state; `Grid` == PyClaw centres; `normalize_bcs` rules; input validation; `describe`; a non-periodic run.
+- `test_backend_agreement.py` — V18a on the four 1-D families (ratios ≥ 1.5 over 64/128/256).
+- `test_generate_dataset.py` — Hypothesis round trip of `DatasetRecord`; sidecar naming; writer layout incl. both BC layouts and `finalize`; `generate_dataset` → store + `dataset.json` → `ZarrWellDatasetSource` → `dataset_id` from the record.
+
+Verification tier (`JAX_PLATFORMS=cpu uv run pytest tests/verification -m slow`): `test_crosscode.py::test_euler_2d_classic_vs_sharpclaw` (V18a, 2-D).
+
+`scripts/import_all.py`: 0 failed, 0 skipped (clawpack present). `scripts/check_configs.py`: the same 14 dimension-mismatch pairings as before.
 
 ## Open issues
 
-*(planned)*
+- **2a-trixi** — needs Julia; hand-off above. Until then V18 is not runnable and ADR-0004's "both oracles before WENO5" is satisfied by PyClaw alone for 2b–2e(C); proposal to amend ADR-0004 accordingly is in the Phase 2b plan.
+- **`CubicFlux2D` has no PyClaw path** (no 2-D Python kernels); options: a Fortran `rpn2` for a scalar cubic flux (~40 lines, built with the clawpack extension machinery), Trixi, or `JaxBackend` (4.7). Decide at 4.4.
+- **`ViscousBurgers1D` is parabolic** — outside ADR-0001's hyperbolic scope until tier-3 `viscous_flux`; its own stepper stays.
+- **`sources.py` prints metadata on every construction** (`print(metadata_name, val, len(val))`) — pre-existing noise, left alone (not this branch's file to clean).
+- **Python-kernel SharpClaw is slow** (pure-Python WENO): fine for tests and small regen, not for 100 × 100 trajectories at N = 100 in 2-D. Fortran kernels for cubic/sine (Clawpack ships `riemann.cubic_1D`) would fix it; not needed yet.
+- **`zarr` shard-shape inference warning** (`shards="auto"`, pre-existing) — harmless; pin explicit shards when the dataset sizes are settled in 4.4.
+- **Goldens policy** — `goldens_simulations/` are regenerated only with a change-document entry (as the regression goldens).
 
 ## Review notes
 
 | Change | Thoughts | Modifications |
 |---|---|---|
-| *(rows added per file as the work lands)* | | |
+| `simulations/grid.py` — `Grid` | | |
+| `simulations/backend.py` — `SolverBackend`, BC names, `normalize_bcs` | | |
+| `simulations/pyclaw.py` — `PyClawSpec`, `PyClawBackend` | | |
+| `simulations/pde/base.py` — minimal interface + default `solve()` | | |
+| `simulations/pde/{cubic,sine_1d,shallow_water,burgers,euler}.py` — classes on the base, `pyclaw_spec`; `ViscousBurgers1D` fixes | | |
+| `simulations/record.py` — `DatasetRecord` | | |
+| `simulations/writer.py` — `WellWriter`, `boundary_conditions` | | |
+| `simulations/generate.py` — `generate_dataset(backend)` | | |
+| `simulations/__init__.py`, deleted `dataset.py` / `utils.py` / `pdesolve.py` / `pyclaw_utils.py` | | |
+| `data/sources.py` — `dataset_record_ids`, `dataset_id` | | |
+| `waveforms/grf.py` — defaults (F11) | | |
+| `scripts/data/generate_dataset.py`, `configs/config.yaml`, `configs/backend/*.yaml`, `README.md` | | |
+| `tests/unit/goldens_simulations/*.npz`, `make_goldens_simulations.py`, `test_pyclaw_backend.py` | | |
+| `tests/unit/test_backend_agreement.py`, `tests/verification/*` | | |
+| `tests/unit/test_generate_dataset.py` | | |
+| `docs/decisions/0011-*.md`, `docs/design/simulation-backends.md` | | |
+| `docs/roadmap.md`, `architecture.md`, `verification.md`, `findings.md`, `glossary.md`, `index.md` | | |
