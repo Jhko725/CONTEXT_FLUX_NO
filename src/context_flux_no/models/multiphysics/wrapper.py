@@ -7,7 +7,7 @@ from .abstract import AbstractMultiphysicsOperator
 
 
 class MultiphysicsWrapper(AbstractMultiphysicsOperator):
-    """A wrapper class that wraps a neural operator model that maps a solution u_t to
+    r"""A wrapper class that wraps a neural operator model that maps a solution u_t to
     u_{t_\Delta t} to a multiphysics model.
 
     Note that this is achieved by disregarding the context, and just mapping the last

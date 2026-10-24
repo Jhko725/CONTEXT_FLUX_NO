@@ -106,25 +106,29 @@ tier (`JAX_PLATFORMS=cpu uv run pytest tests/regression --checkpoints-root ./che
 
 | Change | Thoughts | Modifications |
 |---|---|---|
-| `CLAUDE.md` — session protocol and conventions | | |
-| `docs/roadmap.md` — tracks, phase tables, Done ledger | | |
-| `docs/architecture.md` — as-found + planned | | |
-| `docs/verification.md` — claim → test matrix (all planned) | | |
-| `docs/findings.md` — F1–F8 seeded | | |
-| `docs/glossary.md` | | |
-| `docs/decisions/0001–0009` | | |
-| `docs/design/fv-conventions.md` | | |
-| `docs/index.md` | | |
-| `scripts/check_docs.py` | | |
-| `.gitignore`, untracked files | | |
-| `.gitattributes` + stripped notebooks | | |
-| `pyproject.toml`, `uv.lock` — dev deps, cuda extra, markers, ruff scope | | |
-| `style:` commit — ruff format over 10 source files, one unused import | | |
-| `.pre-commit-config.yaml` | | |
-| `.github/workflows/test.yml` | | |
-| `README.md`, `scripts/training/README.md` | | |
-| `src/context_flux_no/__init__.py` — stub removed | | |
+| `CLAUDE.md` — session protocol and conventions | Looks good. | None |
+| `docs/roadmap.md` — tracks, phase tables, Done ledger | Looks good. | None |
+| `docs/architecture.md` — as-found + planned | Looks good. | None |
+| `docs/verification.md` — claim → test matrix (all planned) | Looks good. | None |
+| `docs/findings.md` — F1–F8 seeded | Agreed. | None |
+| `docs/glossary.md` | Agreed. | None |
+| `docs/decisions/0001–0009` | Looks good for now. | None |
+| `docs/design/fv-conventions.md` | Looks good. | None |
+| `docs/index.md` | Looks good. | None |
+| `scripts/check_docs.py` | Looks good. | None |
+| `.gitignore`, untracked files | Confirmed. | None |
+| `.gitattributes` + stripped notebooks | Confirmed. | None |
+| `pyproject.toml`, `uv.lock` — dev deps, cuda extra, markers, ruff scope | Confirmed. | None |
+| `style:` commit — ruff format over 10 source files, one unused import | Confirmed. | None. |
+| `.pre-commit-config.yaml` | Would there be a benefit to switching to prek? | Deferred to discussions with Claude. |
+| `.github/workflows/test.yml` | Confirmed. | None |
+| `README.md`, `scripts/training/README.md` | Confirmed. | None |
+| `src/context_flux_no/__init__.py` — stub removed | Confirmed. | None |
 
+### Changes by Joon
+| Change | Thoughts | Modifications |
+|---|---|---|
+| 0.0 Prerequisites | <ul><li>Setting up `pyclaw` requires `sudo apt update` and `sudo apt install build-essential gfortran`. Maybe include in the docs somewhere? <li> Current dependencies include `torch`, which may be artifacts from the earlier prototyping phase. May need to clean up required packages. <li> `uv run pytest tests -q` passes with 1 warning regarding an escape sequence in the docstring of `wrapper.py`. <ul> | Offending docstring changed to a raw string |
 ---
 
 ## Steps (plan of record for Joon's part)
