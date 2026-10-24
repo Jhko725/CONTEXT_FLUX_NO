@@ -1,0 +1,7 @@
+# Live wandb run; config = RunRecord.index only, full config uploaded as config.yaml.
+mode: online
+entity: jhko725
+project: hyperfluxfno_revised
+name: null      # defaults to the run_id in metadata.json
+group: null     # defaults to cfg.experiment, else the Hydra sweep dir, else data.name
+tags: []

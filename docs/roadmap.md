@@ -104,15 +104,17 @@ Exit: `import_all.py` and `ruff check` clean ✔; fast tier green (33 tests) ✔
 |---|---|---|---|
 | 1.0 | CI repair: `ruff` in the dev group; `scripts/import_all.py` | CI green on `phase1-prune` | done (`758600f`) |
 
-## Phase 5 — Run identity  [C]  (directly after Phase 1; P9, P10)
+## Phase 5 — Run identity  [C]  (branch `phase5-run-identity`, based on `phase1-prune`; **landed 2026-10-24**; P9, P10; ADR-0010)
 
-| # | Item | Done when |
-|---|---|---|
-| 5.1 | `RunRecord` (run id/name/URL, git SHA + dirty, full config, `ModelConfig` yaml, `DataSpec`, `dataset_id`, index columns, checkpoint path, best step/metric) | dataclass + tests |
-| 5.2 | Trainer writes it to orbax `custom_metadata`, `run.json`, wandb (`config` = index columns only; full config as file; `group`/`job_type`/`tags`); checkpoint folder = run id | one training run shows all three |
-| 5.3 | `training/runs.py`: `index(root) → DataFrame`, `load_run`, `from_wandb` | notebooks lose `CHECKPOINT_DICT` |
-| 5.4 | Backfill `run.json` for ICLR checkpoints | — |
-| 5.5 | One line of design so `Trainer` does not preclude `jax.sharding` | — |
+| # | Item | Done when | Status |
+|---|---|---|---|
+| 5.1 | `RunRecord` (`metadata.json`): locally generated `run_id`, git SHA + dirty, package version, `x64`, `dataset_id`, index columns, model config, status, best/final step, resume notes | dataclass + Hypothesis round trip | done |
+| 5.2 | `Run` directory = Hydra output dir; record written to `metadata.json`, orbax `custom_metadata` and wandb (`config` = index columns only; full config as file; `group`/`job_type`/`tags`); trainer loses wandb/orbax (injected `Logger`/`Checkpointer`), checkpoints whole `TrainerState`, final step forced | one training run shows all three; 28 CPU tests | done (wandb path untested against the service) |
+| 5.3 | `training/runs.py`: `index(root) → DataFrame`, `select`, `load_run`, `load_state`, `from_wandb` | notebooks lose `CHECKPOINT_DICT` | code done; notebooks switch in Phase 6 |
+| 5.4 | Backfill `metadata.json` for ICLR checkpoints (`scripts/backfill_run_records.py`, wandb match via the F1 audit CSV) | run once on the cluster | script + test done; **run pending** (with 0.7/0.8) |
+| 5.5 | One line of design so `Trainer` does not preclude `jax.sharding` | — | done (`mesh` argument; loop never reads device values) |
+| 5.6 | Exact data-stream continuation on resume (grain iterator state in the checkpoint) | resumed run bit-equal to an uninterrupted one | open; the stream restarts today (ADR-0010 §5) |
+| 5.7 | `save_every` default: 1 (ICLR protocol, best over every step) or 100 (current) | Joon decides | open (F10) |
 
 ## Phase 2 — FV core, reference backends, classical fluxes, verification  [C] / [R]
 
@@ -184,7 +186,7 @@ IMEX) — see `design/fv-conventions.md` §Extensibility.
 - Multi-device training — single GPU assumed throughout; Phase 5.5 only keeps the door open.
 - Nonconservative products, incompressible Navier–Stokes — out of `fv/` scope (ADR-0001 §Extensibility).
 - `CFLAdaptive` implementation (`scan` with bounded substeps vs diffrax controller) — when first needed.
-- `orbax-checkpoint==0.11.25` pin — choose a version deliberately in Phase 5 and re-save the ICLR checkpoints once under the shim.
+- `orbax-checkpoint==0.11.25` pin — Phase 5 built on its v1 API (`ocp.training.Checkpointer`); re-saving the ICLR checkpoints under the shim is still deferred to the regression gate.
 - Whether `TrixiBackend` remains a permanent generator after WENO5 is verified.
 
 ---
@@ -204,3 +206,6 @@ IMEX) — see `design/fv-conventions.md` §Extensibility.
 | 2026-10-24 | `phase1-prune` | 1.1: 14 dead symbols removed (incl. `DPOTEncoder`, `LSKFluxNOTargetNetwork`, D1); `AbstractTrainLoss` wired into `Trainer` | `changes/2026-10-04-phase1-prune.md` |
 | 2026-10-24 | `phase1-prune` | 1.2: legacy xarray training path removed (loaders, script, 3 data configs, 5 notebooks); `SegmentLoaderBackground` DEPRECATED until Phase 4; PDE classes return `(u, t, xs)`; `solution_to_dataset` gone | `changes/2026-10-04-phase1-prune.md` |
 | 2026-10-24 | `phase1-prune` | 1.3: key-reuse fixes (F5, F6) + `tests/unit/test_key_hygiene.py`; missing assert; `src/` 10,765 → 9,297 lines | `changes/2026-10-04-phase1-prune.md` |
+| 2026-10-24 | `phase5-run-identity` | 5.2 (trainer side): `training/loggers.py`, `training/checkpoint.py`, `provenance.py`; `Trainer` without wandb/orbax, whole-`TrainerState` checkpoints, forced final save, non-finite stop | `changes/2026-10-24-phase5-run-identity.md` |
+| 2026-10-24 | `phase5-run-identity` | 5.1, 5.3: `RunRecord`, `Run` directory object with refuse/resume/warm-start semantics, `runs.index/select/load_run/load_state/from_wandb`, `WellDatasetSourceBase.dataset_id`, `pandas` declared | `changes/2026-10-24-phase5-run-identity.md` |
+| 2026-10-24 | `phase5-run-identity` | 5.2 (run side), 5.4 script, 5.5: `wandb_run.py` (mirror), `experiment.py`, Hydra `runs/<date>/<time>` run dir, `wandb=disabled|offline|online`, scripts on the new API, the_well optimizer chain in config, `backfill_run_records.py`; ADR-0010, `design/run-identity.md` | `changes/2026-10-24-phase5-run-identity.md` |

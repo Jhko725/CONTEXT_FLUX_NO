@@ -41,8 +41,11 @@ src/context_flux_no/
 │   └── fno.py                   FNO — the one real FNO implementation          (~~fluxfno.py~~)
 ├── nn/                          attention (fork of eqx), hypernetwork.HypernetworkHead, embedding, position_encoding,
 │                                operators/fourier (SpectralConv, Fourier), ssm, convtranspose, misc, … (~~vit.py~~)
-├── training/                    trainer.py (Levanter-style, orbax + wandb; loss_fn: AbstractTrainLoss), loss.py (OneStep/Denoising/Pushforward),
-│                                loader.py (DEPRECATED: SegmentLoaderBackground only, until Phase 4), io.py (load_model)  (~~dataset.py~~, ~~batching.py~~)
+├── training/                    trainer.py (pure loop, injected side effects; ADR-0010), loggers.py, checkpoint.py (OrbaxCheckpointer, whole TrainerState),
+│                                run_record.py (RunRecord), run.py (Run directory), runs.py (index/select/load_run), wandb_run.py (mirror),
+│                                experiment.py (what the scripts share; resume/warm_start), loss.py (OneStep/Denoising/Pushforward),
+│                                loader.py (DEPRECATED: SegmentLoaderBackground only, until Phase 4), io.py (legacy load_model)  (~~dataset.py~~, ~~batching.py~~)
+├── provenance.py                git_state(), package_version()
 ├── data/                        sources.py: WellDatasetSourceBase · ZarrWellDatasetSource (current) · TheWellDataSource (re-implements base)  (~~transforms.py~~)
 ├── simulations/                 pde/{burgers, cubic, euler, shallow_water, sine_1d, base}: 2 classes on AbstractHyperbolicConservationLaw,
 │                                5 plain eqx.Modules (~~Euler1D~~), all returning (u, t, xs); pdesolve.py (PyClaw wrapper); utils.generate_dataset;
@@ -50,10 +53,11 @@ src/context_flux_no/
 ├── waveforms/                   GaussianRandomField{,1D,2D}, PeriodicRandomStepFunction{1D,2D}, MultichannelWaveform, TruncatedFourier1D
 ├── plotting/, metrics.py, utils.py, custom_types.py
 scripts/
-├── training/  train_multiphysics.py (current, zarr) · train_the_well.py; configs/ (22 model yamls, 3 data yamls, one schema)  (~~train_shallow_water.py~~, ~~train_multiphysics_2d.py~~)
+├── training/  train_multiphysics.py (zarr) · train_the_well.py — data + loaders only, on experiment.train; configs/ (22 model, 3 data, 2 training, 3 wandb yamls; config.yaml + config_the_well.yaml)
+├── backfill_run_records.py   legacy ICLR checkpoints → metadata.json
 └── data/      generate_dataset.py; configs/
 notebooks/    data_generation/ evaluation/ misc/ nn/ training/ — evaluation logic (compute_metrics ×7, metrics_long_rollout ×4) lives here; 5 legacy notebooks removed
-tests/        5 example files + test_nn_hypernetwork.py; tests/unit/test_key_hygiene.py (first test over the method's model classes); tests/regression/ machinery (goldens pending)
+tests/        5 example files + test_nn_hypernetwork.py; tests/unit/ (key hygiene; loggers, checkpoint, trainer, run_record, run, experiment, backfill); tests/regression/ machinery (goldens pending)
 third_party/icon   submodule → Jhko725/icon-baseline (upstream ICON + Joon's HDF5 data path); not imported by src   [0.5 done]
 ```
 
@@ -83,7 +87,7 @@ src/context_flux_no/
   sim/           Phase 2/4  SolverBackend: PyClawBackend · TrixiBackend · JaxBackend; dataset writer; DatasetRecord
   models/incontext/  Phase 3  InContextOperator ⊃ InContextFluxOperator; conditioners; encoders
   models/baselines/  DISCO · DPOT · NaiveFNO …
-  training/      Phase 5  Trainer · losses · RunRecord · runs.py
+  training/      Phase 5 ✓ Trainer · loggers · checkpoint · RunRecord · Run · runs · wandb_run · experiment
   evaluation/    Phase 6  rollout · metrics · tables · figures
   configs/       Phase 3/7  dataclass configs + ConfigStore
 reference/trixi/  Julia project, one elixir per family (reference oracle, fallback generator)
@@ -101,7 +105,7 @@ batch ─► loss(model, batch)
           │    flux = conditioner(Scaled(NumericalFlux(reconstruction, base, dissipation)), ctx)
           │    u_next = integrator.step(RHS(hyperbolic = −Σ_axis div(flux(pad_ghost_cells(u, bcs))), source), u, dt)
           ▼
-Trainer: RunRecord → orbax metadata + run.json + wandb(index columns)
+experiment.train: Run(dir) → metadata.json · orbax custom_metadata · wandb(index columns);  Trainer(logger, checkpointer, evaluate)
 ```
 
 The same `fv/` objects — `pad_ghost_cells`, `Integrator`, `NumericalFlux` with a classical
@@ -128,4 +132,5 @@ evidence that each numerics claim is tested is `verification.md`.
 | Dataclass configs + ConfigStore | ADR-0007 |
 | Four-tier testing | ADR-0008 |
 | Tracks C/M/R | ADR-0009 |
+| Run identity: run directory, `RunRecord`, injected side effects, wandb as mirror, resume | ADR-0010, `design/run-identity.md` |
 | Smaller decisions (D1–D4, D15, D16) | `roadmap.md` tables and change documents |

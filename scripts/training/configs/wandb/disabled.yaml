@@ -1,0 +1,2 @@
+# No wandb run: the run directory (config.yaml, metadata.json, checkpoints/) is the record.
+mode: disabled
