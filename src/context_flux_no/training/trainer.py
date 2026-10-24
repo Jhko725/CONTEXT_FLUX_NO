@@ -1,24 +1,53 @@
-import datetime
-from collections.abc import Callable, Iterable
-from contextlib import ExitStack
+"""The training loop (ADR-0010).
+
+`TrainerState` holds everything a run needs to continue — model, optimizer state, step and
+PRNG key — and is what gets checkpointed. `Trainer(optimizer, loss_fn)` owns the JIT-compiled
+`train_step` and `valid_step` and the loop; it has **no side effects of its own**: logging,
+checkpointing and evaluation are injected (`training.loggers`, `training.checkpoint`), so a
+test runs the loop with `ListLogger()` and a temporary `OrbaxCheckpointer`, and a notebook
+can run it with anything. The experiment script (`scripts/training/train_multiphysics.py`)
+assembles the run directory (`training.run.Run`), the wandb run (`training.wandb_run`) and
+the loaders around it.
+
+Design, inspired by Levanter's `TrainerState` and `deep_isochron.training.trainer`:
+
+- the loop never reads a device value: metrics go to the logger as JAX scalars and the
+  `DelayedLogger` converts the *previous* step's, so the host does not wait on the step it
+  just enqueued;
+- validation runs every `eval_every` steps through `evaluate(model) -> metrics`; the result
+  is logged and offered to the checkpointer;
+- the final state is always evaluated and checkpointed (`force=True`), so `Run.restore()`
+  with no step is the trained state whatever `save_every` is;
+- `mesh` is stored for a later multi-device step (plan §10.6) and unused.
+"""
+
+from __future__ import annotations
+
+import itertools
+import math
+import warnings
+from collections.abc import Callable, Iterable, Mapping
 from dataclasses import replace
 from functools import cached_property
-from pathlib import Path
 from typing import Any, Self, TypeVar
 
 import equinox as eqx
 import jax
 import jax.numpy as jnp
 import optax
-import wandb
-from jaxtyping import Array, PRNGKeyArray, PyTree
-from orbax.checkpoint import v1 as ocp
+from jaxtyping import PRNGKeyArray, PyTree
 
-from context_flux_no.custom_types import FilterSpec, FloatScalar, IntScalar
+from context_flux_no.custom_types import FilterSpec, IntScalar
+from context_flux_no.training.checkpoint import Checkpointer, NullCheckpointer
+from context_flux_no.training.loggers import Logger, NullLogger
 from context_flux_no.training.loss import AbstractTrainLoss
 
 
-# Inspired by levanter
+Batch = PyTree
+Metrics = Mapping[str, Any]
+M = TypeVar("M", bound=eqx.Module)
+
+
 class TrainerState[M: eqx.Module](eqx.Module):
     step: IntScalar
     model: M
@@ -37,11 +66,10 @@ class TrainerState[M: eqx.Module](eqx.Module):
         *,
         key: PRNGKeyArray,
     ):
-        # Making this as the __init__ will clash with the use of replace()
+        # Making this the __init__ would clash with the use of replace()
         opt_state = optimizer.init(
             eqx.filter(model, is_trainable)  # ty: ignore[invalid-argument-type]
         )
-
         return cls(
             step=jnp.asarray(0, dtype=int),
             model=model,
@@ -51,10 +79,7 @@ class TrainerState[M: eqx.Module](eqx.Module):
             is_trainable=is_trainable,
         )
 
-    def take_step(
-        self,
-        grads: M,
-    ) -> Self:
+    def take_step(self, grads: M) -> Self:
         """Given a pytree of model gradients, update model parameters using the
         appropriate optimizer update function."""
         grads = self.filter_trainable(grads)
@@ -74,163 +99,156 @@ class TrainerState[M: eqx.Module](eqx.Module):
 
     def filter_trainable(self, pytree: M) -> M:
         """Filter the given pytree to retain the trainable model parameters, as
-        determined by self.is_trainable. Note that this function works on all pytrees
-        that are compatible with self.model."""
+        determined by self.is_trainable. Works on all pytrees compatible with self.model."""
         return eqx.filter(pytree, self.is_trainable)
 
 
-Batch = PyTree
-M = TypeVar("M", bound=eqx.Module)
-
-
 class Trainer:
-    loss_fn: AbstractTrainLoss
-    optimizer: optax.GradientTransformation
-    checkpoint_path: Path
-    wandb_kwargs: dict[str, Any]
+    """`Trainer(optimizer, loss_fn)`; see the module docstring. `loss_args` is whatever the
+    loss needs besides the batch (today `(dt, *dx)`); it is static for a run."""
 
     def __init__(
         self,
         optimizer: optax.GradientTransformation,
         loss_fn: AbstractTrainLoss,
-        checkpoint_dir: str | Path,
-        checkpoint_name: str | None,
-        wandb_kwargs: dict[str, Any],
-        config_dict: dict[str, Any],
+        *,
+        loss_args: Any = None,
+        is_trainable: FilterSpec = eqx.is_inexact_array,
+        mesh: jax.sharding.Mesh | None = None,
     ):
         self.optimizer = optimizer
         self.loss_fn = loss_fn
-        self.checkpoint_path = self._make_checkpoint_path(
-            checkpoint_dir, checkpoint_name
-        )
-        self.wandb_kwargs = wandb_kwargs
-        self.config_dict = config_dict
+        self.loss_args = loss_args
+        self.is_trainable = is_trainable
+        self.mesh = mesh  # reserved for multi-device training; unused (plan §10.6)
 
-    def _make_checkpoint_path(
-        self, checkpoint_dir: str | Path, checkpoint_name: str | None
-    ) -> Path:
-        """Given checkpoint directory and name, return the absolute path to save
-        checkpoints in."""
-        now = datetime.datetime.now()
-        now_str = now.strftime("%y-%m-%d-%H_%M_%S")
-        if checkpoint_name is None:
-            checkpoint_name = ""
+    # ------------------------------------------------------------------ state ----
+    def init(self, model: M, *, key: PRNGKeyArray) -> TrainerState[M]:
+        return TrainerState[M].init(model, self.optimizer, self.is_trainable, key=key)
 
-        checkpoint_path = Path(checkpoint_dir) / checkpoint_name / now_str
-        # orbax.checkpoint does not like relative paths
-        checkpoint_path = checkpoint_path.resolve()
-        return checkpoint_path
-
-    def train(
-        self,
-        model: M,
-        train_dataloader: Iterable[Batch],
-        validation_dataloader: Iterable[Batch] | None = None,
-        loss_args: Any = None,
-        *,
-        trainable_filterspec: FilterSpec = eqx.is_inexact_array,
-        num_steps: int = 5000,
-        seed: int = 0,
-    ):
-        self.checkpoint_path.mkdir(parents=True, exist_ok=True)
-
-        state = TrainerState[M].init(
-            model, self.optimizer, trainable_filterspec, key=jax.random.key(seed)
-        )
-        train_dataiter = iter(train_dataloader)
-        valid_dataiter = iter(validation_dataloader) if validation_dataloader else None
-
-        save_metric = "train_loss" if validation_dataloader is None else "valid_loss"
-
-        with ExitStack() as stack:
-            logger = stack.enter_context(
-                wandb.init(config=self.config_dict, **self.wandb_kwargs)
-            )
-            ckptr = stack.enter_context(
-                ocp.training.Checkpointer(
-                    self.checkpoint_path,
-                    preservation_policy=ocp.training.preservation_policies.BestN(
-                        get_metric_fn=lambda metrics: metrics[save_metric],
-                        reverse=True,
-                        n=1,
-                    ),
-                    custom_metadata=self.config_dict["model"],
-                )
-            )  # add preservation policy, custom_metadata
-
-            state_prev, outputs_prev = None, None
-
-            for _ in range(num_steps):
-                try:
-                    batch = next(train_dataiter)
-                    batch_valid = next(valid_dataiter)
-                except StopIteration:
-                    break
-
-                state_next, loss, metrics = self.train_step(state, batch, loss_args)
-                loss_valid, metrics_valid = self.valid_step(
-                    state, batch_valid, loss_args
-                )
-
-                output = (
-                    {"train_loss": loss, "valid_loss": loss_valid}
-                    | metrics
-                    | metrics_valid
-                )
-
-                if (outputs_prev is not None) and (state_prev is not None):
-                    step_log = int(state_prev.step)
-                    outputs_prev = jax.tree.map(lambda x: float(x), outputs_prev)
-                    logger.log(outputs_prev, step=step_log)
-                    print(f"""Step: {step_log} | Train loss: {outputs_prev["train_loss"]}
-                     | Valid loss: {outputs_prev["valid_loss"]}""")
-                    weights = eqx.filter(state_prev.model, eqx.is_array)
-                    ckptr.save_pytree(
-                        step=step_log, pytree=weights, metrics=outputs_prev
-                    )
-
-                outputs_prev = output
-                state, state_prev = state_next, state
-
-            step_log = int(state_prev.step)
-            outputs_prev = jax.tree.map(lambda x: float(x), outputs_prev)
-            logger.log(outputs_prev, step=step_log)
-            print(f"""Step: {step_log} | Train loss: {outputs_prev["train_loss"]}
-                                 | Valid loss: {outputs_prev["valid_loss"]}""")
-            weights = eqx.filter(state_prev.model, eqx.is_array)
-            ckptr.save_pytree(step=step_log, pytree=weights, metrics=outputs_prev)
-
+    # ------------------------------------------------------------------ steps ----
     @cached_property
     def train_step(
         self,
-    ) -> Callable[
-        [TrainerState[M], Batch, Batch | None, Any],
-        tuple[M, FloatScalar, dict[str, Array]],
-    ]:
+    ) -> Callable[[TrainerState[M], Batch], tuple[TrainerState[M], Metrics]]:
         return eqx.filter_jit(self._train_step)
 
     def _train_step(
-        self, state: TrainerState[M], batch: Batch, args
-    ) -> tuple[M, FloatScalar, dict[str, Array]]:
+        self, state: TrainerState[M], batch: Batch
+    ) -> tuple[TrainerState[M], Metrics]:
         model = eqx.nn.inference_mode(state.model, False)
-
         loss_grad_fn = eqx.filter_value_and_grad(self.loss_fn, has_aux=True)
-        (loss, metrics), grads = loss_grad_fn(model, batch, args, state.training_key)
-        state_next = state.take_step(grads)
-        return state_next, loss, metrics
+        (loss, metrics), grads = loss_grad_fn(
+            model, batch, self.loss_args, state.training_key
+        )
+        return state.take_step(grads), {"train_loss": loss, **metrics}
 
     @cached_property
-    def valid_step(
-        self,
-    ) -> Callable[
-        [TrainerState[M], Batch, Batch | None, Any],
-        tuple[FloatScalar, dict[str, Array]],
-    ]:
+    def valid_step(self) -> Callable[[TrainerState[M], Batch], Metrics]:
         return eqx.filter_jit(self._valid_step)
 
-    def _valid_step(
-        self, state: TrainerState[M], batch: Batch, args
-    ) -> tuple[FloatScalar, dict[str, Array]]:
+    def _valid_step(self, state: TrainerState[M], batch: Batch) -> Metrics:
         model = eqx.nn.inference_mode(state.model, True)
-        loss, metrics = self.loss_fn(model, batch, args, state.training_key)
-        return loss, metrics
+        loss, metrics = self.loss_fn(model, batch, self.loss_args, state.training_key)
+        return {"valid_loss": loss, **metrics}
+
+    def evaluator(
+        self, valid_loader: Iterable[Batch]
+    ) -> Callable[[TrainerState[M]], Metrics]:
+        """An `evaluate(state)` that runs `valid_step` on the next batch of
+        `valid_loader` — the one-batch validation the scripts have always done. A more
+        thorough evaluator (Phase 6) is any callable with the same signature."""
+        batches = iter(valid_loader)
+
+        def evaluate(state: TrainerState[M]) -> Metrics:
+            return self.valid_step(state, next(batches))
+
+        return evaluate
+
+    # ------------------------------------------------------------------ loop -----
+    def train(
+        self,
+        model_or_state: M | TrainerState[M],
+        train_loader: Iterable[Batch],
+        *,
+        num_steps: int,
+        key: PRNGKeyArray | None = None,
+        logger: Logger | None = None,
+        checkpointer: Checkpointer | None = None,
+        evaluate: Callable[[TrainerState[M]], Metrics] | None = None,
+        eval_every: int = 1,
+        stop_on_nonfinite: bool = True,
+    ) -> TrainerState[M]:
+        """Run `num_steps` steps (an upper bound: a loader that ends first stops the run
+        with a warning). `evaluate(state)` returns validation metrics every `eval_every`
+        steps; they are logged and offered to `checkpointer.save`, and the final step is
+        evaluated and checkpointed regardless of the save policy. Resume by passing a
+        restored `TrainerState`. With `stop_on_nonfinite`, a non-finite validation metric
+        stops the run with `FloatingPointError` *before* that state is checkpointed, so the
+        last checkpoint on disk is finite. The logger and checkpointer are entered as
+        context managers, so they close — and the `DelayedLogger` flushes — even if a step
+        raises."""
+        if isinstance(model_or_state, TrainerState):
+            state = model_or_state
+        else:
+            if key is None:
+                raise ValueError("key is required when starting from a model.")
+            state = self.init(model_or_state, key=key)
+        if eval_every < 1:
+            raise ValueError("eval_every must be a positive integer.")
+        if num_steps < 0:
+            raise ValueError("num_steps must be non-negative.")
+        log: Logger = NullLogger() if logger is None else logger
+        ckpt: Checkpointer = (
+            NullCheckpointer() if checkpointer is None else checkpointer
+        )
+
+        saved_step = int(state.step) if isinstance(model_or_state, TrainerState) else -1
+        last_eval: tuple[int, dict[str, float]] | None = None
+
+        def evaluate_and_save(step: int, *, force: bool = False) -> None:
+            nonlocal saved_step, last_eval
+            assert evaluate is not None
+            val_metrics = {k: float(v) for k, v in evaluate(state).items()}
+            last_eval = (step, val_metrics)
+            log.log(val_metrics, step)
+            bad = sorted(k for k, v in val_metrics.items() if not math.isfinite(v))
+            if stop_on_nonfinite and bad:
+                raise FloatingPointError(
+                    f"non-finite validation metrics at step {step}: {bad}; the state was "
+                    f"not checkpointed (last checkpoint: step {saved_step})."
+                )
+            if ckpt.save(step, state, val_metrics, force=force):
+                saved_step = step
+
+        batches = iter(train_loader)
+        step = int(state.step)  # Python-side counter: the device value is never read
+        with log, ckpt:
+            for i in itertools.count():
+                if i >= num_steps:
+                    break
+                try:
+                    batch = next(batches)
+                except StopIteration:
+                    warnings.warn(
+                        f"the loader ended after {i} of {num_steps} steps.",
+                        stacklevel=2,
+                    )
+                    break
+                state, metrics = self.train_step(state, batch)
+                step += 1
+                log.log(metrics, step)
+                if evaluate is not None and step % eval_every == 0:
+                    evaluate_and_save(step)
+            # the final state is always evaluated and checkpointed, unless the loop's
+            # last step already did both
+            if step != saved_step:
+                if evaluate is None:
+                    ckpt.save(step, state, {}, force=True)
+                elif last_eval is not None and last_eval[0] == step:
+                    ckpt.save(
+                        step, state, last_eval[1], force=True
+                    )  # already evaluated
+                else:
+                    evaluate_and_save(step, force=True)
+        return state
