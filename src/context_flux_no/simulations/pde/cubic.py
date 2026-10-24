@@ -160,6 +160,10 @@ class CubicFlux2D(AbstractHyperbolicConservationLaw):
         cfl: float = 0.4,
         **kwargs,
     ):
+        if kwargs.pop("backend", None) is not None:
+            raise ValueError(
+                f"{type(self).__name__} uses its own stepper; backend= is not supported"
+            )
         if bc != "periodic":
             raise NotImplementedError("CubicFlux2D's own stepper is periodic only")
         Nx, Ny = Nxs

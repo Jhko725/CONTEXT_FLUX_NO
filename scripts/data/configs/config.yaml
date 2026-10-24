@@ -1,6 +1,7 @@
 defaults:
   - initial_condition: grf
   - pde: cubic_1d
+  - backend: default
   - override hydra/launcher: submitit_slurm
 
 hydra:
@@ -19,5 +20,6 @@ dataset_type: "train"
 
 savedir: ./data/datasets
 savename: ${.pde.name}_${.initial_condition.name}_seed=${.seed}.zarr
+bc: periodic   # or a list of [lower, upper] pairs per axis: [[extrap, extrap]]
 
 gpu_id: "auto" # or integer

@@ -1,0 +1,5 @@
+# PyClaw Classic (wave propagation, 2nd order): what every ICLR dataset was generated with.
+# `null` here means "each PDE class's default", which is Classic for the PyClaw families and
+# the class's own stepper for CubicFlux2D / ViscousBurgers1D.
+_target_: context_flux_no.simulations.PyClawBackend
+scheme: classic
