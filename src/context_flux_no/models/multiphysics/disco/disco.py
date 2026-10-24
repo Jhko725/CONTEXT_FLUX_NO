@@ -16,10 +16,6 @@ from .hypernet import HyperNetwork
 from .operatornet import OperatorNetwork
 
 
-class LinearVariableInFeatures(eqx.Module):
-    """Same as equinox.nn.Linear, but accepts arrays with varying in_features."""
-
-
 class HyperNetworkHead[NN: eqx.Module](eqx.Module):
     linear: eqx.nn.Linear
 

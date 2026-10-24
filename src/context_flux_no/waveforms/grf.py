@@ -18,14 +18,6 @@ class AbstractCovarianceFn(eqx.Module):
     def __call__(self, r: Float[Array, "*shape"]) -> Float[Array, "*shape"]: ...
 
 
-class ExponentialCov(AbstractCovarianceFn):
-    corr_length: float = eqx.field(static=True)
-    marginal_std: float = eqx.field(static=True, default=1.0)
-
-    def __call__(self, r: Float[Array, "*shape"]) -> Float[Array, "*shape"]:
-        return self.marginal_std**2 * jnp.exp(-jnp.abs(r) / self.corr_length)
-
-
 class GaussianCov(AbstractCovarianceFn):
     corr_length: float = eqx.field(static=True)
     marginal_std: float = eqx.field(static=True, default=1.0)

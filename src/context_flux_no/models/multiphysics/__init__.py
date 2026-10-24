@@ -10,4 +10,3 @@ from .dpot import DPOT as DPOT
 from .fluxno import NaiveFluxNO as NaiveFluxNO
 from .fno import NaiveFNO as NaiveFNO, SpatiotemporalFNO as SpatiotemporalFNO
 from .hyperfluxfno import HyperFluxFNOLocal as HyperFluxFNOLocal
-from .wrapper import MultiphysicsWrapper as MultiphysicsWrapper

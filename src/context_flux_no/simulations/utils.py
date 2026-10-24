@@ -42,26 +42,6 @@ def sample_coefficients(
     }
 
 
-def sample_coefficients_uniform(
-    key: PRNGKeyArray, coeff_range_dict: dict[str, tuple[float, float]]
-) -> dict[str, float]:
-    """
-    Given a dictionary of coefficient names and a tuple indicating the range to sample
-    from, return dictionary of coefficient names and values that are sampled from
-    uniform distributions of the given range.
-    """
-    subkeys = jax.random.split(key, len(coeff_range_dict))
-    return {
-        name: float(
-            jax.random.uniform(subkey, minval=coeff_range[0], maxval=coeff_range[1])
-        )
-        for subkey, (name, coeff_range) in zip(subkeys, coeff_range_dict.items())
-    }
-
-
-BASE_KEY_DICT = {"train": 0, "validation": 1, "test": 2}
-
-
 # TODO: change x_span, Nx, etc to be compatible with N-D simulations
 def generate_dataset(
     dataset_name: str,
