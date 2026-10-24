@@ -1,0 +1,3 @@
+[submodule "third_party/icon"]
+	path = third_party/icon
+	url = https://github.com/Jhko725/icon-baseline.git

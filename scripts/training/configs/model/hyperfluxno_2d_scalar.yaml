@@ -20,7 +20,7 @@ activation:
   _target_: hydra.utils.get_method
   path: jax.nn.gelu
 stack_grid: true
-hypernet_init: bias_hyperinit
+hypernet_init: bias-hyperinit
 key:
   _target_: jax.random.PRNGKey
   seed: 0
