@@ -9,7 +9,7 @@ lives in Hydra's output directory; see `training.run` and `train_multiphysics.py
 import grain
 import hydra
 from context_flux_no.data import TheWellDataSource
-from context_flux_no.training import experiment as common
+from context_flux_no.training import experiment
 from omegaconf import DictConfig
 
 
@@ -24,11 +24,11 @@ def make_loader(source, *, batch_size: int, seed: int, worker_count: int):
 
 @hydra.main(config_path="./configs", config_name="config_the_well", version_base=None)
 def main(cfg: DictConfig) -> None:
-    common.select_device(cfg)
+    experiment.select_device(cfg)
 
     model = hydra.utils.instantiate(cfg.model)
     loss_fn = hydra.utils.instantiate(cfg.loss_fn)
-    window = common.segment_length(cfg, loss_fn)
+    window = experiment.segment_length(cfg, loss_fn)
 
     def source(split: str) -> TheWellDataSource:
         return TheWellDataSource(
@@ -44,7 +44,7 @@ def main(cfg: DictConfig) -> None:
     kwargs = dict(
         batch_size=cfg.training.batch_size, worker_count=cfg.data.worker_count
     )
-    common.train(
+    experiment.train(
         cfg,
         model=model,
         loss_fn=loss_fn,

@@ -21,8 +21,6 @@ import abc
 from collections.abc import Mapping
 from typing import Any
 
-import jax
-
 
 Metrics = Mapping[str, Any]
 
@@ -122,11 +120,3 @@ class MultiLogger(Logger):
     def close(self) -> None:
         for logger in self.loggers:
             logger.close()
-
-
-def block(metrics: Metrics) -> Metrics:
-    """Wait for every metric to be computed (tests; never in the loop)."""
-    for v in metrics.values():
-        if isinstance(v, jax.Array):
-            v.block_until_ready()
-    return metrics

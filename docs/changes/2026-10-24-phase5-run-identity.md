@@ -126,6 +126,15 @@ Not tested here: a real `wandb.init` (network); `scripts/check_configs.py` still
 - **wandb `resume="allow"` on an in-place resume** reuses the recorded wandb id; untested against the service.
 - **`check_docs.py --files`** defaults to `--base origin/main`; for this branch use `--base phase1-prune` (documented above) — a `base:` frontmatter key that the script reads would remove the footgun; left for a docs-tooling pass.
 
+## Review round 1 (2026-10-24)
+
+Joon's Review notes below; Claude's response per row:
+
+- `loggers.py` — `block` was unused anywhere (tests included); removed rather than generalised. If a pytree-wide wait is ever needed, `jax.block_until_ready(tree)` already exists in JAX, so no helper is warranted.
+- `train_*.py` — the `experiment as common` alias dropped; the scripts call `experiment.select_device / segment_length / train`.
+- `configs` — "cadence" meant the three frequencies `eval_every` / `save_every` / `log_every`; no change.
+- `checkpoint.py` typed keys, `run.py` constants, `run/runs/run_record/wandb_run` naming and the `training` split — proposals in the reply to Joon; files not moved until confirmed.
+
 ## Review notes
 
 | Change | Thoughts | Modifications |

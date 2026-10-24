@@ -13,7 +13,7 @@ import grain
 import hydra
 import jax
 from context_flux_no.data import WellDatasetSourceBase, ZarrWellDatasetSource
-from context_flux_no.training import experiment as common
+from context_flux_no.training import experiment
 from omegaconf import DictConfig
 
 
@@ -43,11 +43,11 @@ def make_loader(source, *, batch_size: int, seed: int):
 
 @hydra.main(config_path="./configs", config_name="config", version_base=None)
 def main(cfg: DictConfig) -> None:
-    common.select_device(cfg)
+    experiment.select_device(cfg)
 
     model = hydra.utils.instantiate(cfg.model)
     loss_fn = hydra.utils.instantiate(cfg.loss_fn)
-    window = common.segment_length(cfg, loss_fn)
+    window = experiment.segment_length(cfg, loss_fn)
 
     def source(split: str) -> ZarrWellDatasetSource:
         return ZarrWellDatasetSource(
@@ -60,7 +60,7 @@ def main(cfg: DictConfig) -> None:
         )
 
     source_train, source_valid = source("train"), source("valid")
-    common.train(
+    experiment.train(
         cfg,
         model=model,
         loss_fn=loss_fn,
