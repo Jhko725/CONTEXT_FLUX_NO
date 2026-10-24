@@ -1,2 +1,3 @@
-from .dataset import PDEDataset as PDEDataset
-from .loader import SegmentLoader as SegmentLoader
+from .loader import (
+    SegmentLoaderBackground as SegmentLoaderBackground,  # DEPRECATED, see loader.py
+)
