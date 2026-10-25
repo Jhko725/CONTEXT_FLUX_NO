@@ -151,20 +151,21 @@ Verification tier (`JAX_PLATFORMS=cpu uv run pytest tests/verification -m slow`)
 
 | Change | Thoughts | Modifications |
 |---|---|---|
-| `simulations/grid.py` — `Grid` | | |
-| `simulations/backend.py` — `SolverBackend`, BC names, `normalize_bcs` | | |
-| `simulations/pyclaw.py` — `PyClawSpec`, `PyClawBackend` | | |
-| `simulations/pde/base.py` — minimal interface + default `solve()` | | |
-| `simulations/pde/{cubic,sine_1d,shallow_water,burgers,euler}.py` — classes on the base, `pyclaw_spec`; `ViscousBurgers1D` fixes | | |
-| `simulations/record.py` — `DatasetRecord` | | |
-| `simulations/writer.py` — `WellWriter`, `boundary_conditions` | | |
-| `simulations/generate.py` — `generate_dataset(backend)` | | |
-| `simulations/__init__.py`, deleted `dataset.py` / `utils.py` / `pdesolve.py` / `pyclaw_utils.py` | | |
-| `data/sources.py` — `dataset_record_ids`, `dataset_id` | | |
-| `waveforms/grf.py` — defaults (F11) | | |
-| `scripts/data/generate_dataset.py`, `configs/config.yaml`, `configs/backend/*.yaml`, `README.md` | | |
-| `tests/unit/goldens_simulations/*.npz`, `make_goldens_simulations.py`, `test_pyclaw_backend.py` | | |
-| `tests/unit/test_backend_agreement.py`, `tests/verification/*` | | |
-| `tests/unit/test_generate_dataset.py` | | |
-| `docs/decisions/0011-*.md`, `docs/design/simulation-backends.md` | | |
-| `docs/roadmap.md`, `architecture.md`, `verification.md`, `findings.md`, `glossary.md`, `index.md` | | |
+| `simulations/grid.py` — `Grid` | Logic is clean, but some changes to be made. <ul><li>American Englished to be used. <li>If we want to restict the types of a generic constructor input, the correct place would be in the `__init__` function or the `converter` argument of `equinox.field` if we are using `equinox.Module`s and the conversion is simple. Not sure why we need to reach for `__post_init__`. <li> `from_sequence` seems redundant with the new constructor. <li>`dxs` and `centers` share the dx computation logic, but letting it slide since `zip(self.x_spans, self.Nxs, self.dxs)` does not seem elegant either. <ul> |<ul><li>Changed "centre" -> "center" <li> Moved contents of `__post_init__` into `__init__`. <li> `from_sequence` removed. <ul> |
+| `simulations/backend.py` — `SolverBackend`, BC names, `normalize_bcs` | Looks good. | None |
+| `simulations/pyclaw.py` — `PyClawSpec`, `PyClawBackend` | Looks good with one question and a minor correction. `build_solver` rejects python kernels for >1D problems. Speed concern, or PyClaw constraint? If the latter, cite relevant documentation. | Dictionary unpacking changed to dictionary union. |
+| `simulations/pde/base.py` — minimal interface + default `solve()` | Looks good, but maybe it might be better to change the roadmap a bit and start introducing relevant parts of the PDEFamily abstraction to avoid doing similar work twice? Also `solution_to_well_schema` might be the writer's job, assuming the writer has access to the PDE object as well (for the field names, ranks, etc; or read in from solution metadata)? | To be discussed with Claude. |
+| `simulations/pde/{cubic,sine_1d,shallow_water,burgers,euler}.py` — classes on the base, `pyclaw_spec`; `ViscousBurgers1D` fixes | Confirmed. | None |
+| `simulations/record.py` — `DatasetRecord` | Logic seems okay. Couple thoughts. <ul><li> `create` essentially is the constructor. Need to make into a separate classmethod? <li> `replace` and `to_dict` are superthin wrappers around `copy.replace` (use `copy` not `dataclasses`) and `asdict`. Do we really need these wrappers? <li> Want consistent namings across codebase for savind and loading files. Is `read`/`write` our current convention (if none exist, decide now). <li> Three class methods to load objecty from dict, json, and text file. Why not a single method using `match`? Argue your preference - small classmethods vs one polymorphic. <li> Not a big fan of staticmethods and this logic is not specific to the class either. Separate out into a freestanding function in the same file, or if to be used in multiple places in the codebase, into some utilities submodule. <li> Is Json encoding with `_default` pattern that is to be used across the codebase? If so, better to create a wrapped version of `json.dumps` to reuse. <ul>| To be discussed with Claude. |
+| `simulations/writer.py` — `WellWriter`, `boundary_conditions` | Do we need `__len__` and `__getitem__` on the Writer? When I was first writing the code, I conflated its responsibility with the datasource, hence these methods. How about in the current refactored state? | To be discussed with Claude. |
+| `simulations/generate.py` — `generate_dataset(backend)` | Would it be possible to tighten `except Exception` to a more concrete exception type? That was a quick hack from my prototyping. | `Grid` instantiation fixed to account for the new constructor. |
+| `simulations/__init__.py`, deleted `dataset.py` / `utils.py` / `pdesolve.py` / `pyclaw_utils.py` | Confirmed. | None |
+| `data/sources.py` — `dataset_record_ids`, `dataset_id` | `dataset_id` returns `None` if `dataset_record_ids` is an empty list, corresponding to the case of any dataset not having an id. Intended behavior? Thought a source should have an id in any case, but may be mistaken. | To be discussed with Claude. |
+| `waveforms/grf.py` — defaults (F11) | Confirmed. `waveforms` might have to be renamed and moved somewhere else in the module hierarchy since it pertains to the generation of initial conditions for simulations. Suitable location and place? | To be discussed with Claude. |
+| `scripts/data/generate_dataset.py`, `configs/config.yaml`, `configs/backend/*.yaml`, `README.md` | Looks good. Also possible to clean up the initial condition configs, by bring ahead relevant parts of the `PDEFamily` refactor and reorganizing `waveforms`? Or defer later in the roadmap? | To be discussed with Claude. |
+| `tests/unit/goldens_simulations/*.npz`, `make_goldens_simulations.py`, `test_pyclaw_backend.py` | Confirmed. | Golden tests to run when the cluster is back online. |
+| `tests/unit/test_backend_agreement.py`, `tests/verification/*` | Confirmed. Maybe `l1_distance` needs a better name? Something like `l1_sharpclaw_classic`? Also have we laid out the contract for the different types of tests (regression / unit / verification / rest) | To be discussed with Claude. |
+| `tests/unit/test_generate_dataset.py` | Confirmed. | None |
+| `docs/decisions/0011-*.md`, `docs/design/simulation-backends.md` | Looks good. | None |
+| `docs/roadmap.md`, `architecture.md`, `verification.md`, `findings.md`, `glossary.md`, `index.md` | Had a readthrough. | None |
+

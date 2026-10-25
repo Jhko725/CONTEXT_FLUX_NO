@@ -83,7 +83,7 @@ def generate_dataset(
     PyClaw families, the class's own stepper otherwise)."""
     filename = filename or f"{dataset_name}_{seed=}.zarr"
     savepath = Path(savedir) / dataset_name / "data" / dataset_type / filename
-    grid = Grid.from_sequences(x_spans, Nxs)
+    grid = Grid(x_spans, Nxs)
     t_out = np.linspace(t_span[0], t_span[1], Nt + 1, endpoint=True)
     bcs = normalize_bcs(bc, grid.n_spatial_dims)
 
