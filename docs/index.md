@@ -22,6 +22,7 @@ document is listed here and has frontmatter.
 | [`architecture.md`](architecture.md) | architecture | what the code is now, module by module; what it becomes; where each decision is recorded |
 | [`roadmap.md`](roadmap.md) | roadmap | the single current plan: tracks, phase tables with *Done when*, Parked, the Done ledger |
 | [`../CLAUDE.md`](../CLAUDE.md) | conventions | how Claude works here: session protocol, change documents, review notes, repo facts |
+| [`coding-standards.md`](coding-standards.md) | reference | where each convention is enforced here: tiers, goldens and tolerances, scope, the checks that replace prose |
 | [`glossary.md`](glossary.md) | glossary | the vocabulary the other documents use |
 
 ## Ledgers
@@ -70,6 +71,7 @@ recorded in the roadmap tables and the change documents that implement them.
 | `phase1-prune` | landed (merge gated on the regression tier) | [`2026-10-04-phase1-prune.md`](changes/2026-10-04-phase1-prune.md) |
 | `phase5-run-identity` | landed (based on `phase1-prune`; merge after it) | [`2026-10-24-phase5-run-identity.md`](changes/2026-10-24-phase5-run-identity.md) |
 | `phase2a-pyclaw-backend` | landed (based on `phase5-run-identity`; Trixi half pending) | [`2026-10-25-phase2a-pyclaw-backend.md`](changes/2026-10-25-phase2a-pyclaw-backend.md) |
+| `conventions-docs` | in-progress (based on `phase2a-pyclaw-backend`; rebases onto `main` cleanly) | [`2026-10-25-conventions-docs.md`](changes/2026-10-25-conventions-docs.md) |
 
 ## Historical
 
