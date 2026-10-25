@@ -201,33 +201,34 @@ Fast tier 2026-10-26 (`JAX_PLATFORMS=cpu uv run pytest -q`, Julia set up): 103 p
 
 | Change | Thoughts | Modifications |
 |---|---|---|
-| `simulations/initial_conditions/base.py` — `InitialCondition`, `FromFunction`, `Stacked`, `Conserved`, `InitialConditionSampler`, `Multichannel` | | |
-| `simulations/initial_conditions/grf.py` — gstools sampler evaluable anywhere; circulant GRFs deleted | | |
-| `simulations/initial_conditions/step.py` — `PeriodicStep1D` / `PeriodicVoronoi2D` with positions in the domain | | |
-| `simulations/initial_conditions/fourier.py` — `TruncatedFourier1D` is an `InitialCondition` | | |
-| `simulations/initial_conditions/__init__.py` — exports | | |
-| `simulations/backend.py` — `solve(pde, ic, grid, t_out, bcs)`; `check_inputs(ic)`; `solve_batch` deleted | | |
-| `simulations/pyclaw.py` — evaluates `ic` at the centers | | |
-| `simulations/trixi.py` — `TrixiSpec`, `TrixiBackend`, `available()`, environment, Julia interface spec | | |
-| `simulations/pde/base.py` — `solve(ic, …)` passes the function; `trixi_spec` default | | |
-| `simulations/pde/{cubic,sine_1d,shallow_water,burgers,euler}.py` — `trixi_spec`; Euler `solve` override gone; cubic-2D on `Grid` | | |
-| `simulations/generate.py` — sampler + `ic_in_primitive` | | |
-| `simulations/__init__.py` — exports | | |
-| `juliapkg.json`, `scripts/setup_julia.py`, `pyproject.toml`/`uv.lock`, `.gitignore` — Julia set-up | | |
-| `scripts/data/generate_dataset.py` + configs — `sampler:`, `ic_in_primitive`, cubic-2D keys | | |
-| `tests/unit/make_goldens_simulations.py`, `test_generate_dataset.py`, `test_pyclaw_backend.py` — through the callable path | | |
-| `tests/unit/test_initial_conditions.py`, `tests/unit/test_trixi_backend.py` — new | | |
-| `tests/verification/test_crosscode.py` — V18 tests (skip) | | |
-| `reference/trixi/{Project,Manifest}.toml` — the committed Julia lock (juliapkg shared mode; Trixi 0.17.16) | | |
-| `reference/trixi/ContextFluxTrixi/{Project.toml, src/ContextFluxTrixi.jl}` — package, deps/compat, `SolveFailed` | | |
-| `reference/trixi/ContextFluxTrixi/src/equations.jl` — four custom equations, exact LF bound (D-WS), indicator variable, volume flux, `EQUATIONS` table | | |
-| `reference/trixi/ContextFluxTrixi/src/solve.jl` — `node_coordinates`, `solve`, `versions` | | |
-| `reference/trixi/ContextFluxTrixi/test/runtests.jl` — 72 checks | | |
-| `simulations/trixi.py` — `julia_package_version` (D-PROV); `faulthandler.disable()` before Julia starts | | |
-| `simulations/pde/cubic.py` — `CubicFlux2D.solve` time stepping (F14) | | |
-| `tests/helpers.py` — `SHARPCLAW_SSP33`; `tests/verification/test_crosscode.py` uses it; `tests/unit/test_trixi_backend.py` — `describe()` keys | | |
-| `scripts/data/configs/backend/trixi.yaml`, `scripts/data/README.md`, `CLAUDE.md` (D-DOC) | | |
-| `.github/workflows/test.yml` — opt-in `julia` job (unverified until a `[julia]` push) | | |
-| F13, F14; `verification.md` V18 ratios; `python-julia-repo.md` §what happened; `simulation-backends.md` §Trixi; architecture; roadmap | | |
-| ADR-0011 §Initial conditions, ADR-0004 §Amendment, F12 | | |
-| `design/python-julia-repo.md` (agreed; §Decided), `design/simulation-backends.md` (§Trixi), `verification.md`, roadmap, architecture, glossary, index | | |
+| `simulations/initial_conditions/base.py` — `InitialCondition`, `FromFunction`, `Stacked`, `Conserved`, `InitialConditionSampler`, `Multichannel` | May have to revisit later when we roll the JAX WENO5 to make more jit and vmap friendly. There is a bit of overlap between the initial conditions and its sampler. Are there potential alternate design than the current style? Or ways to minimize overlap. | To be discussed with Claude. |
+| `simulations/initial_conditions/grf.py` — gstools sampler evaluable anywhere; circulant GRFs deleted | Looks good. Agree on the deletions. | None |
+| `simulations/initial_conditions/step.py` — `PeriodicStep1D` / `PeriodicVoronoi2D` with positions in the domain | Looks good. | None |
+| `simulations/initial_conditions/fourier.py` — `TruncatedFourier1D` is an `InitialCondition` | Agreed. But its `with_uniform_rand_coeffs` correspond to the functionality of its sampler. | Deferred changes to Claude. |
+| `simulations/initial_conditions/__init__.py` — exports | Trivial changes. | None |
+| `simulations/backend.py` — `solve(pde, ic, grid, t_out, bcs)`; `check_inputs(ic)`; `solve_batch` deleted | Looks good. | None |
+| `simulations/pyclaw.py` — evaluates `ic` at the centers | Looks good. | None |
+| `simulations/trixi.py` — `TrixiSpec`, `TrixiBackend`, `available()`, environment, Julia interface spec | Looks good. Feel that `simulations` need a `backends` subpackage though. It will contain the current `backends..py`, `pyclaw.py` and `trixi.py`. | To be discussed with Claude. |
+| `simulations/pde/base.py` — `solve(ic, …)` passes the function; `trixi_spec` default | Looks good. | None |
+| `simulations/pde/{cubic,sine_1d,shallow_water,burgers,euler}.py` — `trixi_spec`; Euler `solve` override gone; cubic-2D on `Grid` | Looks good. | None |
+| `simulations/generate.py` — sampler + `ic_in_primitive` | Logic is good, but let's rename `ic_in_primitive` to `ic_to_primitive`. Also, want proper docstings (`equinox`/`diffrax` style) for this function. | Changes deferred to Claude. |
+| `simulations/__init__.py` — exports | Trivial changes. | None |
+| `juliapkg.json`, `scripts/setup_julia.py`, `pyproject.toml`/`uv.lock`, `.gitignore` — Julia set-up | Looks good. | None |
+| `scripts/data/generate_dataset.py` + configs — `sampler:`, `ic_in_primitive`, cubic-2D keys | Looks good. | None |
+| `tests/unit/make_goldens_simulations.py`, `test_generate_dataset.py`, `test_pyclaw_backend.py` — through the callable path | 
+Confirmed. | None |
+| `tests/unit/test_initial_conditions.py`, `tests/unit/test_trixi_backend.py` — new | Looks good. | None |
+| `tests/verification/test_crosscode.py` — V18 tests (skip) | Looks good. | None |
+| `reference/trixi/{Project,Manifest}.toml` — the committed Julia lock (juliapkg shared mode; Trixi 0.17.16) | Looks good. | None |
+| `reference/trixi/ContextFluxTrixi/{Project.toml, src/ContextFluxTrixi.jl}` — package, deps/compat, `SolveFailed` | Looks good. | None |
+| `reference/trixi/ContextFluxTrixi/src/equations.jl` — four custom equations, exact LF bound (D-WS), indicator variable, volume flux, `EQUATIONS` table | Looks good. | None |
+| `reference/trixi/ContextFluxTrixi/src/solve.jl` — `node_coordinates`, `solve`, `versions` | Had a skim. Looks good. | None |
+| `reference/trixi/ContextFluxTrixi/test/runtests.jl` — 72 checks | Skimmed for now. Will revisit later. | None for now. |
+| `simulations/trixi.py` — `julia_package_version` (D-PROV); `faulthandler.disable()` before Julia starts | Confirmed. | None |
+| `simulations/pde/cubic.py` — `CubicFlux2D.solve` time stepping (F14) | Looks good. | None |
+| `tests/helpers.py` — `SHARPCLAW_SSP33`; `tests/verification/test_crosscode.py` uses it; `tests/unit/test_trixi_backend.py` — `describe()` keys | Confirmed. | None |
+| `scripts/data/configs/backend/trixi.yaml`, `scripts/data/README.md`, `CLAUDE.md` (D-DOC) | Looks good. | None |
+| `.github/workflows/test.yml` — opt-in `julia` job (unverified until a `[julia]` push) | COnfirmed. | None |
+| F13, F14; `verification.md` V18 ratios; `python-julia-repo.md` §what happened; `simulation-backends.md` §Trixi; architecture; roadmap | Looks good. | None |
+| ADR-0011 §Initial conditions, ADR-0004 §Amendment, F12 | Looks good. | None |
+| `design/python-julia-repo.md` (agreed; §Decided), `design/simulation-backends.md` (§Trixi), `verification.md`, roadmap, architecture, glossary, index | Looks good. | None |
