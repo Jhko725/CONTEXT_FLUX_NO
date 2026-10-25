@@ -157,6 +157,7 @@ Joon's Review notes below. Resolutions, one commit per logical group (`code-conv
 - **`writer.py`** — `__len__`, `__getitem__` and `open` deleted: reading back is `ZarrWellDatasetSource`'s job and the record is read from the sidecar; `record` is no longer optional.
 - **`pyclaw.py`** — the >1-D Python-kernel refusal is PyClaw's constraint, cited in the docstring and the error (`pyclaw/classic/solver.py:215`, `pyclaw/sharpclaw/solver.py:890`, `:975`; clawpack 5.14.0).
 - **`generate.py`** — `except Exception` narrowed: PyClaw raises bare `Exception` for CFL/step-limit/invalid-state (`pyclaw/solver.py:651,664`, `controller.py:228-234`), so `PyClawBackend.solve` converts those (and a non-finite final state) into `simulations.SolverFailure(backend, reason)`; `generate_dataset` catches only `SolverFailure` and counts it; anything else propagates. Test: `test_blow_up_is_a_solver_failure`.
+- **`waveforms/` → `simulations/initial_conditions/`** — pure move (`git mv`; config `_target_`s updated; all seven IC configs instantiate). The `InitialCondition.sample(key, grid, layout, bcs)` contract and the IC-config cleanup wait for tier 0 (roadmap 4.2), since the samplers then need `layout`/`bcs` from the family.
 - *(further rows resolved below as their commits land)*
 
 ## Review notes

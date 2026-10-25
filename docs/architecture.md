@@ -54,7 +54,7 @@ src/context_flux_no/
 │                                Well boundary_conditions), generate.py (generate_dataset); pde/{base (minimal interface until 4.1), burgers,
 │                                cubic, euler, shallow_water, sine_1d} — 5 PyClaw families + CubicFlux2D/ViscousBurgers1D own steppers
 │                                (~~dataset.py~~, ~~utils.py~~, ~~pdesolve.py~~, ~~pyclaw_utils.py~~)
-├── waveforms/                   GaussianRandomField{,1D,2D}, PeriodicRandomStepFunction{1D,2D}, MultichannelWaveform, TruncatedFourier1D
+│   └── initial_conditions/      (was waveforms/) GaussianRandomField{,1D,2D}, PeriodicRandomStepFunction{1D,2D}, MultichannelWaveform, TruncatedFourier1D
 ├── plotting/, metrics.py, custom_types.py
 scripts/
 ├── training/  train_multiphysics.py (zarr) · train_the_well.py — data + loaders only, on experiment.train; configs/ (22 model, 3 data, 2 training, 3 wandb yamls; config.yaml + config_the_well.yaml)
@@ -87,7 +87,7 @@ src/context_flux_no/
   fv/            Phase 2  pure numerics, N-D via `axis`: stencil · boundary · divergence · split · integrate ·
                           analytic · riemann · flux/{base (FluxPredictor, NumericalFlux), classical, neural}
   pde/           Phase 4  PDEFamily (tiered: flux, max_wave_speed, reflect, conversions | eigensystem… | riemann_flux | viscous_flux)
-  ic/            Phase 4  InitialCondition samplers over waveforms/
+  simulations/initial_conditions/  Phase 4.2  InitialCondition contract over the moved samplers
   simulations/   Phase 2a ✓ PyClawBackend · DatasetRecord · WellWriter · generate;  pending: TrixiBackend (2a-trixi) · JaxBackend (4.7) · PDEFamily (4.1)
   models/incontext/  Phase 3  InContextOperator ⊃ InContextFluxOperator; conditioners; encoders
   models/baselines/  DISCO · DPOT · NaiveFNO …

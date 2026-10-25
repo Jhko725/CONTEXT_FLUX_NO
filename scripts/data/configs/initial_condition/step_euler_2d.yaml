@@ -1,6 +1,6 @@
 name: step
 waveform:
-  _target_: context_flux_no.waveforms.step.PeriodicRandomStepFunction2D
+  _target_: context_flux_no.simulations.initial_conditions.step.PeriodicRandomStepFunction2D
   channels: 4
   num_regions_min: 2
   num_regions_max: 8
