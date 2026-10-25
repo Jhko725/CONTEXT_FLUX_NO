@@ -33,6 +33,21 @@ issues*, and `docs/findings.md` — rather than running a full tier to discover 
 already red. GPU machines add `--extra cuda`; PyClaw needs `build-essential` and
 `gfortran`.
 
+## Test contracts
+
+What each tier promises, so a new test has one obvious home (ADR-0008):
+
+| Tier | Directory | Contract |
+|---|---|---|
+| unit | `tests/unit` | fast, deterministic, no external data; each test is a law at a contract (what the module promises), not at its internals; a test that must change when the implementation changes was testing internals |
+| property | `tests/property` | Hypothesis laws over generated inputs; strategies in `tests/strategies.py`, parameterized by bounds rather than duplicated; `N = 1, 2, 3` spatial dimensions wherever a function takes `axis` (V23) |
+| verification | `tests/verification` | every test carries a `docs/verification.md` row id in its docstring and compares against an **independent oracle** (closed form, another code, a published number); runs under `jax_enable_x64` (its conftest); marked `slow` only when it is slow — a fast verification test still lives here and runs on every commit. Placement is by the claim, not by speed |
+| regression | `tests/regression` | ICLR checkpoints reproduce their goldens on CPU; skips (never fails) without the checkpoints |
+
+Shared across tiers: tolerances and solver settings are named entries with a one-line reason
+in `tests/helpers.py` (created with the first numerics test); a test file tests one module or
+one claim — a file edited for unrelated reasons is split.
+
 ## Goldens and tolerances
 
 - Regression goldens (`tests/regression/goldens/*.npz`) are generated **and** compared on

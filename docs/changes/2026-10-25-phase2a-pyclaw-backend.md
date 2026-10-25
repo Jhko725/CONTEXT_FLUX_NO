@@ -131,7 +131,7 @@ Commit 3 — docs:
 
 Fast tier (`JAX_PLATFORMS=cpu uv run pytest tests/unit`, now 59 tests, ~65 s; the simulation ones need `clawpack`, which builds here after `apt-get install gfortran`):
 - `test_pyclaw_backend.py` — V25 bit identity on 5 families; SharpClaw runs on 5 families and starts from the identical state; `Grid` == PyClaw centres; `normalize_bcs` rules; input validation; `describe`; a non-periodic run.
-- `test_backend_agreement.py` — V18a on the four 1-D families (ratios ≥ 1.5 over 64/128/256).
+- `tests/verification/test_backend_agreement.py` — V18a on the four 1-D families (ratios ≥ 1.5 over 64/128/256); unmarked, runs in the fast tier.
 - `test_generate_dataset.py` — Hypothesis round trip of `DatasetRecord`; sidecar naming; writer layout incl. both BC layouts and `finalize`; `generate_dataset` → store + `dataset.json` → `ZarrWellDatasetSource` → `dataset_id` from the record.
 
 Verification tier (`JAX_PLATFORMS=cpu uv run pytest tests/verification -m slow`): `test_crosscode.py::test_euler_2d_classic_vs_sharpclaw` (V18a, 2-D).
@@ -159,6 +159,8 @@ Joon's Review notes below. Resolutions, one commit per logical group (`code-conv
 - **`pyclaw.py`** — the >1-D Python-kernel refusal is PyClaw's constraint, cited in the docstring and the error (`pyclaw/classic/solver.py:215`, `pyclaw/sharpclaw/solver.py:890`, `:975`; clawpack 5.14.0).
 - **`generate.py`** — `except Exception` narrowed: PyClaw raises bare `Exception` for CFL/step-limit/invalid-state (`pyclaw/solver.py:651,664`, `controller.py:228-234`), so `PyClawBackend.solve` converts those (and a non-finite final state) into `simulations.SolverFailure(backend, reason)`; `generate_dataset` catches only `SolverFailure` and counts it; anything else propagates. Test: `test_blow_up_is_a_solver_failure`.
 - **`waveforms/` → `simulations/initial_conditions/`** — pure move (`git mv`; config `_target_`s updated). The commit message of `10c9584` was made before the instantiation check finished: six of seven IC configs instantiated; `step_shallow.yaml` passed its two samplers as `_args_` to `MultichannelWaveform(waveforms)` (pre-existing, since `c67e5d2`) and is fixed in the next commit (`waveforms:` named). The `InitialCondition.sample(key, grid, layout, bcs)` contract and the IC-config cleanup wait for tier 0 (roadmap 4.2), since the samplers then need `layout`/`bcs` from the family.
+- **tests** — `l1_distance` → `l1_classic_vs_sharpclaw`; `test_backend_agreement.py` moved to `tests/verification/` (unmarked, so it still runs every commit) under the new rule that a verification-tier test is placed by the claim it carries, not by its speed; the tier contracts are now a section of `docs/coding-standards.md`.
+- **Retro note** — commit `10c9584` was made in the same shell chain as the check whose output I had not read; the check had failed on one config. Rule for myself, now in the change-doc *Tests* discipline: a commit is a separate command issued after reading the checks' output, never chained behind them.
 - *(further rows resolved below as their commits land)*
 
 ## Review notes
@@ -178,7 +180,7 @@ Joon's Review notes below. Resolutions, one commit per logical group (`code-conv
 | `waveforms/grf.py` — defaults (F11) | Confirmed. `waveforms` might have to be renamed and moved somewhere else in the module hierarchy since it pertains to the generation of initial conditions for simulations. Suitable location and place? | To be discussed with Claude. |
 | `scripts/data/generate_dataset.py`, `configs/config.yaml`, `configs/backend/*.yaml`, `README.md` | Looks good. Also possible to clean up the initial condition configs, by bring ahead relevant parts of the `PDEFamily` refactor and reorganizing `waveforms`? Or defer later in the roadmap? | To be discussed with Claude. |
 | `tests/unit/goldens_simulations/*.npz`, `make_goldens_simulations.py`, `test_pyclaw_backend.py` | Confirmed. | Golden tests to run when the cluster is back online. |
-| `tests/unit/test_backend_agreement.py`, `tests/verification/*` | Confirmed. Maybe `l1_distance` needs a better name? Something like `l1_sharpclaw_classic`? Also have we laid out the contract for the different types of tests (regression / unit / verification / rest) | To be discussed with Claude. |
+| `tests/unit/test_backend_agreement.py` (now `tests/verification/`), `tests/verification/*` | Confirmed. Maybe `l1_distance` needs a better name? Something like `l1_sharpclaw_classic`? Also have we laid out the contract for the different types of tests (regression / unit / verification / rest) | To be discussed with Claude. |
 | `tests/unit/test_generate_dataset.py` | Confirmed. | None |
 | `docs/decisions/0011-*.md`, `docs/design/simulation-backends.md` | Looks good. | None |
 | `docs/roadmap.md`, `architecture.md`, `verification.md`, `findings.md`, `glossary.md`, `index.md` | Had a readthrough. | None |
