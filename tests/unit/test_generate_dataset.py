@@ -121,8 +121,8 @@ def test_generate_dataset_end_to_end(tmp_path):
     from context_flux_no.data import ZarrWellDatasetSource
 
     class SinePhase(InitialConditionSampler):
-        n_eqn = 1
-        n_spatial_dims = 1
+        def __init__(self):
+            super().__init__(n_eqn=1, n_spatial_dims=1)
 
         def sample(self, key, x_spans):
             import jax

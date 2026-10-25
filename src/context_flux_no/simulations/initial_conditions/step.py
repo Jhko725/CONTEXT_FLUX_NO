@@ -33,19 +33,12 @@ class PeriodicStep1D(InitialCondition):
     def __init__(
         self, jumps: Float[np.ndarray, " J"], values: Float[np.ndarray, " J"], x_span
     ):
+        super().__init__(n_eqn=1, n_spatial_dims=1)
         self.jumps = np.sort(np.asarray(jumps, dtype=float))
         self.values = np.asarray(values, dtype=float)
         self.x_span = (float(x_span[0]), float(x_span[1]))
         if self.jumps.shape != self.values.shape or self.jumps.ndim != 1:
             raise ValueError("jumps and values must be 1-D of equal length")
-
-    @property
-    def n_eqn(self) -> int:
-        return 1
-
-    @property
-    def n_spatial_dims(self) -> int:
-        return 1
 
     def at_points(self, coords: Coords) -> Float[np.ndarray, "1 *shape"]:
         (x,) = self.check_coords(coords)
@@ -66,20 +59,13 @@ class PeriodicRandomStepFunction1D(InitialConditionSampler):
         value_min: float = -1.0,
         value_max: float = 1.0,
     ) -> None:
+        super().__init__(n_eqn=1, n_spatial_dims=1)
         if num_jumps_min < 1 or num_jumps_max < num_jumps_min:
             raise ValueError("need 1 <= num_jumps_min <= num_jumps_max")
         self.num_jumps_min = int(num_jumps_min)
         self.num_jumps_max = int(num_jumps_max)
         self.value_min = float(value_min)
         self.value_max = float(value_max)
-
-    @property
-    def n_eqn(self) -> int:
-        return 1
-
-    @property
-    def n_spatial_dims(self) -> int:
-        return 1
 
     def sample(
         self, key: PRNGKeyArray, x_spans: Sequence[Sequence[float]]
@@ -110,16 +96,9 @@ class PeriodicVoronoi2D(InitialCondition):
         self.x_spans = tuple((float(lo), float(hi)) for lo, hi in x_spans)
         if self.seeds.ndim != 2 or self.seeds.shape[1] != 2 or len(self.x_spans) != 2:
             raise ValueError("seeds must be [R, 2] on a 2-D domain")
-        if self.values.shape[1] != self.seeds.shape[0]:
+        if self.values.ndim != 2 or self.values.shape[1] != self.seeds.shape[0]:
             raise ValueError("values must be [channels, R]")
-
-    @property
-    def n_eqn(self) -> int:
-        return self.values.shape[0]
-
-    @property
-    def n_spatial_dims(self) -> int:
-        return 2
+        super().__init__(n_eqn=self.values.shape[0], n_spatial_dims=2)
 
     def at_points(self, coords: Coords) -> Float[np.ndarray, "n_eqn *shape"]:
         x, y = self.check_coords(coords)
@@ -143,6 +122,7 @@ class PeriodicRandomStepFunction2D(InitialConditionSampler):
         value_min: float | Sequence[float] = -1.0,
         value_max: float | Sequence[float] = 1.0,
     ) -> None:
+        super().__init__(n_eqn=channels, n_spatial_dims=2)
         self.channels = int(channels)
         if num_regions_min < 1 or num_regions_max < num_regions_min:
             raise ValueError("need 1 <= num_regions_min <= num_regions_max")
@@ -150,14 +130,6 @@ class PeriodicRandomStepFunction2D(InitialConditionSampler):
         self.num_regions_max = int(num_regions_max)
         self.value_min = np.broadcast_to(np.asarray(value_min, float), (self.channels,))
         self.value_max = np.broadcast_to(np.asarray(value_max, float), (self.channels,))
-
-    @property
-    def n_eqn(self) -> int:
-        return self.channels
-
-    @property
-    def n_spatial_dims(self) -> int:
-        return 2
 
     def sample(
         self, key: PRNGKeyArray, x_spans: Sequence[Sequence[float]]

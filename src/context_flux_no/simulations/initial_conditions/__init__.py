@@ -10,7 +10,10 @@ from .base import (
     Multichannel as Multichannel,
     Stacked as Stacked,
 )
-from .fourier import TruncatedFourier1D as TruncatedFourier1D
+from .fourier import (
+    RandomTruncatedFourier1D as RandomTruncatedFourier1D,
+    TruncatedFourier1D as TruncatedFourier1D,
+)
 from .grf import (
     GaussianRandomField as GaussianRandomField,
     GaussianRandomFieldCondition as GaussianRandomFieldCondition,

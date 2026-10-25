@@ -25,16 +25,24 @@ from jaxtyping import Float, PRNGKeyArray
 Coords = Sequence[Float[np.ndarray, "*shape"]]  # one array per spatial axis, same shape
 
 
+def _check_dims(cls_name: str, n_eqn: int, n_spatial_dims: int) -> tuple[int, int]:
+    if int(n_eqn) < 1 or int(n_spatial_dims) < 1:
+        raise ValueError(f"{cls_name}: n_eqn and n_spatial_dims must be >= 1")
+    return int(n_eqn), int(n_spatial_dims)
+
+
 class InitialCondition(abc.ABC):
-    """A function `x ↦ u0(x)` with `n_eqn` components on `n_spatial_dims` dimensions."""
+    """A function `x ↦ u0(x)` with `n_eqn` components on `n_spatial_dims` dimensions.
+    Subclasses call `super().__init__(n_eqn=..., n_spatial_dims=...)` and implement
+    `at_points`."""
 
-    @property
-    @abc.abstractmethod
-    def n_eqn(self) -> int: ...
+    n_eqn: int
+    n_spatial_dims: int
 
-    @property
-    @abc.abstractmethod
-    def n_spatial_dims(self) -> int: ...
+    def __init__(self, *, n_eqn: int, n_spatial_dims: int) -> None:
+        self.n_eqn, self.n_spatial_dims = _check_dims(
+            type(self).__name__, n_eqn, n_spatial_dims
+        )
 
     @abc.abstractmethod
     def at_points(self, coords: Coords) -> Float[np.ndarray, "n_eqn *shape"]:
@@ -64,17 +72,8 @@ class FromFunction(InitialCondition):
         n_eqn: int,
         n_spatial_dims: int,
     ) -> None:
+        super().__init__(n_eqn=n_eqn, n_spatial_dims=n_spatial_dims)
         self.fn = fn
-        self._n_eqn = int(n_eqn)
-        self._n_spatial_dims = int(n_spatial_dims)
-
-    @property
-    def n_eqn(self) -> int:
-        return self._n_eqn
-
-    @property
-    def n_spatial_dims(self) -> int:
-        return self._n_spatial_dims
 
     def at_points(self, coords: Coords) -> Float[np.ndarray, "n_eqn *shape"]:
         arrays = self.check_coords(coords)
@@ -95,14 +94,9 @@ class Stacked(InitialCondition):
         dims = {p.n_spatial_dims for p in self.parts}
         if len(self.parts) == 0 or len(dims) != 1:
             raise ValueError("Stacked needs >= 1 part, all of one spatial dimension")
-
-    @property
-    def n_eqn(self) -> int:
-        return sum(p.n_eqn for p in self.parts)
-
-    @property
-    def n_spatial_dims(self) -> int:
-        return self.parts[0].n_spatial_dims
+        super().__init__(
+            n_eqn=sum(p.n_eqn for p in self.parts), n_spatial_dims=dims.pop()
+        )
 
     def at_points(self, coords: Coords) -> Float[np.ndarray, "n_eqn *shape"]:
         return np.concatenate([p.at_points(coords) for p in self.parts], axis=0)
@@ -115,31 +109,26 @@ class Conserved(InitialCondition):
     def __init__(self, primitive: InitialCondition, pde: Any) -> None:
         if not hasattr(pde, "to_conserved"):
             raise TypeError(f"{type(pde).__name__} has no primitive-variable form")
+        super().__init__(n_eqn=pde.n_eqns, n_spatial_dims=primitive.n_spatial_dims)
         self.primitive = primitive
         self.pde = pde
-
-    @property
-    def n_eqn(self) -> int:
-        return self.pde.n_eqns
-
-    @property
-    def n_spatial_dims(self) -> int:
-        return self.primitive.n_spatial_dims
 
     def at_points(self, coords: Coords) -> Float[np.ndarray, "n_eqn *shape"]:
         return np.asarray(self.pde.to_conserved(*self.primitive.at_points(coords)))
 
 
 class InitialConditionSampler(abc.ABC):
-    """Draws an `InitialCondition` on the domain `x_spans` from a PRNG key."""
+    """Draws an `InitialCondition` on the domain `x_spans` from a PRNG key; the draw has the
+    sampler's `n_eqn` and `n_spatial_dims`. Subclasses call `super().__init__(n_eqn=...,
+    n_spatial_dims=...)` and implement `sample`."""
 
-    @property
-    @abc.abstractmethod
-    def n_eqn(self) -> int: ...
+    n_eqn: int
+    n_spatial_dims: int
 
-    @property
-    @abc.abstractmethod
-    def n_spatial_dims(self) -> int: ...
+    def __init__(self, *, n_eqn: int, n_spatial_dims: int) -> None:
+        self.n_eqn, self.n_spatial_dims = _check_dims(
+            type(self).__name__, n_eqn, n_spatial_dims
+        )
 
     @abc.abstractmethod
     def sample(
@@ -152,16 +141,14 @@ class Multichannel(InitialConditionSampler):
 
     def __init__(self, samplers: Sequence[InitialConditionSampler]) -> None:
         self.samplers = tuple(samplers)
-        if len({s.n_spatial_dims for s in self.samplers}) != 1:
-            raise ValueError("Multichannel samplers must share one spatial dimension")
-
-    @property
-    def n_eqn(self) -> int:
-        return sum(s.n_eqn for s in self.samplers)
-
-    @property
-    def n_spatial_dims(self) -> int:
-        return self.samplers[0].n_spatial_dims
+        dims = {s.n_spatial_dims for s in self.samplers}
+        if len(self.samplers) == 0 or len(dims) != 1:
+            raise ValueError(
+                "Multichannel needs >= 1 sampler, all of one spatial dimension"
+            )
+        super().__init__(
+            n_eqn=sum(s.n_eqn for s in self.samplers), n_spatial_dims=dims.pop()
+        )
 
     def sample(self, key: PRNGKeyArray, x_spans: Sequence[Sequence[float]]) -> Stacked:
         import jax

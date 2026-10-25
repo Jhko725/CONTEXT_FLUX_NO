@@ -29,19 +29,11 @@ class GaussianRandomFieldCondition(InitialCondition):
         scales: Float[np.ndarray, " channels"],
         n_spatial_dims: int,
     ) -> None:
+        super().__init__(n_eqn=len(srfs), n_spatial_dims=n_spatial_dims)
         self.srfs = tuple(srfs)
         self.seeds = tuple(int(s) for s in seeds)
         self.means = np.asarray(means, dtype=float)
         self.scales = np.asarray(scales, dtype=float)
-        self._n_spatial_dims = int(n_spatial_dims)
-
-    @property
-    def n_eqn(self) -> int:
-        return len(self.srfs)
-
-    @property
-    def n_spatial_dims(self) -> int:
-        return self._n_spatial_dims
 
     def at_points(self, coords: Coords) -> Float[np.ndarray, "n_eqn *shape"]:
         arrays = self.check_coords(coords)
@@ -74,8 +66,8 @@ class GaussianRandomField(InitialConditionSampler):
         dims = {cov.dim for cov in covariance_fns}
         if len(covariance_fns) == 0 or len(dims) != 1:
             raise ValueError("covariance_fns must be non-empty and of one dimension")
+        super().__init__(n_eqn=len(covariance_fns), n_spatial_dims=dims.pop())
         self.covariance_fns = tuple(covariance_fns)
-        self._n_spatial_dims = int(dims.pop())
         self.period = float(period)
         self.num_modes = int(num_modes)
         n = len(self.covariance_fns)
@@ -96,14 +88,6 @@ class GaussianRandomField(InitialConditionSampler):
             )
             for cov, norm in zip(self.covariance_fns, normalizers)
         )
-
-    @property
-    def n_eqn(self) -> int:
-        return len(self.covariance_fns)
-
-    @property
-    def n_spatial_dims(self) -> int:
-        return self._n_spatial_dims
 
     def sample(
         self, key: PRNGKeyArray, x_spans: Sequence[Sequence[float]]

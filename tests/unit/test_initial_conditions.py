@@ -14,6 +14,7 @@ from context_flux_no.simulations.initial_conditions import (
     Multichannel,
     PeriodicRandomStepFunction1D,
     PeriodicRandomStepFunction2D,
+    RandomTruncatedFourier1D,
     Stacked,
     TruncatedFourier1D,
 )
@@ -37,6 +38,7 @@ def _samplers():
         "multi": Multichannel(
             [PeriodicRandomStepFunction1D(1, 3), PeriodicRandomStepFunction1D(1, 3)]
         ),
+        "fourier": RandomTruncatedFourier1D(4, offset_range=(-0.5, 0.5)),
     }
 
 
@@ -132,7 +134,9 @@ def test_stacked_conserved_and_from_function():
         FromFunction(lambda c: c[0], n_eqn=1, n_spatial_dims=1).at_points([np.zeros(3)])
 
 
-def test_truncated_fourier_is_periodic():
-    ic = TruncatedFourier1D.with_uniform_rand_coeffs(4, key=jax.random.key(5))
-    x = np.linspace(0, 1, 50, endpoint=False)
-    np.testing.assert_allclose(ic.at_points([x]), ic.at_points([x + 1.0]), atol=1e-12)
+def test_truncated_fourier_is_periodic_with_the_domain_length():
+    ic = RandomTruncatedFourier1D(4).sample(jax.random.key(5), [(-1.0, 2.0)])
+    assert isinstance(ic, TruncatedFourier1D) and ic.L == 3.0
+    x = np.linspace(-1, 2, 50, endpoint=False)
+    np.testing.assert_allclose(ic.at_points([x]), ic.at_points([x + 3.0]), atol=1e-12)
+    assert not np.allclose(ic.at_points([x]), ic.at_points([x + 1.0]))
