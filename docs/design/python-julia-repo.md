@@ -3,7 +3,7 @@ type: design
 status: tentative
 updated: 2026-10-25
 verified_by: — (Claude's proposal for Joon; becomes `agreed` once Joon has chosen)
-sources: [juliapkg PyPI README; JuliaCall docs (PythonCall.jl 0.9); PythonCall.jl README and FAQ 0.9.19; PySR julia_import.py; Julia Pkg docs; Trixi.jl docs; ADR-0004]
+sources: [juliapkg PyPI README; JuliaCall docs (stable; Multi-threading, Configuration, Managing dependencies); PythonCall.jl README and FAQ 0.9.19; PySR (julia_import.py, sr.py, __init__.py) and SymbolicRegression.jl (parallelism); Julia Pkg docs; Trixi.jl docs; ADR-0004]
 ---
 
 # Maintaining Julia (Trixi.jl) inside a `uv`-managed Python repository
@@ -33,13 +33,11 @@ repository gets a working, *reproducible* Julia + Trixi.jl without a second tool
   Julia itself (e.g. `{"julia": "=1.11.7"}` or `"~1.11"`), nothing else. `juliapkg.json` has no
   lock file, so putting Trixi in it would give compat ranges, not exact reproducibility
   **[deduced from the README's schema: `julia`, `packages{uuid, version}` only]**.
-- Python side: `simulations/trixi.py` calls
+- Python side: `simulations/trixi.py` offers two transports over the same Julia function
+  (see C below): in-process through `juliacall` (default) or a subprocess
   `subprocess.run([juliapkg.executable(), f"--project={REF_TRIXI}", "--startup-file=no",
-  "run.jl", request_json])`. No `juliacall`, no libjulia in the Python process: JAX and an
-  embedded Julia runtime would share one process's threads and signal handlers, which is a class
-  of problems a subprocess simply does not have **[deduced]**; JuliaCall's own knobs for
-  threads/sysimage exist (`PYTHON_JULIACALL_THREADS`, `_SYSIMAGE`, … **[cited: JuliaCall docs]**)
-  but are only needed in-process.
+  "run.jl", request_json])`. Either way `juliapkg` only locates/installs Julia; the Trixi
+  environment is `reference/trixi/`'s `Manifest.toml`.
 - Where things live: with an active virtualenv, juliapkg's project (and a downloaded Julia) go
   to `.venv/julia_env/` **[cited]**; Julia packages themselves go to the depot (`~/.julia`, or
   `JULIA_DEPOT_PATH`). On a cluster set `JULIA_DEPOT_PATH` to a shared/scratch path and run the
@@ -59,63 +57,76 @@ than by a file `uv sync` reads; a fresh clone needs one manual step before `Trix
 works; CI needs a `julia-actions/setup-julia` step. Reasonable if `juliapkg` ever misbehaves,
 and A degrades to B gracefully (`PYTHON_JULIAPKG_EXE=$(which julia)`).
 
-### C. `juliacall` in-process (assessed at Joon's request, 2026-10-25)
+### C. `juliacall` in-process — re-assessed 2026-10-25 (round 2)
 
-`import juliacall` embeds libjulia in the Python process; Julia is installed on demand through
-juliapkg, and a `Main.seval`/`Main.include` API runs Julia code. What the evidence says:
+**Correction.** The first assessment conflated the two directions of PythonCall.jl. The FAQ's
+"Is PythonCall/JuliaCall thread safe? — No", the rule "only call Python from the first
+thread", and the `PythonCall.GC.disable()/enable()` advice concern *Python objects touched
+from Julia threads* (the PythonCall direction, and Julia code that calls back into Python).
+They do **not** forbid running multithreaded *pure-Julia* code from Python through JuliaCall.
+What the JuliaCall page actually says [cited: JuliaCall docs, "Multi-threading"]:
 
-*For it.*
-- **No file protocol.** PythonCall advertises "fast non-copying conversion of numeric arrays in
-  either direction" (numpy ↔ Julia `Array`) **[cited: PythonCall README]**, so `u0` goes in and
-  `u` comes out as arrays; `request.json`/`u.h5` and the temp directory disappear.
-- **Interactive use.** Calling a Trixi elixir from a notebook, inspecting the DG solution,
-  changing `polydeg` and re-running is immediate; with the subprocess route every experiment is
-  a file round trip.
-- **Same installer.** It needs `juliapkg` and a `juliapkg.json` exactly as layout A does, so A's
-  infrastructure is a prerequisite, not an alternative **[cited: JuliaCall docs]**.
-- **Precedent.** PySR drives a large Julia package (SymbolicRegression.jl) from Python through
-  juliacall in production, including its own handling of the signal and thread options
-  (`pysr/julia_import.py`) **[cited]** — so the route is mature when its rules are followed.
+- `PYTHON_JULIACALL_THREADS=N|auto` (and `_PROCS`) launches Julia with N threads;
+- Julia code may run while Python's GIL is released by calling it through
+  `f._jl_call_nogil(...)`, so Python threads can run Julia in parallel (the docs' example: four
+  `Libc.systemsleep` calls in ~5 s instead of ~20 s);
+- the constraints: a `_jl_call_nogil` function must not touch Python unless it re-acquires
+  the GIL (`PythonCall.GIL.@lock`), and functions that *yield to Julia's scheduler* (e.g.
+  `sleep`, `wait`) can hang without a `jl.yield()` polling loop;
+- `PYTHON_JULIACALL_HANDLE_SIGNALS=yes` is required with multiple threads (GC safepoints are
+  implemented with deliberate segfaults); the documented cost is that Ctrl-C no longer raises
+  `KeyboardInterrupt`;
+- the feature is labelled "experimental and can change without notice".
 
-*Against it, for this repository's use.*
-- **Not thread safe.** The FAQ answers "No": Python may only be called from Julia's first
-  thread, and Julia finalizers can run on any thread, so `PythonCall.GC.disable()/enable()` is
-  needed around threaded Julia code — and "problems may still occur" **[cited: PythonCall FAQ
-  0.9.19]**. Trixi's performance on 2D Euler comes from `Threads.@threads` over elements, so the
-  production generator would run exactly in the configuration the FAQ warns about.
-- **Signals.** Julia uses deliberate segfaults as GC safepoints; without
-  `PYTHON_JULIACALL_HANDLE_SIGNALS=yes` set *before import* they kill the process **[cited:
-  FAQ]**. Settable, but one more invariant for every entry point (scripts, tests, notebooks,
-  Slurm jobs) to respect.
-- **Shared-library conflicts.** The FAQ documents `libstdc++` clashes ("`ccall` requires the
-  compiler" when another library is imported first) and heap corruption with PyTorch unless
-  `juliacall` is imported *before* it **[cited: FAQ]**. `jaxlib` is a manylinux wheel bundling its
-  own C++ runtime, the same hazard class as the documented cases — untested for JAX specifically,
-  but the mitigation ("import juliacall first, everywhere") is fragile across Hydra scripts and
-  pytest collection **[deduced]**.
-- **Process coupling.** A Julia crash, OOM or precompile stall takes the JAX process with it; with
-  a subprocess it is a non-zero exit code recorded as a failed trajectory batch in
-  `DatasetRecord.n_failed`. On Slurm the subprocess also lets Julia use all node cores without
-  negotiating with Python.
-- **No performance need.** `TrixiBackend` runs per *dataset* (hundreds of trajectories per
-  process); array transfer through HDF5 is milliseconds against seconds of DG time stepping,
-  and Julia start-up/TTFX is paid once per dataset either way **[deduced]**.
+**PySR as precedent** [cited: `pysr/julia_import.py`, `pysr/sr.py`, `pysr/__init__.py`;
+`SymbolicRegression.jl/src/SymbolicRegression.jl`]: SymbolicRegression.jl's default is
+`parallelism=:multithreading` (multiprocessing via `addprocs` also supported, including
+Slurm cluster managers), and PySR drives it from Python exactly through the mechanism above:
+it sets `PYTHON_JULIACALL_HANDLE_SIGNALS=yes`, `PYTHON_JULIACALL_THREADS=auto` and
+`JULIA_NUM_GC_THREADS` *before* `import juliacall`, imports JuliaCall as the very first thing
+in `pysr/__init__.py` ("to prevent library linking issues caused by numpy/pytorch/etc.
+importing old libraries"), and calls `equation_search._jl_call_nogil(...)` for the search. It
+works around the lost Ctrl-C with its own "external stop signal" context. So in-process,
+multithreaded Julia from Python is a production pattern, not a corner case.
 
-*Verdict.* The transport, not the Julia code, is what the two routes differ in. Design the Julia
-side as a **local package** `reference/trixi/ContextFluxTrixi.jl` exposing one function,
-`solve(family, params, u0::Array, grid, t_out, bcs; polydeg) -> Array`, and keep the elixirs as
-thin callers of it. Then:
+*What remains true against C, for this repository.*
+- The import-order constraint (`juliacall` before `jax`/`numpy`) and the signal setting are
+  process-wide invariants that every entry point must honour; PySR solves it by owning the
+  package `__init__`. Here they can be confined to one module (`simulations/trixi.py`, which
+  sets the environment and imports `juliacall` on first use) **provided** that module is
+  imported before `jax` in the process that uses it — true for `scripts/data/generate_dataset.py`
+  if the import is placed first, false for a notebook that already imported JAX. **[deduced]**
+- Process coupling: a Julia OOM or crash takes the JAX process with it; a subprocess returns
+  an exit code that `DatasetRecord.n_failed` records. For a Slurm generation job this is the
+  one practical difference.
+- `_jl_call_nogil` + scheduler-yielding code: Trixi/OrdinaryDiffEq time stepping does not
+  yield, but Trixi's `AnalysisCallback`/`AliveCallback` printing and any `ProgressMeter` use
+  can; run the elixir with callbacks disabled or accept blocking under the GIL. **[deduced]**
 
-- **production / generator / tests**: `run.jl` wraps `solve` for the subprocess `TrixiBackend`
-  (ADR-0004 as written);
-- **exploration**: a notebook may `import juliacall` (with `PYTHON_JULIACALL_HANDLE_SIGNALS=yes`,
-  imported before jax) and call `ContextFluxTrixi.solve` on numpy arrays directly — nothing in
-  `src/` depends on it.
+*What C gains.* No file protocol and no temp directory; arrays cross with no copy; one warm
+Julia session per Python process, so TTFX is paid once per *process*, not once per dataset —
+which matters for tests, notebooks and small regenerations far more than for a 100 × 100
+trajectory job; and a REPL-like loop for developing the elixirs from Python.
 
-That keeps one Julia implementation, costs nothing now, and leaves an in-process
-`TrixiBackend(transport="juliacall")` as a ten-line addition if the file protocol ever becomes a
-bottleneck. It is *not* recommended to make juliacall the default transport, for the thread,
-signal and library-order reasons above.
+*Verdict (revised).* Both transports are viable; the decision is about failure isolation and
+ergonomics, not thread safety. Design the Julia side as a **local package**
+`reference/trixi/ContextFluxTrixi.jl` exposing one function
+`solve(family, params, u0::Array, grid, t_out, bcs; polydeg) -> Array`, so the transport is a
+thin layer either way, and implement **both** behind `TrixiBackend(transport=…)`:
+
+- `transport="juliacall"` — the default for development, tests and notebooks: `simulations/trixi.py`
+  sets `PYTHON_JULIACALL_HANDLE_SIGNALS=yes`, `PYTHON_JULIACALL_THREADS=auto` (and
+  `PYTHON_JULIACALL_EXE`/`_PROJECT` to the `reference/trixi` project so `juliapkg.json` is
+  not needed for packages) before importing `juliacall`, then calls
+  `ContextFluxTrixi.solve._jl_call_nogil(...)` with numpy arrays. Document the import-order
+  rule in the module docstring and make the generate script import it first.
+- `transport="subprocess"` — `run.jl` wrapping the same `solve` via `request.json`/`u.h5`:
+  for Slurm generation jobs where a Julia failure must not kill the Python process, and as the
+  fallback if the experimental multithreading path misbehaves.
+
+This revises ADR-0004's "Julia subprocess only" wording: the *pinned, file-based* intent (Julia
+as an oracle/generator behind `SolverBackend`, not as a dependency of `src/` at large) stands;
+the transport is a per-call choice. Amend ADR-0004 with one line when 2a-trixi lands.
 
 ## Recommended layout (A), concretely
 
@@ -131,8 +142,8 @@ reference/trixi/
   run.jl                         reads request.json → includes the elixir → writes u.h5
   elixirs/{cubic_1d,sine_1d,burgers_1d,shallow_water_1d,cubic_2d,euler_2d}.jl
   ContextFluxTrixi/              local package (`dev`-ed into Project.toml): custom scalar equations
-                                 + `solve(...)`; elixirs and run.jl are thin callers; juliacall can
-                                 call the same `solve` in a notebook (layout C, exploration only)
+                                 + `solve(...)`; run.jl (subprocess transport) and juliacall (in-process
+                                 transport, default) are thin callers of the same function
 scripts/setup_julia.py           resolve + instantiate + precompile + smoke test
 src/context_flux_no/simulations/trixi.py   TrixiBackend (subprocess; temp dir; JSON + HDF5)
 ```
@@ -144,10 +155,13 @@ skip until the Julia surface grows.
 
 ## What this means for 2a-Trixi on Joon's machine
 
-Steps 1–2 of the ledger's hand-off become: `uv add --group dev juliapkg`, write `juliapkg.json`,
-`uv run python scripts/setup_julia.py` (first run downloads Julia if `juliaup`/`julia` are
-absent), then `julia --project=reference/trixi` → `] add Trixi OrdinaryDiffEqSSPRK HDF5 JSON3`,
-commit both TOMLs. Everything after that is elixir writing.
+Steps 1–2 of the ledger's hand-off become: `uv add --group dev juliapkg juliacall`, write
+`juliapkg.json` (`{"julia": "~1.11"}`), `uv run python scripts/setup_julia.py` (first run
+downloads Julia if `juliaup`/`julia` are absent), then `julia --project=reference/trixi` →
+`] add Trixi OrdinaryDiffEqSSPRK HDF5 JSON3 PythonCall` (PythonCall.jl must be in the project
+for the juliacall transport, at the version matching the Python `juliacall` [cited: JuliaCall
+docs, "Managing Julia dependencies"]), `] dev ./ContextFluxTrixi`, commit both TOMLs. Then
+`ContextFluxTrixi.solve`, the elixirs, `simulations/trixi.py` with both transports, and V18.
 
 ## Sources
 
@@ -158,9 +172,12 @@ JuliaCall documentation, PythonCall.jl 0.9
 (<https://docs.juliahub.com/PythonCall/WdXsa/0.9.5/juliacall>): configuration options, Julia
 installed via JuliaPkg on demand, environment choice · PythonCall.jl README
 (<https://github.com/JuliaPy/PythonCall.jl>): non-copying array conversion, Julia ≥ 1.10 / Python ≥ 3.10 ·
-PythonCall FAQ 0.9.19 (<https://docs.juliahub.com/PythonCall/WdXsa/0.9.19/faq>): thread safety,
-`PYTHON_JULIACALL_HANDLE_SIGNALS`, libstdc++ and PyTorch heap-corruption notes · PySR's
-`pysr/julia_import.py` (<https://huggingface.co/spaces/MilesCranmer/PySR/blob/47ce6616a74a03c692a8fc52b3e751bb3b62dd4b/pysr/julia_import.py>) as a production juliacall precedent · Julia `Pkg` documentation
+PythonCall FAQ 0.9.19 (<https://docs.juliahub.com/PythonCall/WdXsa/0.9.19/faq>): thread safety
+*of Python objects from Julia threads*, `PYTHON_JULIACALL_HANDLE_SIGNALS`, libstdc++ and PyTorch
+heap-corruption notes · PySR (<https://github.com/MilesCranmer/PySR>: `pysr/julia_import.py`,
+`pysr/sr.py` `_jl_call_nogil`, `pysr/__init__.py` import order) and SymbolicRegression.jl
+(<https://github.com/MilesCranmer/SymbolicRegression.jl>: `parallelism=:multithreading` default)
+as the production precedent for threaded Julia under juliacall · Julia `Pkg` documentation
 (<https://pkgdocs.julialang.org>): Project/Manifest semantics and `instantiate` · Trixi.jl
 documentation (<https://trixi-framework.github.io/Trixi.jl/stable/>) for the equation/elixir
 structure · ADR-0004 for the subprocess decision.

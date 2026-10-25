@@ -51,9 +51,11 @@ What `reference/trixi/` + `simulations/trixi.py::TrixiBackend` need, so it can b
    where the family shocks (`VolumeIntegralShockCapturingHG`), `initial_condition(x, t, equations)`
    reading `u0` from the HDF5 input by nearest cell, output projected to cell averages on the
    requested grid (`Trixi.integrate` per element or `PlotData` sampling — decide in the elixir).
-3. The protocol: `TrixiBackend.solve` writes `{u0.h5, request.json}` to a temp dir, runs
-   `julia --project=reference/trixi run.jl request.json`, reads `u.h5` back. `request.json` =
-   `{family, params, grid, t_out, bcs, polydeg}`.
+3. Two transports over one Julia function `ContextFluxTrixi.solve` (`design/python-julia-repo.md`
+   §C, revised): `TrixiBackend(transport="juliacall")` (default; numpy arrays in and out,
+   `_jl_call_nogil`, env set before import) and `transport="subprocess"` (`run.jl` with
+   `request.json` = `{family, params, grid, t_out, bcs, polydeg}` + `u0.h5`/`u.h5`) for Slurm
+   jobs needing failure isolation.
 4. The scalar families (cubic, sine) need custom `AbstractEquations` in the elixir (Trixi ships
    `LinearScalarAdvection`, `Burgers`, `ShallowWater`, `CompressibleEuler`; a scalar law with
    user `flux(u)` is ~30 lines following `BurgersEquation1D`).
