@@ -9,8 +9,9 @@ from einops import reduce
 from jax import flatten_util
 from jaxtyping import Array, Float, PRNGKeyArray, PyTree
 
+from context_flux_no.utils.arrays import num_parameters
+
 from ....nn.misc import destandardize, standardize
-from ....utils import num_parameters
 from ..abstract import AbstractMultiphysicsOperator
 from .hypernet import HyperNetwork
 from .operatornet import OperatorNetwork

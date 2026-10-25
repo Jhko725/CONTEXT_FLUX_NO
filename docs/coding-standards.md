@@ -101,6 +101,21 @@ what matters is that the findings fall into two groups needing different treatme
 
 Turn the check on after both commits, so its first CI run is green.
 
+## Persistence verbs
+
+One verb pair per kind of thing, so a reader can guess the method name:
+
+| Thing | Verbs | Examples |
+|---|---|---|
+| a record or document file (JSON, YAML) | `write(path)` / classmethod `read(path)`; `from_dict` for an in-memory dict | `RunRecord`, `DatasetRecord` |
+| a directory-like object | classmethod `open(path)`; `create`/`from_config` to make a new one | `Run.open`, `WellWriter.create` |
+| checkpointed state through orbax | `save(step, state)` / `restore(template, step)` (orbax's words) | `OrbaxCheckpointer`, `Run.restore` |
+| JSON encoding | `utils.serialization.dumps`; decoding is `json.loads` + `from_dict` | both records, zarr attrs |
+
+No `to_json`/`from_json`/`to_dict` wrappers on dataclasses: `dataclasses.asdict` and
+`copy.replace` are called directly. `training/io.py::load_model` is the legacy exception and
+goes with the ICLR shim.
+
 ## Deliberate exceptions
 
 - `SegmentLoaderBackground` survives behind a `DEPRECATED` header naming Phase 4 as its

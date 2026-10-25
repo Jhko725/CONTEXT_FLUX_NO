@@ -8,7 +8,7 @@ from einops import rearrange
 from jax import flatten_util
 from jaxtyping import Array, Float, PRNGKeyArray
 
-from context_flux_no.utils import is_floating_array, num_parameters
+from context_flux_no.utils.arrays import is_floating_array, num_parameters
 
 from .structured_linear import BlockDiagonalLinear
 

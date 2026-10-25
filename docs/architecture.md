@@ -46,7 +46,8 @@ src/context_flux_no/
 │                                loader.py (DEPRECATED: SegmentLoaderBackground only, until Phase 4), io.py (legacy load_model)  (~~dataset.py~~, ~~batching.py~~)
 ├── runs/                        run identity: record.py (RunRecord, index columns), run.py (Run directory, RunLayout), index.py (index/select/load_run/load_state/from_wandb)
 ├── experiment.py                config → objects: build_model/build_optimizer/state_template, wandb mirror (build/finish_wandb_run), what the training scripts share (Run in Hydra's dir, resume/warm_start)
-├── provenance.py                git_state(), package_version()
+├── utils/                       arrays.py (is_floating_array, num_parameters; was utils.py), provenance.py (git_state, package_version),
+│                                serialization.py (dumps: the one JSON encoder for records and store attrs)
 ├── data/                        sources.py: WellDatasetSourceBase · ZarrWellDatasetSource (current) · TheWellDataSource (re-implements base)  (~~transforms.py~~)
 ├── simulations/                 reference solvers + data generation (ADR-0011): grid.py (Grid), backend.py (SolverBackend, BC names),
 │                                pyclaw.py (PyClawSpec, PyClawBackend classic|sharpclaw), record.py (DatasetRecord), writer.py (WellWriter,
@@ -54,7 +55,7 @@ src/context_flux_no/
 │                                cubic, euler, shallow_water, sine_1d} — 5 PyClaw families + CubicFlux2D/ViscousBurgers1D own steppers
 │                                (~~dataset.py~~, ~~utils.py~~, ~~pdesolve.py~~, ~~pyclaw_utils.py~~)
 ├── waveforms/                   GaussianRandomField{,1D,2D}, PeriodicRandomStepFunction{1D,2D}, MultichannelWaveform, TruncatedFourier1D
-├── plotting/, metrics.py, utils.py, custom_types.py
+├── plotting/, metrics.py, custom_types.py
 scripts/
 ├── training/  train_multiphysics.py (zarr) · train_the_well.py — data + loaders only, on experiment.train; configs/ (22 model, 3 data, 2 training, 3 wandb yamls; config.yaml + config_the_well.yaml)
 ├── backfill_run_records.py   legacy ICLR checkpoints → metadata.json

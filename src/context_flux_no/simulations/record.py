@@ -7,7 +7,6 @@ stamps into `RunRecord.index` from the records of the files it reads."""
 
 from __future__ import annotations
 
-import copy
 import dataclasses
 import datetime as _dt
 import json
@@ -16,7 +15,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Literal
 
-from context_flux_no.provenance import git_state, package_version
+from context_flux_no.utils.provenance import git_state, package_version
+from context_flux_no.utils.serialization import dumps
 
 
 SCHEMA_VERSION = 1
@@ -94,17 +94,6 @@ class DatasetRecord:
             extra=dict(extra or {}),
         )
 
-    def replace(self, **changes: Any) -> DatasetRecord:
-        return copy.replace(self, **changes)
-
-    def to_dict(self) -> dict[str, Any]:
-        return dataclasses.asdict(self)
-
-    def to_json(self, indent: int | None = 2) -> str:
-        return json.dumps(
-            self.to_dict(), indent=indent, default=_default, sort_keys=True
-        )
-
     @classmethod
     def from_dict(cls, d: dict[str, Any]) -> DatasetRecord:
         known = {f.name for f in dataclasses.fields(cls)}
@@ -114,30 +103,9 @@ class DatasetRecord:
             kwargs["extra"] = {**kwargs.get("extra", {}), "_unknown": unknown}
         return cls(**kwargs)
 
-    @classmethod
-    def from_json(cls, text: str) -> DatasetRecord:
-        return cls.from_dict(json.loads(text))
-
     def write(self, path: Path) -> None:
-        path.write_text(self.to_json() + "\n")
+        path.write_text(dumps(dataclasses.asdict(self)) + "\n")
 
     @classmethod
     def read(cls, path: Path) -> DatasetRecord:
-        return cls.from_json(path.read_text())
-
-    @staticmethod
-    def sidecar_path(store_path: str | Path) -> Path:
-        """`foo.zarr` → `foo.dataset.json` (and `foo.zarr.zip` → the same)."""
-        p = Path(store_path)
-        name = p.name
-        for suffix in (".zarr.zip", ".zarr"):
-            if name.endswith(suffix):
-                name = name[: -len(suffix)]
-                break
-        return p.with_name(name + ".dataset.json")
-
-
-def _default(o: Any) -> Any:
-    if hasattr(o, "tolist"):
-        return o.tolist()
-    return str(o)
+        return cls.from_dict(json.loads(path.read_text()))

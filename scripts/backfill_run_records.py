@@ -19,6 +19,7 @@ Existing `metadata.json` files are left alone unless `--force`.
 from __future__ import annotations
 
 import argparse
+import copy
 import csv
 import re
 from pathlib import Path
@@ -113,7 +114,9 @@ def backfill(
             ],
             "hypernet_init": model_config.get("hypernet_init"),
         },
-    ).replace(
+    )
+    record = copy.replace(
+        record,
         status="legacy",
         git={},  # the checkpoint's commit is unknown; this script's commit is not it
         package_version="",

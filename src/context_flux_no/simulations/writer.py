@@ -15,6 +15,8 @@ Replaces `simulations/dataset.py::ZarrWellDataset` (same layout for everything i
 
 from __future__ import annotations
 
+import copy
+import dataclasses
 from collections.abc import Mapping
 from pathlib import Path
 from typing import Any, Literal
@@ -25,6 +27,17 @@ import zarr
 from context_flux_no.simulations.backend import BCs
 from context_flux_no.simulations.grid import Grid
 from context_flux_no.simulations.record import DatasetRecord
+
+
+def sidecar_path(store_path: str | Path) -> Path:
+    """`foo.zarr` (or `foo.zarr.zip`) → `foo.dataset.json`, the `DatasetRecord` beside the store."""
+    p = Path(store_path)
+    name = p.name
+    for suffix in (".zarr.zip", ".zarr"):
+        if name.endswith(suffix):
+            name = name[: -len(suffix)]
+            break
+    return p.with_name(name + ".dataset.json")
 
 
 WELL_BC_TYPE = {"periodic": "periodic", "wall": "wall", "extrap": "open"}
@@ -76,7 +89,7 @@ class WellWriter:
                 "n_spatial_dims": n_dims,
                 "simulation_parameters": list(pde.parameters.keys()),
                 "field_rank_names": [[int(r), str(n)] for r, n in pde.field_rank_names],
-                "dataset_record": record.to_dict(),
+                "dataset_record": dataclasses.asdict(record),
             }
         )
 
@@ -142,7 +155,7 @@ class WellWriter:
                 arr.attrs["time_varying"] = True
 
         writer = cls(root, path, record)
-        record.write(DatasetRecord.sidecar_path(path))
+        record.write(sidecar_path(path))
         return writer
 
     @classmethod
@@ -203,8 +216,11 @@ class WellWriter:
                     arr.resize((n_written,) + arr.shape[1:])
         self.root.attrs["n_trajectories"] = int(n_written)
         if self.record is not None:
-            self.record = self.record.replace(
-                n_trajectories=int(n_written), n_failed=int(n_failed), status=status
+            self.record = copy.replace(
+                self.record,
+                n_trajectories=int(n_written),
+                n_failed=int(n_failed),
+                status=status,
             )
-            self.root.attrs["dataset_record"] = self.record.to_dict()
-            self.record.write(DatasetRecord.sidecar_path(self.path))
+            self.root.attrs["dataset_record"] = dataclasses.asdict(self.record)
+            self.record.write(sidecar_path(self.path))

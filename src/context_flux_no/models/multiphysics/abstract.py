@@ -6,7 +6,7 @@ import jax
 import jax.numpy as jnp
 from jaxtyping import Array, Float, PRNGKeyArray
 
-from context_flux_no.utils import num_parameters
+from context_flux_no.utils.arrays import num_parameters
 
 
 class AbstractMultiphysicsOperator(eqx.Module):

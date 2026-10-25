@@ -2,6 +2,8 @@
 group), and `generate_dataset` end to end: a tiny cubic-1D store through Classic PyClaw,
 read back with `ZarrWellDatasetSource`, whose `dataset_id` then comes from the record."""
 
+import copy
+import dataclasses
 import json
 
 import numpy as np
@@ -15,6 +17,8 @@ from context_flux_no.simulations import (
     WellWriter,
 )
 from context_flux_no.simulations.pde import CubicFlux1D
+from context_flux_no.simulations.writer import sidecar_path
+from context_flux_no.utils.serialization import dumps
 from hypothesis import given, settings, strategies as st
 
 
@@ -55,17 +59,14 @@ def _record(**over):
 @settings(max_examples=30, deadline=None)
 @given(extra=_flat, n_failed=st.integers(0, 100))
 def test_record_round_trip(extra, n_failed):
-    rec = _record(extra=extra).replace(n_failed=n_failed, status="complete")
-    assert DatasetRecord.from_json(rec.to_json()) == rec
+    rec = copy.replace(_record(extra=extra), n_failed=n_failed, status="complete")
+    assert DatasetRecord.from_dict(json.loads(dumps(dataclasses.asdict(rec)))) == rec
     assert rec.id.startswith("cubic_1d-train-")
 
 
 def test_record_sidecar_path(tmp_path):
-    assert (
-        DatasetRecord.sidecar_path(tmp_path / "a_seed=0.zarr").name
-        == "a_seed=0.dataset.json"
-    )
-    assert DatasetRecord.sidecar_path(tmp_path / "a.zarr.zip").name == "a.dataset.json"
+    assert sidecar_path(tmp_path / "a_seed=0.zarr").name == "a_seed=0.dataset.json"
+    assert sidecar_path(tmp_path / "a.zarr.zip").name == "a.dataset.json"
 
 
 def test_writer_layout_and_boundary_conditions(tmp_path):
@@ -95,17 +96,14 @@ def test_writer_layout_and_boundary_conditions(tmp_path):
             assert list(g["mask"][:]) == mask
         assert root.attrs["simulation_parameters"] == ["a", "b", "c"]
         assert root["t0_fields"]["u"].shape == (4, 3, 8)
-        assert DatasetRecord.sidecar_path(path).exists()
+        assert sidecar_path(path).exists()
         w.write_trajectory(0, np.zeros((3, 1, 8)), pde.parameters)
         w.finalize(1, n_failed=3)
         reopened = WellWriter.open(path)
         assert len(reopened) == 1 and reopened.record.status == "complete"
         assert reopened.record.n_failed == 3 and reopened.record.n_trajectories == 1
         assert reopened[0]["t0_fields"]["u"].shape == (3, 8)
-        assert (
-            json.loads(DatasetRecord.sidecar_path(path).read_text())["n_trajectories"]
-            == 1
-        )
+        assert json.loads(sidecar_path(path).read_text())["n_trajectories"] == 1
 
 
 def test_generate_dataset_end_to_end(tmp_path):
