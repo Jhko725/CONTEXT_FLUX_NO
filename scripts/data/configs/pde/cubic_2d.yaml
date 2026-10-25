@@ -8,4 +8,11 @@ coeff_range_dict:
 
 coeff_sampling_strategy: linspace
 
+# Grid and time keys were missing from this config (it could not run); these mirror euler_2d
+# and are to be confirmed against the ICLR cubic-2D data before Phase 4.4 regenerates it.
+x_spans: [[0, 1], [0, 1]]
+Nxs: [128, 128]
+t_span: [0, 0.5]
+Nt: 100
+
 solve_kwargs: null

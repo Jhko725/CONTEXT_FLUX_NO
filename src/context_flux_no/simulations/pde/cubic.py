@@ -1,4 +1,3 @@
-from collections.abc import Callable
 from math import ceil
 from typing import ClassVar
 
@@ -8,6 +7,7 @@ import jax.numpy as jnp
 import numpy as np
 from jaxtyping import Array, Float
 
+from context_flux_no.simulations.grid import Grid
 from context_flux_no.simulations.pde.base import AbstractPDEFamily
 from context_flux_no.simulations.pyclaw import PyClawSpec
 
@@ -148,9 +148,7 @@ class CubicFlux2D(AbstractPDEFamily):
 
     def solve(
         self,
-        ic_factory: Callable[
-            [Float[np.ndarray, " *spatial_dims"]], Float[np.ndarray, " *spatial_dims"]
-        ],  # Need to fix function signature here
+        ic,
         x_spans: tuple[tuple[float, float], tuple[float, float]],
         Nxs: tuple[int, int],
         t_span: tuple[float, float],
@@ -166,18 +164,15 @@ class CubicFlux2D(AbstractPDEFamily):
             )
         if bc != "periodic":
             raise NotImplementedError("CubicFlux2D's own stepper is periodic only")
-        Nx, Ny = Nxs
-        x_span, y_span = x_spans
-        dx = (x_span[1] - x_span[0]) / Nx
-        dy = (y_span[1] - y_span[0]) / Ny
-        x = jnp.linspace(x_span[0] + 0.5 * dx, x_span[1] - 0.5 * dx, Nx)
-        y = jnp.linspace(y_span[0] + 0.5 * dy, y_span[1] - 0.5 * dy, Ny)
+        grid = Grid(x_spans, Nxs)
+        dx, dy = grid.dxs
+        x, y = grid.centers  # float64, the same arithmetic as every other backend
 
         t0, t1 = t_span
         dt = (t1 - t0) / Nt
-        t = jnp.linspace(t0, t0 + dt * Nt, Nt + 1)
+        t = np.linspace(t0, t1, Nt + 1, endpoint=True)
 
-        u0: Float[Array, "Nx Ny"] = ic_factory((x, y))
+        u0: Float[Array, "Nx Ny"] = jnp.asarray(ic.at_points(grid.meshgrid())[0])
 
         # Reduce dt using the CFL number (optional)
         # max_speed ~ max |f'(u)|

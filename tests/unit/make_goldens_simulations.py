@@ -13,6 +13,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import numpy as np
+from context_flux_no.simulations.initial_conditions import Conserved, FromFunction
 from context_flux_no.simulations.pde import (
     Burgers1D,
     CubicFlux1D,
@@ -25,24 +26,30 @@ from context_flux_no.simulations.pde import (
 GOLDENS = Path(__file__).parent / "goldens_simulations"
 
 
-def ic_scalar(xs):
-    x = xs[0]
+def _scalar(coords):
+    (x,) = coords
     return (0.5 + 0.4 * np.sin(2 * np.pi * x) + 0.1 * np.cos(6 * np.pi * x))[None]
 
 
-def ic_sw(xs):
-    x = xs[0]
+def _shallow_water(coords):
+    (x,) = coords
     h = 1.0 + 0.2 * np.sin(2 * np.pi * x)
     return np.stack([h, 0.1 * h * np.cos(2 * np.pi * x)])
 
 
-def ic_euler(xs):
-    x, y = np.meshgrid(*xs, indexing="ij")
+def _euler_primitive(coords):
+    x, y = coords
     rho = 1.0 + 0.2 * np.sin(2 * np.pi * x) * np.cos(2 * np.pi * y)
     u = 0.1 * np.ones_like(rho)
     v = -0.05 * np.ones_like(rho)
     p = 1.0 + 0.1 * np.cos(2 * np.pi * x)
-    return rho, u, v, p
+    return np.stack([rho, u, v, p])
+
+
+ic_scalar = FromFunction(_scalar, n_eqn=1, n_spatial_dims=1)
+ic_sw = FromFunction(_shallow_water, n_eqn=2, n_spatial_dims=1)
+_euler = Euler2D(1.4)
+ic_euler = Conserved(FromFunction(_euler_primitive, n_eqn=4, n_spatial_dims=2), _euler)
 
 
 # name: (pde, ic_factory, x_spans, Nxs, t_span, Nt, solve kwargs)
@@ -67,15 +74,7 @@ CASES = {
         4,
         {},
     ),
-    "euler_2d": (
-        Euler2D(1.4),
-        ic_euler,
-        [(0, 1), (0, 1)],
-        [16, 16],
-        (0, 0.05),
-        2,
-        {"use_rho_v_p_ics": True},
-    ),
+    "euler_2d": (_euler, ic_euler, [(0, 1), (0, 1)], [16, 16], (0, 0.05), 2, {}),
 }
 
 

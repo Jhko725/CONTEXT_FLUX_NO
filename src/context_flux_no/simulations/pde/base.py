@@ -10,7 +10,7 @@ capabilities` for every flux × family pairing), not a rewrite (ADR-0001, amende
 from __future__ import annotations
 
 import abc
-from collections.abc import Callable, Sequence
+from collections.abc import Sequence
 from typing import Any
 
 import equinox as eqx
@@ -18,11 +18,7 @@ import numpy as np
 
 from context_flux_no.simulations.backend import normalize_bcs, SolverBackend
 from context_flux_no.simulations.grid import Grid
-
-
-ICFactory = Callable[
-    [Sequence[np.ndarray]], np.ndarray
-]  # cell centres per axis → [n_eqn, *N]
+from context_flux_no.simulations.initial_conditions.base import InitialCondition
 
 
 class AbstractPDEFamily(eqx.Module):
@@ -60,7 +56,7 @@ class AbstractPDEFamily(eqx.Module):
 
     def solve(
         self,
-        ic_factory: ICFactory,
+        ic: InitialCondition,
         x_spans: Sequence[Sequence[float]],
         Nxs: Sequence[int],
         t_span: tuple[float, float],
@@ -71,13 +67,20 @@ class AbstractPDEFamily(eqx.Module):
         verbose: bool = False,
         **kwargs: Any,
     ) -> tuple[np.ndarray, np.ndarray, list[np.ndarray]]:
-        """`(u[Nt+1, n_eqn, *N], t[Nt+1], centres per axis)`: the initial condition from
-        `ic_factory(centres)` evolved by `backend` over `linspace(*t_span, Nt + 1)`."""
+        """`(u[Nt+1, n_eqn, *N], t[Nt+1], centers per axis)`: `ic` evaluated at the cell
+        centers and evolved by `backend` over `linspace(*t_span, Nt + 1)`. (The PyClaw
+        backend takes point values at centers as the cell state — the ICLR convention; see
+        F12 for the averages-vs-points question.)"""
         if kwargs:
             raise TypeError(f"unexpected solve() arguments: {sorted(kwargs)}")
         grid = Grid(x_spans, Nxs)
         t_out = np.linspace(t_span[0], t_span[1], Nt + 1, endpoint=True)
-        u0 = np.asarray(ic_factory(grid.centers), dtype=float)
+        if ic.n_eqn != self.n_eqns or ic.n_spatial_dims != self.n_spatial_dims:
+            raise ValueError(
+                f"initial condition is {ic.n_eqn} × {ic.n_spatial_dims}-D, "
+                f"{type(self).__name__} is {self.n_eqns} × {self.n_spatial_dims}-D"
+            )
+        u0 = ic.at_points(grid.meshgrid())
         backend = backend or self.default_backend(verbose=verbose)
         bcs = normalize_bcs(bc, grid.n_spatial_dims)
         u = backend.solve(self, u0, grid, t_out, bcs)

@@ -26,6 +26,10 @@ from context_flux_no.simulations.backend import (
     SolverFailure,
 )
 from context_flux_no.simulations.grid import Grid
+from context_flux_no.simulations.initial_conditions.base import (
+    Conserved,
+    InitialConditionSampler,
+)
 from context_flux_no.simulations.record import DatasetRecord
 from context_flux_no.simulations.writer import WellWriter
 
@@ -65,7 +69,7 @@ def generate_dataset(
     n_coeffs: int,
     n_ics_per_coeff: int,
     pde_factory: Callable[..., Any],
-    initial_condition_fn: Callable[[Sequence[np.ndarray], PRNGKeyArray], Array],
+    initial_condition: InitialConditionSampler,
     coeff_range_dict: Mapping[str, tuple[float, float]],
     x_spans: Sequence[Sequence[float]],
     Nxs: Sequence[int],
@@ -80,11 +84,13 @@ def generate_dataset(
     seed: int = 0,
     backend: SolverBackend | None = None,
     ic_description: Mapping[str, Any] | None = None,
+    ic_in_primitive: bool = False,
     **solve_kwargs: Any,
 ) -> WellWriter:
     """Writes `<savedir>/<dataset_name>/data/<split>/<filename>` and returns the writer
-    (finalised). `backend=None` means each PDE class's default (Classic PyClaw for the
-    PyClaw families, the class's own stepper otherwise)."""
+    (finalized). `backend=None` means each family's default (Classic PyClaw for the PyClaw
+    families, the family's own stepper otherwise). `ic_in_primitive` wraps each sampled
+    condition in `Conserved(ic, pde)` (Euler's `(rho, u, v, p)` samplers)."""
     filename = filename or f"{dataset_name}_{seed=}.zarr"
     savepath = Path(savedir) / dataset_name / "data" / dataset_type / filename
     grid = Grid(x_spans, Nxs)
@@ -120,14 +126,10 @@ def generate_dataset(
             "n_coeffs": int(n_coeffs),
             "n_ics_per_coeff": int(n_ics_per_coeff),
         },
-        ic=dict(
-            ic_description
-            or {
-                "name": getattr(
-                    initial_condition_fn, "__qualname__", str(initial_condition_fn)
-                )
-            }
-        ),
+        ic={
+            **dict(ic_description or {"name": type(initial_condition).__name__}),
+            "in_primitive": bool(ic_in_primitive),
+        },
         backend=(backend or pde0.default_backend()).describe(),
         seed=seed,
         extra={"solve_kwargs": {k: _jsonable(v) for k, v in solve_kwargs.items()}},
@@ -142,8 +144,11 @@ def generate_dataset(
         pde = pde_factory(**{k: float(v[i]) for k, v in coeffs.items()})
         for key_ic in jax.random.split(key, n_ics_per_coeff):
             try:
+                ic = initial_condition.sample(key_ic, x_spans)
+                if ic_in_primitive:
+                    ic = Conserved(ic, pde)
                 u, t, xs = pde.solve(
-                    lambda centers: initial_condition_fn(centers, key_ic),  # noqa: B023
+                    ic,
                     x_spans,
                     Nxs,
                     t_span,

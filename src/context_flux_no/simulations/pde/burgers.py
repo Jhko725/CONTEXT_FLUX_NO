@@ -74,7 +74,7 @@ class ViscousBurgers1D(AbstractPDEFamily):
 
     def solve(
         self,
-        ic_factory,
+        ic,
         x_spans,
         Nxs,
         t_span: tuple[float, float],
@@ -121,11 +121,11 @@ class ViscousBurgers1D(AbstractPDEFamily):
 
         t_save = np.linspace(t0, t1, Nt + 1)
 
-        u = jnp.squeeze(ic_factory([x_grid]))
+        u = jnp.squeeze(jnp.asarray(ic.at_points([x_grid])))
 
         if u.ndim != 1:
             raise ValueError(
-                f"ic_factory must return shape (Nx,), but got shape {u.shape}."
+                f"initial condition must have shape (1, Nx), got {u.shape}."
             )
 
         u_save = np.zeros((Nt + 1, 1, Nx), dtype=float)
