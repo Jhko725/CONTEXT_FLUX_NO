@@ -117,6 +117,7 @@ Commit 3 — docs:
 
 - `GaussianRandomField(means, scales)` required arguments since `b918750` while every 1-D IC config omits them: the data script could not build `grf`/`step` ICs. Defaults restored (F11).
 - `ViscousBurgers1D.solve` took `(x_span, Nx)` while `generate_dataset` passes sequences, so the `burgers_1d` config could not run; it also never wrote the last frame (`while save_idx < Nt`) and evaluated the IC on left edges (F8). Fixed; `CubicFlux2D`'s Rusanov stepper untouched.
+- `scripts/data/configs/initial_condition/step_shallow.yaml` passed two samplers positionally (`_args_`) to `MultichannelWaveform(waveforms)`, which takes one sequence — the shallow-water step IC could not instantiate (pre-existing, `c67e5d2`). Fixed: `waveforms:`.
 - Five of seven PDE classes did not implement the base the writer needs (`parameters`, `n_spatial_dims`, `field_rank_names`, `solution_to_well_schema`), so only `cubic_1d` and `euler_2d` could be generated. All seven conform now (`scripts/data/generate_dataset.py` verified on sine, cubic, Burgers, shallow water with N = 32).
 - `riemann_cubic_1D` raised a NumPy `invalid value` warning on every call from the division inside `np.where`; masked with `errstate` (no numerical change — the goldens still match).
 
@@ -157,7 +158,7 @@ Joon's Review notes below. Resolutions, one commit per logical group (`code-conv
 - **`writer.py`** — `__len__`, `__getitem__` and `open` deleted: reading back is `ZarrWellDatasetSource`'s job and the record is read from the sidecar; `record` is no longer optional.
 - **`pyclaw.py`** — the >1-D Python-kernel refusal is PyClaw's constraint, cited in the docstring and the error (`pyclaw/classic/solver.py:215`, `pyclaw/sharpclaw/solver.py:890`, `:975`; clawpack 5.14.0).
 - **`generate.py`** — `except Exception` narrowed: PyClaw raises bare `Exception` for CFL/step-limit/invalid-state (`pyclaw/solver.py:651,664`, `controller.py:228-234`), so `PyClawBackend.solve` converts those (and a non-finite final state) into `simulations.SolverFailure(backend, reason)`; `generate_dataset` catches only `SolverFailure` and counts it; anything else propagates. Test: `test_blow_up_is_a_solver_failure`.
-- **`waveforms/` → `simulations/initial_conditions/`** — pure move (`git mv`; config `_target_`s updated; all seven IC configs instantiate). The `InitialCondition.sample(key, grid, layout, bcs)` contract and the IC-config cleanup wait for tier 0 (roadmap 4.2), since the samplers then need `layout`/`bcs` from the family.
+- **`waveforms/` → `simulations/initial_conditions/`** — pure move (`git mv`; config `_target_`s updated). The commit message of `10c9584` was made before the instantiation check finished: six of seven IC configs instantiated; `step_shallow.yaml` passed its two samplers as `_args_` to `MultichannelWaveform(waveforms)` (pre-existing, since `c67e5d2`) and is fixed in the next commit (`waveforms:` named). The `InitialCondition.sample(key, grid, layout, bcs)` contract and the IC-config cleanup wait for tier 0 (roadmap 4.2), since the samplers then need `layout`/`bcs` from the family.
 - *(further rows resolved below as their commits land)*
 
 ## Review notes
