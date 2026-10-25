@@ -47,7 +47,7 @@ document is listed here and has frontmatter.
 
 | ADR | Status | Decision |
 |---|---|---|
-| [0001](decisions/0001-tiered-pde-coupling.md) | accepted | PDE ↔ solver coupling is tiered; fluxes declare `requires` |
+| [0001](decisions/0001-tiered-pde-coupling.md) | amended 2026-10-25 | PDE ↔ solver coupling is tiered; fluxes declare `requires` |
 | [0002](decisions/0002-nd-stepping.md) | accepted | no per-dimension solver hierarchy; FD-WENO, unsplit dimension-by-dimension |
 | [0003](decisions/0003-boundary-conditions-as-objects.md) | accepted | boundary conditions are objects applied by ghost-cell padding |
 | [0004](decisions/0004-weno5-and-reference-backends.md) | accepted | own WENO5, time-boxed; PyClaw/SharpClaw and Trixi.jl as reference backends |

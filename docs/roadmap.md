@@ -151,7 +151,7 @@ Exit: `hyperfluxfno.py` deleted; conditioner ablation is a one-key config change
 
 | # | Track | Item | Done when |
 |---|---|---|---|
-| 4.1 | M | `pde/PDEFamily` tier 0 (`flux(u, params, axis, x)`, `max_wave_speed`, `reflect`, conversions, flags); all families conform | `requires ⊆ capabilities` check passes for every config |
+| 4.1 | M | tier-0 conformance: every family implements `flux(u, params, axis, x)`, `max_wave_speed`, `reflect`, conversions, flags on `AbstractPDEFamily` (the class exists since 2a; the numerics methods arrive with 2b–2e, ADR-0001 amendment) | `requires ⊆ capabilities` check passes for every config |
 | 4.2 | M | `ic/InitialCondition.sample(key, grid, layout, bcs)`; one GRF, one RandomStep | property: valid for the PDE for any seed |
 | 4.3 | M | `DatasetRecord`; backend-agnostic writer; `bcs` + backend in Well metadata | **done 2026-10-25** with 2a (`simulations/{record,writer}.py`; `dataset_id` from records) |
 | 4.4 | M | Regen cubic 1D · sine · Burgers · SW · cubic 2D via reference backends (backend: ____ — `backend=sharpclaw` available now; cubic 2D needs Trixi or `JaxBackend`); Euler stays on Clawpack | datasets on disk with `dataset.json` |

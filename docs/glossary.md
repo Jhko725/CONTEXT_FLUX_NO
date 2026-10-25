@@ -27,7 +27,7 @@ One line per term; `architecture.md` and the design documents use only these.
 - **encoder / conditioner / target** — the three slots of `InContextOperator` (ADR-0006).
 - **Scaled** — the RevIN-style scale wrapper around the conditioned module (ADR-0006).
 - **DataSpec** — shapes, channels, `dt`, `dx`, `bcs` read off a dataset; feeds `build()`.
-- **PDEFamily** — a parametrised conservation law with a state layout and tiered capabilities.
+- **PDEFamily / `AbstractPDEFamily`** — a parametrized conservation law with a state layout and tiered capabilities (`simulations/pde/base.py`; tier 0's numerics methods arrive with `fv/`).
 - **InitialCondition** — a sampler producing primitive fields per field name, valid for the family.
 - **SolverBackend** — `solve(pde, u0, grid, t_out, bcs)` (`simulations/backend.py`): `PyClawBackend` (Classic · SharpClaw; landed), `TrixiBackend`, `JaxBackend` (pending).
 - **Classic / SharpClaw** — PyClaw's two schemes: wave propagation (2nd order, the ICLR data) · WENO5 + SSP-RK method of lines (the higher-order reference).

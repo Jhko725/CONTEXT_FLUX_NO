@@ -152,6 +152,7 @@ Verification tier (`JAX_PLATFORMS=cpu uv run pytest tests/verification -m slow`)
 Joon's Review notes below. Resolutions, one commit per logical group (`code-conventions` §1.3):
 
 - **`grid.py`** — the review commit's `__init__` read `self.x_spans`/`self.Nxs` before assigning them (every `Grid(...)` raised `AttributeError`), and `from_sequences` still had callers at `pde/base.py:86` and `test_pyclaw_backend.py:71`. Fixed: arguments are normalized, validated, then assigned. The `__init__`-over-`__post_init__` form is kept. Instruction gap closed in `CLAUDE.md` (a *Modifications* entry is committed with the touched tests green).
+- **`pde/base.py`** — renamed `AbstractPDEFamily`; tier 0 grows in place (ADR-0001 amended, roadmap 4.1 reworded to the conformance check). `solution_to_well_schema` and `WellSchema` deleted; `WellWriter.write_trajectory(idx, u, scalars)` splits the state by the `field_rank_names` stored in the root attrs at creation (checked on rank-0 and rank-1 layouts).
 - *(further rows resolved below as their commits land)*
 
 ## Review notes

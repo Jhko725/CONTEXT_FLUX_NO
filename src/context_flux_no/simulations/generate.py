@@ -157,9 +157,7 @@ def generate_dataset(
                 n_failed += 1
                 log.exception("solve failed for coefficients %s", pde.parameters)
                 continue
-            writer.write_trajectory(
-                write_idx, pde.solution_to_well_schema(np.asarray(u))
-            )
+            writer.write_trajectory(write_idx, np.asarray(u), pde.parameters)
             write_idx += 1
 
     writer.finalize(write_idx, n_failed=n_failed)

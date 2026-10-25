@@ -96,7 +96,7 @@ def test_writer_layout_and_boundary_conditions(tmp_path):
         assert root.attrs["simulation_parameters"] == ["a", "b", "c"]
         assert root["t0_fields"]["u"].shape == (4, 3, 8)
         assert DatasetRecord.sidecar_path(path).exists()
-        w.write_trajectory(0, pde.solution_to_well_schema(np.zeros((3, 1, 8))))
+        w.write_trajectory(0, np.zeros((3, 1, 8)), pde.parameters)
         w.finalize(1, n_failed=3)
         reopened = WellWriter.open(path)
         assert len(reopened) == 1 and reopened.record.status == "complete"

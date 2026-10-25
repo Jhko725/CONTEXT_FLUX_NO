@@ -40,12 +40,11 @@ version (pain point P9 on the data side; findings F7/F8).
    the Python-kernel families are 1-D on PyClaw; 2-D cubic keeps its JAX Rusanov stepper (F8)
    until Phase 4.
 
-3. **A minimal common PDE interface now, `PDEFamily` later** [code]. All seven classes
-   subclass `AbstractHyperbolicConservationLaw` with `n_spatial_dims`, `field_rank_names`,
-   `parameters`, optional `pyclaw_spec`, and a default `solve()` that runs a backend. This is
-   deliberately *not* ADR-0001's tiered `PDEFamily` (`flux`, `max_wave_speed`, …): it is the
-   smallest shape that lets one writer and one backend serve every family, and Phase 4.1
-   replaces it.
+3. **`AbstractPDEFamily` starts now and grows** [code]. All seven classes subclass it with
+   `n_spatial_dims`, `field_rank_names`, `parameters`, optional `pyclaw_spec`, and a default
+   `solve()` that runs a backend — the data-facing part of ADR-0001's tier 0. The numerics
+   part (`flux`, `max_wave_speed`, `reflect`) is added to the same class as `fv/` consumes it
+   (ADR-0001 amendment, 2026-10-25); Phase 4.1 is the conformance check, not a rewrite.
 
 4. **Backend agreement by mutual convergence** [code]: V18a (Classic vs SharpClaw) requires
    the L1 distance between the two solutions on a shared grid to shrink by ≥ 1.5× per
@@ -70,9 +69,10 @@ version (pain point P9 on the data side; findings F7/F8).
 - **Backend chosen inside each PDE class** (as before). Hides the solver from the record and
   duplicates the controller setup seven times; a backend argument with a per-class default
   keeps the old behaviour as the default and makes the scheme a one-key config change.
-- **Pulling `PDEFamily` (4.1) forward** to avoid the interim base class. It would couple the
-  reference backends to the `fv/` flux interface that Joon is about to write; the interim base
-  is ~40 lines and dies in Phase 4.1.
+- **A throw-away interim base, replaced wholesale in 4.1** (the first draft of this ADR). Joon's
+  review preferred growing one class: the base already carried half of tier 0, so a 4.1 rewrite
+  would have done it twice. Hence `AbstractPDEFamily` now, numerics methods added as `fv/` needs
+  them (ADR-0001 amendment).
 - **BC objects now.** ADR-0003's objects belong with ghost-cell padding in `fv/`; strings are
   what PyClaw and Trixi consume anyway, and the record stores strings regardless.
 - **A fixed tolerance for backend agreement.** Two schemes of different order and dissipation
@@ -88,7 +88,9 @@ version (pain point P9 on the data side; findings F7/F8).
   `GaussianRandomField` defaults, `ViscousBurgers1D.solve` signature + F8 last frame) and
   takes `backend={default,classic,sharpclaw}`.
 - `simulations/{dataset,utils,pdesolve,pyclaw_utils}.py` are gone; `simulations/` is
-  `grid`, `backend`, `pyclaw`, `record`, `writer`, `generate`, `pde/`.
+  `grid`, `backend`, `pyclaw`, `record`, `writer`, `generate`, `pde/`. The Well layout split
+  (`solution_to_well_schema`) moved from the family to the writer, which is created with the
+  layout: the family states its layout once, the store owns how it is laid out on disk.
 - Julia/Trixi enters through the same interface (`simulations/trixi.py`) as
   `docs/design/python-julia-repo.md` describes; nothing in this decision depends on it.
 - Phase 4.4 regeneration picks a backend per family in its config and the choice is in every

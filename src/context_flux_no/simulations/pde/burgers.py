@@ -6,11 +6,11 @@ import numpy as np
 from clawpack import riemann
 from jaxtyping import Float
 
-from context_flux_no.simulations.pde.base import AbstractHyperbolicConservationLaw
+from context_flux_no.simulations.pde.base import AbstractPDEFamily
 from context_flux_no.simulations.pyclaw import PyClawSpec
 
 
-class Burgers1D(AbstractHyperbolicConservationLaw):
+class Burgers1D(AbstractPDEFamily):
     """Inviscid Burgers through Clawpack's compiled `riemann.burgers_1D` (entropy fix on by
     default), van Leer limiter."""
 
@@ -34,7 +34,7 @@ class Burgers1D(AbstractHyperbolicConservationLaw):
         )
 
 
-class ViscousBurgers1D(AbstractHyperbolicConservationLaw):
+class ViscousBurgers1D(AbstractPDEFamily):
     """
     Parametric viscous Burgers-type equation:
 

@@ -3,7 +3,7 @@ from typing import ClassVar
 import equinox as eqx
 import numpy as np
 
-from context_flux_no.simulations.pde.base import AbstractHyperbolicConservationLaw
+from context_flux_no.simulations.pde.base import AbstractPDEFamily
 from context_flux_no.simulations.pyclaw import PyClawSpec
 
 
@@ -29,7 +29,7 @@ def riemann_sine_1D(q_l, q_r, aux_l, aux_r, problem_data):
     return wave, s, amdq, apdq
 
 
-class SineFlux1D(AbstractHyperbolicConservationLaw):
+class SineFlux1D(AbstractPDEFamily):
     """`u_t + (a sin(b u))_x = 0`; Classic PyClaw with the characteristic-speed Python
     Riemann solver above and the MC limiter (the ICLR `sine_1d` setting)."""
 

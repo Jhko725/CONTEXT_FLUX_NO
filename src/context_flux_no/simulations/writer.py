@@ -1,7 +1,7 @@
 """`WellWriter`: a Well-schema zarr store written trajectory by trajectory (roadmap 4.3).
 
-Backend-agnostic: it takes `[time, n_eqn, *N]` arrays from any `SolverBackend` and a PDE
-class's `field_rank_names`/`solution_to_well_schema` for the field layout. Follows The Well's
+Backend-agnostic: it takes `[time, n_eqn, *N]` arrays from any `SolverBackend` and splits them
+into the Well's rank groups with the `field_rank_names` the store was created with. Follows The Well's
 HDF5 specification [cited: the_well/docs/data_format.md] — `dimensions/`, `scalars/`,
 `t{0,1,2}_fields/` and `boundary_conditions/` (one subgroup per axis-side with `bc_type`,
 `associated_dims`, `associated_fields`, `sample_varying`, `time_varying` and a boolean `mask`
@@ -15,6 +15,7 @@ Replaces `simulations/dataset.py::ZarrWellDataset` (same layout for everything i
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Any, Literal
 
@@ -38,6 +39,9 @@ class WellWriter:
         self.root = root
         self.path = path
         self.record = record
+        self.field_rank_names: tuple[tuple[int, str], ...] = tuple(
+            (int(r), str(n)) for r, n in root.attrs["field_rank_names"]
+        )
 
     # ------------------------------------------------------------ construction ---
     @classmethod
@@ -71,6 +75,7 @@ class WellWriter:
                 "grid_type": "cartesian",
                 "n_spatial_dims": n_dims,
                 "simulation_parameters": list(pde.parameters.keys()),
+                "field_rank_names": [[int(r), str(n)] for r, n in pde.field_rank_names],
                 "dataset_record": record.to_dict(),
             }
         )
@@ -156,13 +161,28 @@ class WellWriter:
         return self.n_trajectories
 
     def write_trajectory(
-        self, idx: int, well_schema: dict[str, dict[str, Any]]
+        self, idx: int, u: np.ndarray, scalars: Mapping[str, float]
     ) -> None:
-        """`well_schema` as `pde.solution_to_well_schema(u)` returns it."""
-        for grp_name in ("scalars", "t0_fields", "t1_fields", "t2_fields"):
-            grp = self.root.get_group(grp_name)
-            for f_name, value in well_schema.get(grp_name, {}).items():
-                grp[f_name][idx] = value
+        """`u[time, n_eqn, *N]` in state order and the family's `parameters` for one sample.
+        Component block `r` of rank `r` goes to `t{r}_fields/<name>` as `[time, *N]` (rank 0)
+        or `[time, *N, n_spatial_dims**r]`."""
+        n_dims = int(self.root.attrs["n_spatial_dims"])
+        start = 0
+        for rank, name in self.field_rank_names:
+            stop = start + n_dims**rank
+            block = np.moveaxis(u[:, start:stop], 1, -1)  # [time, *N, components]
+            if rank == 0:
+                block = block[..., 0]
+            self.root.get_group(f"t{rank}_fields")[name][idx] = block
+            start = stop
+        if stop != u.shape[1]:
+            raise ValueError(
+                f"u has {u.shape[1]} components but the layout {self.field_rank_names} "
+                f"covers {stop}"
+            )
+        scalars_grp = self.root.get_group("scalars")
+        for name in scalars_grp.attrs["field_names"]:
+            scalars_grp[name][idx] = scalars[name]
 
     def __getitem__(self, idx: int) -> dict[str, dict[str, np.ndarray]]:
         out: dict[str, dict[str, np.ndarray]] = {}

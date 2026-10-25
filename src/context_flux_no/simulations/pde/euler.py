@@ -24,7 +24,7 @@ from clawpack import riemann
 
 from context_flux_no.simulations.backend import SolverBackend
 from context_flux_no.simulations.pde.base import (
-    AbstractHyperbolicConservationLaw,
+    AbstractPDEFamily,
     ICFactory,
 )
 from context_flux_no.simulations.pyclaw import PyClawSpec
@@ -35,7 +35,7 @@ _PRESSURE_FLOOR = 1.0e-12
 _SPEED_GAP_FLOOR = 1.0e-12
 
 
-class Euler2D(AbstractHyperbolicConservationLaw):
+class Euler2D(AbstractPDEFamily):
     n_spatial_dims: ClassVar[int] = 2
     field_rank_names: ClassVar[tuple[tuple[int, str], ...]] = (
         (0, "rho"),

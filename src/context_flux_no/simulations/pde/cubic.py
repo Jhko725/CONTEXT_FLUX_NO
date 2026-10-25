@@ -8,7 +8,7 @@ import jax.numpy as jnp
 import numpy as np
 from jaxtyping import Array, Float
 
-from context_flux_no.simulations.pde.base import AbstractHyperbolicConservationLaw
+from context_flux_no.simulations.pde.base import AbstractPDEFamily
 from context_flux_no.simulations.pyclaw import PyClawSpec
 
 
@@ -45,7 +45,7 @@ def riemann_cubic_1D(
     return wave, s, amdq, apdq
 
 
-class CubicFlux1D(AbstractHyperbolicConservationLaw):
+class CubicFlux1D(AbstractPDEFamily):
     """`u_t + (a u³ + b u² + c u)_x = 0`; Classic PyClaw with the Roe-speed Python Riemann
     solver above and the MC limiter (the ICLR `cubic_1d` setting)."""
 
@@ -82,7 +82,7 @@ class CubicFlux1D(AbstractHyperbolicConservationLaw):
         )
 
 
-class CubicFlux2D(AbstractHyperbolicConservationLaw):
+class CubicFlux2D(AbstractPDEFamily):
     """2-D cubic flux with the same `f` along both axes; **own first-order Rusanov stepper**
     (F8), not PyClaw — PyClaw has no compiled Riemann solver for it and runs only Fortran
     kernels in 2-D. Regenerated through a reference backend in Phase 4.4."""

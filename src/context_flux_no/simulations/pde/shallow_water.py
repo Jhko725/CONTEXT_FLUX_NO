@@ -4,7 +4,7 @@ import equinox as eqx
 import numpy as np
 from jaxtyping import Float
 
-from context_flux_no.simulations.pde.base import AbstractHyperbolicConservationLaw
+from context_flux_no.simulations.pde.base import AbstractPDEFamily
 from context_flux_no.simulations.pyclaw import PyClawSpec
 
 
@@ -120,7 +120,7 @@ def riemann_param_shallow_water_1D(
     return wave, s, amdq, apdq
 
 
-class ParametrizedShallowWater1D(AbstractHyperbolicConservationLaw):
+class ParametrizedShallowWater1D(AbstractPDEFamily):
     """The three-parameter shallow-water-like system of the Riemann solver above; Classic
     PyClaw, MC limiter. `h_floor` is a numerical floor, not a physical parameter, so it is
     passed to the solver but not recorded as a Well scalar."""

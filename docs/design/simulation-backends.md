@@ -21,11 +21,13 @@ simulations/
   record.py     DatasetRecord (dataset.json + root attrs)
   writer.py     WellWriter.create / write_trajectory / finalize / open  (Well schema + boundary_conditions)
   generate.py   generate_dataset(..., backend=None, ic_description=...)
-  pde/          the PDE classes; AbstractHyperbolicConservationLaw = minimal interface until Phase 4.1
+  pde/          the PDE classes; AbstractPDEFamily (ADR-0001 tier 0, data-facing part; numerics methods arrive with fv/)
 ```
 
-A PDE class needs `n_spatial_dims`, `field_rank_names` (Well layout, state order),
-`parameters` (the Well scalars) and, if PyClaw solves it, `pyclaw_spec`. `solve(ic_factory,
+A family needs `n_spatial_dims`, `field_rank_names` (Well layout, state order),
+`parameters` (the Well scalars) and, if PyClaw solves it, `pyclaw_spec`. The writer splits a
+`[time, n_eqn, *N]` solution into the Well rank groups with the layout it was created with
+(`write_trajectory(idx, u, scalars)`). `solve(ic_factory,
 x_spans, Nxs, t_span, Nt, bc, *, backend=None)` is inherited: it builds the `Grid`, evaluates
 `ic_factory(grid.centers)`, and runs the backend (Classic PyClaw by default).
 
