@@ -40,6 +40,8 @@ work lands (`in-progress`, `landed`), and closed at merge (`merged`). Sections:
   one row per file touched (*Change* = file + one-line summary) and leaves the other two
   columns blank. Joon fills them in while vetting. Claude never edits *Thoughts* or
   *Modifications* except when asked to, and treats them as the current state of the review.
+  A *Modifications* entry that changes code is committed with the touched test files green
+  (`uv run pytest <files> -m "not regression and not slow"`), like any other edit.
 
 Claude updates the change document in the same commit as any code change on the branch.
 
@@ -55,7 +57,7 @@ Claude updates the change document in the same commit as any code change on the 
 
 ## Repository facts
 
-- Python ≥ 3.12, `uv sync` (add `--extra cuda` on GPU machines); tests with `uv run pytest`.
+- Python ≥ 3.13 (`.python-version`; `copy.replace` is the copy-with-changes), `uv sync` (add `--extra cuda` on GPU machines); tests with `uv run pytest`.
   Tiers, tolerances, goldens policy and the checks are in `docs/coding-standards.md`.
 - Read the baseline before editing — the branch change document's *Tests* and *Open
   issues* — rather than running a full tier to discover what is already red.

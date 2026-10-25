@@ -60,22 +60,15 @@ already red. GPU machines add `--extra cuda`; PyClaw needs `build-essential` and
 
 ## Checks that replace prose
 
-```toml
-# pyproject.toml
-[tool.codespell]
-builtin = "clear,en-GB_to_en-US"
-skip = "*.lock,*.ipynb,.git,icon,third_party,notebooks,*.npz,*.h5"
-ignore-words-list = "Numer,DATAS,IST,nd"
-
-[tool.ruff.lint.flake8-tidy-imports.banned-api]
-"dataclasses.replace".msg = "use copy.replace (3.13)"
-```
+The configuration lives in `pyproject.toml` (`[tool.ruff.lint]` with `TID251` selected and
+`[tool.ruff.lint.flake8-tidy-imports.banned-api]`; `[tool.codespell]` once the spelling sweep
+lands) — this document names the rule and the reason, not the settings, so it cannot go stale.
 
 | Rule | Check |
 |---|---|
-| American English, irregulars and typos | `codespell` as configured above |
+| American English, irregulars and typos | `codespell` (`[tool.codespell]`) |
 | American English, the productive families | `scripts/check_spelling.py` |
-| `copy.replace` | ruff banned-api as above |
+| `copy.replace`, never `dataclasses.replace` (Python floor 3.13) | ruff `TID251` banned-api |
 | change-document *Files* matches the diff; frontmatter; index coverage; Done-ledger order | `scripts/check_docs.py` |
 | every model config instantiates | `scripts/check_configs.py` |
 | every module imports | `scripts/import_all.py` |

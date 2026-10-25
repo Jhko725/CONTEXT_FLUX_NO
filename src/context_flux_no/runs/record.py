@@ -12,6 +12,7 @@ Legacy ICLR checkpoints get a record with `status="legacy"` from
 
 from __future__ import annotations
 
+import copy
 import dataclasses
 import datetime as _dt
 import json
@@ -157,7 +158,7 @@ class RunRecord:
         )
 
     def replace(self, **changes: Any) -> RunRecord:
-        return dataclasses.replace(self, **changes)
+        return copy.replace(self, **changes)
 
     # ------------------------------------------------------------ (de)serialise --
     def to_dict(self) -> dict[str, Any]:

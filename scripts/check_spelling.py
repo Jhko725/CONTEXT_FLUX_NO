@@ -22,6 +22,7 @@ import sys
 from collections.abc import Iterable, Iterator
 from pathlib import Path
 
+
 # Words whose `-ise` ending is correct in American English. Verbs of Latin (not Greek)
 # origin, plus every noun and adjective the pattern would otherwise catch. Closed: the
 # language does not coin new members.

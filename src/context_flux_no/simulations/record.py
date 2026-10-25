@@ -7,6 +7,7 @@ stamps into `RunRecord.index` from the records of the files it reads."""
 
 from __future__ import annotations
 
+import copy
 import dataclasses
 import datetime as _dt
 import json
@@ -94,7 +95,7 @@ class DatasetRecord:
         )
 
     def replace(self, **changes: Any) -> DatasetRecord:
-        return dataclasses.replace(self, **changes)
+        return copy.replace(self, **changes)
 
     def to_dict(self) -> dict[str, Any]:
         return dataclasses.asdict(self)
