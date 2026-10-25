@@ -16,9 +16,10 @@ Everything is **[code]** on `phase2a-pyclaw-backend` unless marked.
 ```
 simulations/
   grid.py       Grid(x_spans, Nxs): centres (PyClaw arithmetic), dxs, axis_names, to_dict()
-  backend.py    SolverBackend.solve(pde, ic, grid, t_out, bcs); BCName = periodic|extrap|wall; normalize_bcs
-  pyclaw.py     PyClawSpec (per PDE class) · PyClawBackend(scheme="classic"|"sharpclaw", **solver_overrides)
-  trixi.py      TrixiSpec (per PDE class) · TrixiBackend(polydeg, cfl, surface_flux, shock_capturing); juliacall
+  backends/
+    base.py     SolverBackend.solve(pde, ic, grid, t_out, bcs); BCName = periodic|extrap|wall; normalize_bcs; SolverFailure
+    pyclaw.py   PyClawSpec (per PDE class) · PyClawBackend(scheme="classic"|"sharpclaw", **solver_overrides)
+    trixi.py    TrixiSpec (per PDE class) · TrixiBackend(polydeg, cfl, surface_flux, shock_capturing); juliacall
   initial_conditions/  InitialCondition (at_points) · samplers (sample(key, x_spans)) · FromFunction/Stacked/Conserved
   record.py     DatasetRecord (dataset.json + root attrs)
   writer.py     WellWriter.create / write_trajectory / finalize / open  (Well schema + boundary_conditions)
@@ -83,7 +84,7 @@ Adding a PyClaw family = a class with the four attributes above and a `pyclaw_sp
 backend = a `SolverBackend` subclass with `solve` and `describe` (Trixi: ADR-0004,
 `design/python-julia-repo.md`).
 
-## Trixi (`simulations/trixi.py`)
+## Trixi (`simulations/backends/trixi.py`)
 
 DGSEM `polydeg=3` on a `StructuredMesh` with one element per cell, Lax–Friedrichs surface flux,
 Hennemann–Gassner shock capturing, SSPRK33 at `cfl=0.5` through `StepsizeCallback`, output =

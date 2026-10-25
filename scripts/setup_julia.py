@@ -12,7 +12,7 @@ import argparse
 import subprocess
 import sys
 
-from context_flux_no.simulations import trixi
+from context_flux_no.simulations.backends import trixi
 
 
 def main() -> int:

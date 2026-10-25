@@ -67,8 +67,9 @@ Claude updates the change document in the same commit as any code change on the 
 - `third_party/icon` is a git submodule (`git submodule update --init`); not imported by
   `src`.
 - `import juliacall` or `import juliapkg` *installs Julia* (1 GB) on a machine without it;
-  probe for the Julia side with `simulations.trixi.available()`, never by importing. Set-up is
-  `uv run python scripts/setup_julia.py`; `uv sync` here takes `--group dev --extra cuda`.
+  probe for the Julia side with `simulations.backends.trixi.available()`, never by importing.
+  Set-up is `uv run python scripts/setup_julia.py`; `uv sync` here takes `--group dev
+  --extra cuda`.
 - `git log -p docs/roadmap.md` is the project diary; `git blame` dates every Done row.
 - Tags cannot be pushed from Claude's sessions (proxy policy); Joon pushes tags.
 - Numerics conventions (stencil `(a, b)`, faces, padding, BCs, axis handling) are in

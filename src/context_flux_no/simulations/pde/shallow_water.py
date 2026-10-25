@@ -4,9 +4,9 @@ import equinox as eqx
 import numpy as np
 from jaxtyping import Float
 
+from context_flux_no.simulations.backends.pyclaw import PyClawSpec
+from context_flux_no.simulations.backends.trixi import TrixiSpec
 from context_flux_no.simulations.pde.base import AbstractPDEFamily
-from context_flux_no.simulations.pyclaw import PyClawSpec
-from context_flux_no.simulations.trixi import TrixiSpec
 
 
 def riemann_param_shallow_water_1D(

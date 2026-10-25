@@ -32,7 +32,7 @@ from typing import Any, Literal
 
 import numpy as np
 
-from context_flux_no.simulations.backend import BCs, SolverBackend, SolverFailure
+from context_flux_no.simulations.backends.base import BCs, SolverBackend, SolverFailure
 from context_flux_no.simulations.grid import Grid
 from context_flux_no.simulations.initial_conditions.base import InitialCondition
 

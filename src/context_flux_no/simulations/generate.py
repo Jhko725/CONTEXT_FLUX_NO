@@ -20,7 +20,7 @@ import numpy as np
 from jaxtyping import Array, PRNGKeyArray
 from tqdm import tqdm
 
-from context_flux_no.simulations.backend import (
+from context_flux_no.simulations.backends.base import (
     normalize_bcs,
     SolverBackend,
     SolverFailure,

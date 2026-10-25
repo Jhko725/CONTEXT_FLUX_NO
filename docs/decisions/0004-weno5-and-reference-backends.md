@@ -50,7 +50,7 @@ evaluated by Python on the DG nodes Julia reports (ADR-0011 §Initial conditions
 assessment's thread-safety objection concerned the other direction (Python called from Julia
 threads) and was withdrawn after re-reading the JuliaCall documentation and PySR. What stands
 from the original wording: Julia is pinned (`reference/trixi/Manifest.toml`, Julia `~1.12` via
-juliapkg) and enters `src/` through `simulations/trixi.py` alone. A file-based subprocess
+juliapkg) and enters `src/` through `simulations/backends/trixi.py` alone. A file-based subprocess
 transport is the fallback if the in-process path proves unworkable in practice (a Julia crash
 takes the Python process with it; a Slurm generation job may prefer isolation) — built then,
 not now.

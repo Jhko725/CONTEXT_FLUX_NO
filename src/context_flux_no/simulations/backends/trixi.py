@@ -65,12 +65,12 @@ from typing import Any, Literal
 
 import numpy as np
 
-from context_flux_no.simulations.backend import BCs, SolverBackend, SolverFailure
+from context_flux_no.simulations.backends.base import BCs, SolverBackend, SolverFailure
 from context_flux_no.simulations.grid import Grid
 from context_flux_no.simulations.initial_conditions.base import InitialCondition
 
 
-REFERENCE_TRIXI = Path(__file__).resolve().parents[3] / "reference" / "trixi"
+REFERENCE_TRIXI = Path(__file__).resolve().parents[4] / "reference" / "trixi"
 """The Julia project (`Project.toml` + `Manifest.toml`) juliacall runs in."""
 
 SurfaceFlux = Literal["lax_friedrichs"]

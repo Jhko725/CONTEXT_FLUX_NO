@@ -3,9 +3,9 @@ from typing import ClassVar
 import equinox as eqx
 import numpy as np
 
+from context_flux_no.simulations.backends.pyclaw import PyClawSpec
+from context_flux_no.simulations.backends.trixi import TrixiSpec
 from context_flux_no.simulations.pde.base import AbstractPDEFamily
-from context_flux_no.simulations.pyclaw import PyClawSpec
-from context_flux_no.simulations.trixi import TrixiSpec
 
 
 def riemann_sine_1D(q_l, q_r, aux_l, aux_r, problem_data):

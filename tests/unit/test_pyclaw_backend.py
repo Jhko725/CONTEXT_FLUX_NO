@@ -11,10 +11,10 @@ import pytest
 
 pytest.importorskip("clawpack")
 
-from context_flux_no.simulations.backend import normalize_bcs  # noqa: E402
+from context_flux_no.simulations.backends.base import normalize_bcs  # noqa: E402
+from context_flux_no.simulations.backends.pyclaw import PyClawBackend  # noqa: E402
 from context_flux_no.simulations.grid import Grid  # noqa: E402
 from context_flux_no.simulations.initial_conditions import FromFunction  # noqa: E402
-from context_flux_no.simulations.pyclaw import PyClawBackend  # noqa: E402
 
 from tests.unit.make_goldens_simulations import CASES, GOLDENS  # noqa: E402
 

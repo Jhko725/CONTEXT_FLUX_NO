@@ -120,7 +120,7 @@ points).
   `grid`, `backend`, `pyclaw`, `record`, `writer`, `generate`, `pde/`. The Well layout split
   (`solution_to_well_schema`) moved from the family to the writer, which is created with the
   layout: the family states its layout once, the store owns how it is laid out on disk.
-- Julia/Trixi enters through the same interface (`simulations/trixi.py`) as
+- Julia/Trixi enters through the same interface (`simulations/backends/trixi.py`) as
   `docs/design/python-julia-repo.md` describes; nothing in this decision depends on it.
 - Phase 4.4 regeneration picks a backend per family in its config and the choice is in every
   `dataset.json`.

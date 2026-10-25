@@ -29,7 +29,7 @@ One line per term; `architecture.md` and the design documents use only these.
 - **DataSpec** — shapes, channels, `dt`, `dx`, `bcs` read off a dataset; feeds `build()`.
 - **PDEFamily / `AbstractPDEFamily`** — a parametrized conservation law with a state layout and tiered capabilities (`simulations/pde/base.py`; tier 0's numerics methods arrive with `fv/`).
 - **InitialCondition** — a function of space, `at_points(coords) -> [n_eqn, *shape]`, that each backend evaluates where its scheme needs it (`simulations/initial_conditions/base.py`); an **InitialConditionSampler** draws one with `sample(key, x_spans)`.
-- **SolverBackend** — `solve(pde, ic, grid, t_out, bcs)` (`simulations/backend.py`): `PyClawBackend` (Classic · SharpClaw; landed), `TrixiBackend` (juliacall; Python side landed, Julia package pending), `JaxBackend` (pending).
+- **SolverBackend** — `solve(pde, ic, grid, t_out, bcs)` (`simulations/backends/base.py`): `PyClawBackend` (Classic · SharpClaw; landed), `TrixiBackend` (juliacall; Python side landed, Julia package pending), `JaxBackend` (pending).
 - **Classic / SharpClaw** — PyClaw's two schemes: wave propagation (2nd order, the ICLR data) · WENO5 + SSP-RK method of lines (the higher-order reference).
 - **PyClawSpec** — how a PDE class describes itself to PyClaw (Riemann solver, waves, kernel language, per-scheme options).
 - **TrixiSpec** — how a PDE class describes itself to `ContextFluxTrixi` (equations constructor name, parameter kwargs).

@@ -49,12 +49,12 @@ src/context_flux_no/
 ├── utils/                       arrays.py (is_floating_array, num_parameters; was utils.py), provenance.py (git_state, package_version),
 │                                serialization.py (dumps: the one JSON encoder for records and store attrs)
 ├── data/                        sources.py: WellDatasetSourceBase · ZarrWellDatasetSource (current) · TheWellDataSource (re-implements base)  (~~transforms.py~~)
-├── simulations/                 reference solvers + data generation (ADR-0011): grid.py (Grid), backend.py (SolverBackend, BC names),
-│                                pyclaw.py (PyClawSpec, PyClawBackend classic|sharpclaw), trixi.py (TrixiSpec, TrixiBackend via juliacall;
-│                                Julia side in reference/trixi/ContextFluxTrixi/), record.py (DatasetRecord), writer.py (WellWriter,
+├── simulations/                 reference solvers + data generation (ADR-0011): grid.py (Grid), record.py (DatasetRecord), writer.py (WellWriter,
 │                                Well boundary_conditions), generate.py (generate_dataset); pde/{base (minimal interface until 4.1), burgers,
 │                                cubic, euler, shallow_water, sine_1d} — 5 PyClaw families + CubicFlux2D/ViscousBurgers1D own steppers
 │                                (~~dataset.py~~, ~~utils.py~~, ~~pdesolve.py~~, ~~pyclaw_utils.py~~)
+│   ├── backends/                base.py (SolverBackend, BC names, SolverFailure), pyclaw.py (PyClawSpec, PyClawBackend classic|sharpclaw),
+│                                trixi.py (TrixiSpec, TrixiBackend via juliacall; Julia side in reference/trixi/ContextFluxTrixi/); jax.py at 4.7
 │   └── initial_conditions/      base.py (InitialCondition.at_points, FromFunction, Stacked, Conserved; InitialConditionSampler.sample(key, x_spans),
 │                                Multichannel), grf.py (GaussianRandomField via gstools, evaluable anywhere), step.py (PeriodicStep1D/PeriodicVoronoi2D
 │                                + their samplers), fourier.py (TruncatedFourier1D)

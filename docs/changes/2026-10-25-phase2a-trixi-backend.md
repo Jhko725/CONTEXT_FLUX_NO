@@ -11,7 +11,7 @@ base: phase2a-pyclaw-backend
 
 The Trixi.jl half of roadmap 2a, designed by interview on 2026-10-25 (decisions below), and
 the contract change it needs: initial conditions become *functions* that each backend
-discretizes itself. The Python side (contract, `trixi_spec`s, `simulations/trixi.py`, tests
+discretizes itself. The Python side (contract, `trixi_spec`s, `simulations/backends/trixi.py`, tests
 that skip without Julia, documents) was done in Claude's cloud session on 2026-10-25; the Julia
 package `reference/trixi/ContextFluxTrixi/`, the committed lock and the V18 runs in a Claude Code
 CLI session on Joon's laptop on 2026-10-26 (§Laptop steps says what happened; the Julia-side
@@ -29,7 +29,7 @@ decisions were grilled first and are rows D-VF … D-CI below).
 | D-FAM | Six families (five PyClaw ones + `CubicFlux2D`); `ViscousBurgers1D` waits for tier 3. Custom Trixi equations for cubic 1D/2D, sine, parametrized shallow water; Trixi's `InviscidBurgersEquation1D` and `CompressibleEulerEquations2D`. |
 | D-BC | Periodic only; `extrap`/`wall` raise `ValueError` at `solve` (V17 adds Trixi's BCs). |
 | D-JL | Julia `~1.12` via `juliapkg.json` (Trixi's compat is `julia = "1.10"` = `[1.10, 2)`, CI on 1.10/1.11/1.12); `reference/trixi/Project.toml` + committed `Manifest.toml` with `ContextFluxTrixi` `dev`-ed in. *Mechanism refined in implementation* (Design): juliapkg's shared-project mode (`PYTHON_JULIAPKG_PROJECT`) instead of `PYTHON_JULIACALL_EXE`/`_PROJECT` — same files, one installer. |
-| D-TR | Transport = juliacall in-process, Python evaluates the IC at the LGL nodes Julia reports and passes arrays both ways (no Python-from-Julia calls); `PYTHON_JULIACALL_HANDLE_SIGNALS=yes`, `_THREADS=auto`, set before import in `simulations/trixi.py`; no `_jl_call_nogil`; the subprocess transport only if juliacall proves unworkable. **ADR-0004 amendment.** |
+| D-TR | Transport = juliacall in-process, Python evaluates the IC at the LGL nodes Julia reports and passes arrays both ways (no Python-from-Julia calls); `PYTHON_JULIACALL_HANDLE_SIGNALS=yes`, `_THREADS=auto`, set before import in `simulations/backends/trixi.py`; no `_jl_call_nogil`; the subprocess transport only if juliacall proves unworkable. **ADR-0004 amendment.** |
 | D-SPEC | `trixi_spec` on each family (equations constructor name + parameter kwargs), parallel to `pyclaw_spec`. |
 | D-API | `TrixiBackend(polydeg=3, cfl=0.5, surface_flux="lax_friedrichs", shock_capturing=True)`; `describe()` = those + Trixi version, Julia version, thread count. Julia-side failures → `SolverFailure("trixi", reason)`; configuration failures propagate. |
 | D-V18 | `tests/verification/test_crosscode.py::test_reference_backends`: SharpClaw (`SSP33`) vs Trixi (`SSPRK33`), N = 64/128/256, ratio ≥ 1.5, skipping without Julia; no CI Julia job until the laptop proves the setup. Generator defaults untouched (SharpClaw keeps `SSP104`). |
@@ -59,7 +59,7 @@ Julia side (grill of 2026-10-26; Design carries the rejected alternatives):
 | # | Where | Item | Done when |
 |---|---|---|---|
 | 1 ✓ | cloud | `InitialCondition`/`InitialConditionSampler` contract; samplers rewritten as functions of position (GRF via gstools unstructured evaluation — identical values on grid points; 1-D steps with jump *positions* drawn in the domain; 2-D Voronoi with seeds in the domain, torus distance); `FromFunction`, `Stacked`, `Conserved`, `Multichannel`; `solve(ic, …)` on every family; `generate_dataset(initial_condition=sampler, ic_in_primitive=)`; configs `sampler:`; goldens through the new path | goldens bit-identical; `test_initial_conditions.py` green; every IC config samples; script runs on cubic 1D (step), Euler 2D (primitive GRF), cubic 2D |
-| 2 ✓ | cloud | `trixi_spec` on the six families; `simulations/trixi.py`: env setup, lazy `juliacall` import, `TrixiBackend` per D-API with `SolverFailure` seam, `describe()`; `scripts/setup_julia.py`; `juliapkg.json`; `juliapkg`+`juliacall` in the dev group | imports without Julia; `TrixiBackend()` raises a clear configuration error when Julia/the project is absent |
+| 2 ✓ | cloud | `trixi_spec` on the six families; `simulations/backends/trixi.py`: env setup, lazy `juliacall` import, `TrixiBackend` per D-API with `SolverFailure` seam, `describe()`; `scripts/setup_julia.py`; `juliapkg.json`; `juliapkg`+`juliacall` in the dev group | imports without Julia; `TrixiBackend()` raises a clear configuration error when Julia/the project is absent |
 | 3 ✓ | cloud | V18 tests (skip), ADR-0011 §Initial conditions, ADR-0004 amendment, F12, `python-julia-repo.md` + `simulation-backends.md` updated, roadmap/architecture/glossary/index | `check_docs --files` clean |
 | 4 ✓ | laptop | `reference/trixi/`: `Project.toml`, `Manifest.toml` (written by juliapkg), `ContextFluxTrixi/` (`equations.jl`, `solve.jl`: `node_coordinates`, `solve`, `versions`; `test/runtests.jl`, 72 checks) | `Pkg.test` green 2026-10-26; `setup_julia.py` prints `describe()` |
 | 5 ✓ | laptop | `TrixiBackend.solve` end to end on the six families; V18 ratios measured and recorded in `verification.md`; `julia_package_version` in `describe()` (D-PROV) | V18 green 2026-10-26 (ratios in Tests) |
@@ -69,7 +69,7 @@ Julia side (grill of 2026-10-26; Design carries the rejected alternatives):
 
 1. `uv sync --group dev --extra cuda` — the CUDA extra is installed on this machine; a sync
    without it removes the CUDA packages (happened once, restored).
-2. `reference/trixi/ContextFluxTrixi/` written to the interface in `simulations/trixi.py`'s
+2. `reference/trixi/ContextFluxTrixi/` written to the interface in `simulations/backends/trixi.py`'s
    docstring with a complete `Project.toml` (UUIDs from the General registry).
 3. `touch reference/trixi/Project.toml`; `uv run python scripts/setup_julia.py --test` — one
    run installed Julia 1.12.7 into `reference/trixi/pyjuliapkg/install` (1.1 GB; the `~/.julia`
@@ -110,13 +110,13 @@ Commit 1 — the `InitialCondition` contract (ledger 1):
 - `docs/changes/2026-10-25-phase2a-trixi-backend.md` — this document; `docs/index.md` — its row.
 
 Commit 2 — the backend takes the function, not the array (D-IC, second half):
-- `src/context_flux_no/simulations/backend.py` — `SolverBackend.solve(pde, ic, grid, t_out, bcs)` and `check_inputs(pde, ic, grid, t_out)` take the `InitialCondition` (checks `n_eqn`/`n_spatial_dims` against the family and grid); `solve_batch` deleted (no caller).
-- `src/context_flux_no/simulations/pyclaw.py` — `solve` evaluates `ic.at_points(grid.meshgrid())` as the cell state (the ICLR convention; F12).
+- `src/context_flux_no/simulations/backends/base.py` — `SolverBackend.solve(pde, ic, grid, t_out, bcs)` and `check_inputs(pde, ic, grid, t_out)` take the `InitialCondition` (checks `n_eqn`/`n_spatial_dims` against the family and grid); `solve_batch` deleted (no caller).
+- `src/context_flux_no/simulations/backends/pyclaw.py` — `solve` evaluates `ic.at_points(grid.meshgrid())` as the cell state (the ICLR convention; F12).
 - `src/context_flux_no/simulations/pde/base.py` — `solve` passes `ic` through; the check moved into `check_inputs`.
 - `tests/unit/test_pyclaw_backend.py` — input checks use a two-channel `FromFunction` instead of a wrong-shaped array.
 
 Commit 3 — the Trixi backend's Python side (ledger 2–3):
-- `src/context_flux_no/simulations/trixi.py` — new: `TrixiSpec`, `TrixiBackend` (D-API; periodic only; `SolverFailure("trixi", …)` seam; `describe()`), `TrixiUnavailable`, `available()`, `configure_environment()`, `REFERENCE_TRIXI`; the Julia interface in the docstring.
+- `src/context_flux_no/simulations/backends/trixi.py` — new: `TrixiSpec`, `TrixiBackend` (D-API; periodic only; `SolverFailure("trixi", …)` seam; `describe()`), `TrixiUnavailable`, `available()`, `configure_environment()`, `REFERENCE_TRIXI`; the Julia interface in the docstring.
 - `src/context_flux_no/simulations/pde/{base,cubic,sine_1d,shallow_water,burgers,euler}.py` — `trixi_spec` (base raises `NotImplementedError`; six families return a `TrixiSpec`).
 - `src/context_flux_no/simulations/__init__.py` — exports `TrixiBackend`, `TrixiSpec`.
 - `src/context_flux_no/juliapkg.json` — new: Julia `~1.12`, `ContextFluxTrixi` `dev`-ed from `reference/trixi/ContextFluxTrixi`.
@@ -141,7 +141,7 @@ Commit 4 — the Julia side (ledger 4–5, laptop):
 - `reference/trixi/ContextFluxTrixi/src/equations.jl` — new: `CubicFluxEquation1D/2D`, `SineFluxEquation1D`, `ParametrizedShallowWaterEquations1D` (exact LF bound, D-WS), `indicator_variable`, `volume_flux_dg`, the `EQUATIONS` table with strict parameter checking.
 - `reference/trixi/ContextFluxTrixi/src/solve.jl` — new: `node_coordinates`, `solve` (StructuredMesh periodic, DGSEM + HG, state injected via `wrap_array`, SSPRK33 + `StepsizeCallback`, element means), `versions`.
 - `reference/trixi/ContextFluxTrixi/test/runtests.jl` — new: 72 checks (node order pin, D-WS bound, flux oracles, conservation, Burgers equivalence, characteristics convergence, failure seam, versions).
-- `src/context_flux_no/simulations/trixi.py` — `describe()` records `julia_package_version` (D-PROV); `faulthandler.disable()` before Julia starts; docstring: `versions()` keys, import order observed, the faulthandler fact.
+- `src/context_flux_no/simulations/backends/trixi.py` — `describe()` records `julia_package_version` (D-PROV); `faulthandler.disable()` before Julia starts; docstring: `versions()` keys, import order observed, the faulthandler fact.
 - `src/context_flux_no/simulations/pde/cubic.py` — `CubicFlux2D.solve` steps exactly onto the output times (F14; Bugs fixed).
 - `tests/helpers.py` — new: `SHARPCLAW_SSP33`.
 - `tests/verification/test_crosscode.py` — the SharpClaw partner uses `SHARPCLAW_SSP33`.
@@ -157,6 +157,9 @@ Commit 5 — review round 1, items 1–2 (initial conditions):
 - `src/context_flux_no/simulations/initial_conditions/fourier.py` — `TruncatedFourier1D.with_uniform_rand_coeffs` → `RandomTruncatedFourier1D(num_modes, coeff_range, offset_range)`, an `InitialConditionSampler` whose period is the domain length.
 - `src/context_flux_no/simulations/initial_conditions/__init__.py` — export.
 - `tests/unit/test_initial_conditions.py` — the Fourier sampler in the function-of-position law; period = domain length. `tests/unit/test_generate_dataset.py` — the test sampler calls `super().__init__`.
+
+Commit 6 — review round 1, item 3 (`backends/` subpackage):
+- `src/context_flux_no/simulations/backends/{__init__,base,pyclaw,trixi}.py` — `simulations/{backend,pyclaw,trixi}.py` moved (`git mv`; `backend.py` → `base.py`); `REFERENCE_TRIXI` one level deeper; `simulations/__init__.py` re-exports from the subpackage; every import site, config target, document and `CLAUDE.md` updated (`docs/changes/2026-10-25-phase2a-pyclaw-backend.md` kept as the historical record).
 
 ## Design
 
@@ -174,6 +177,7 @@ Commit 5 — review round 1, items 1–2 (initial conditions):
 - **`SHARPCLAW_SSP33` as a named configuration** in `tests/helpers.py` rather than literals at the call site: Clawpack provides CFL defaults only for SSP104, so the SSP33 numbers are a choice that needs its reason next to it (same CFL per unit SSP coefficient as Clawpack's SSP104 defaults).
 - **Review item 1 — the overlap between a condition and its sampler.** Kept the distribution-vs-draw split (the draw is evaluated on several grids in V18, so it must be an object, and the sampler is what Hydra instantiates and `DatasetRecord.ic` describes); removed the duplication by declaring `n_eqn`/`n_spatial_dims` once in each base `__init__`. Rejected: one class with an "unsampled" state (`at_points` would have to raise before `sample`); a generic sampler around a closure (hyperparameters in a `partial`, worse for Hydra and the record); deriving the sampler's dims by a dry draw (a sample at construction). Jit/vmap for the JAX backend (4.7) is unaffected — a backend evaluates `at_points` once on the host and jits the stepping; the only thing that would keep an IC *out* of a jitted computation is the `np.asarray` coercion in `FromFunction`/`Stacked`/`Conserved`, left until 4.7 names a use.
 - **Review item 2 — `RandomTruncatedFourier1D`.** The classmethod took a key but not the domain, so `L` could disagree with `x_spans`; as a sampler the period is the domain length. Its default `coeff_range=(1, 1)` drew nothing (every coefficient 1); the sampler's default is `(-1, 1)`. Only a legacy notebook used the classmethod (Phase 6).
+- **Review item 3 — `simulations/backends/`.** Three adopters (`base`, `pyclaw`, `trixi`) and a fourth known (`jax`, 4.7); moved now rather than at 4.7 so no later branch rebases across it. `grid.py` stays at `simulations/` (shared with the writer and the families).
 - **Deleted samplers**: circulant-embedding GRF and the 2-D single-channel GRF were a second route to what the gstools sampler does; the deletion test passes (nothing concentrates elsewhere). Two legacy data-generation notebooks referenced them; they are Phase 6's to thin.
 
 ## Bugs fixed
@@ -216,10 +220,11 @@ Fast tier 2026-10-26 (`JAX_PLATFORMS=cpu uv run pytest -q`, Julia set up): 103 p
 | `simulations/initial_conditions/fourier.py` — `TruncatedFourier1D` is an `InitialCondition` | Agreed. But its `with_uniform_rand_coeffs` correspond to the functionality of its sampler. | Deferred changes to Claude. |
 | `simulations/initial_conditions/__init__.py` — exports | Trivial changes. | None |
 | **Round 2** `initial_conditions/base.py`, `grf.py`, `step.py` — dims set once in the base `__init__`s (item 1) | | |
+| **Round 2** `simulations/backends/` — `backend.py` → `backends/base.py`, `pyclaw.py`, `trixi.py` moved; call sites, configs, docs (item 3) | | |
 | **Round 2** `initial_conditions/fourier.py` — `RandomTruncatedFourier1D` sampler (item 2); `test_initial_conditions.py`, `test_generate_dataset.py` | | |
-| `simulations/backend.py` — `solve(pde, ic, grid, t_out, bcs)`; `check_inputs(ic)`; `solve_batch` deleted | Looks good. | None |
-| `simulations/pyclaw.py` — evaluates `ic` at the centers | Looks good. | None |
-| `simulations/trixi.py` — `TrixiSpec`, `TrixiBackend`, `available()`, environment, Julia interface spec | Looks good. Feel that `simulations` need a `backends` subpackage though. It will contain the current `backends..py`, `pyclaw.py` and `trixi.py`. | To be discussed with Claude. |
+| `simulations/backends/base.py` — `solve(pde, ic, grid, t_out, bcs)`; `check_inputs(ic)`; `solve_batch` deleted | Looks good. | None |
+| `simulations/backends/pyclaw.py` — evaluates `ic` at the centers | Looks good. | None |
+| `simulations/backends/trixi.py` — `TrixiSpec`, `TrixiBackend`, `available()`, environment, Julia interface spec | Looks good. Feel that `simulations` need a `backends` subpackage though. It will contain the current `backends..py`, `pyclaw.py` and `trixi.py`. | To be discussed with Claude. |
 | `simulations/pde/base.py` — `solve(ic, …)` passes the function; `trixi_spec` default | Looks good. | None |
 | `simulations/pde/{cubic,sine_1d,shallow_water,burgers,euler}.py` — `trixi_spec`; Euler `solve` override gone; cubic-2D on `Grid` | Looks good. | None |
 | `simulations/generate.py` — sampler + `ic_in_primitive` | Logic is good, but let's rename `ic_in_primitive` to `ic_to_primitive`. Also, want proper docstings (`equinox`/`diffrax` style) for this function. | Changes deferred to Claude. |
@@ -235,7 +240,7 @@ Confirmed. | None |
 | `reference/trixi/ContextFluxTrixi/src/equations.jl` — four custom equations, exact LF bound (D-WS), indicator variable, volume flux, `EQUATIONS` table | Looks good. | None |
 | `reference/trixi/ContextFluxTrixi/src/solve.jl` — `node_coordinates`, `solve`, `versions` | Had a skim. Looks good. | None |
 | `reference/trixi/ContextFluxTrixi/test/runtests.jl` — 72 checks | Skimmed for now. Will revisit later. | None for now. |
-| `simulations/trixi.py` — `julia_package_version` (D-PROV); `faulthandler.disable()` before Julia starts | Confirmed. | None |
+| `simulations/backends/trixi.py` — `julia_package_version` (D-PROV); `faulthandler.disable()` before Julia starts | Confirmed. | None |
 | `simulations/pde/cubic.py` — `CubicFlux2D.solve` time stepping (F14) | Looks good. | None |
 | `tests/helpers.py` — `SHARPCLAW_SSP33`; `tests/verification/test_crosscode.py` uses it; `tests/unit/test_trixi_backend.py` — `describe()` keys | Confirmed. | None |
 | `scripts/data/configs/backend/trixi.yaml`, `scripts/data/README.md`, `CLAUDE.md` (D-DOC) | Looks good. | None |

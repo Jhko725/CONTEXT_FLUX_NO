@@ -3,7 +3,8 @@ checks that need no Julia run before Julia is started."""
 
 import numpy as np
 import pytest
-from context_flux_no.simulations import Grid, normalize_bcs, trixi
+from context_flux_no.simulations import Grid, normalize_bcs
+from context_flux_no.simulations.backends import trixi
 from context_flux_no.simulations.initial_conditions import FromFunction
 from context_flux_no.simulations.pde import (
     Burgers1D,

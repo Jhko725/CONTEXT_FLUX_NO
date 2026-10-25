@@ -5,9 +5,9 @@ knows nothing about datasets, files or sampling: `simulations.generate` owns tho
 conditions are *names* per (axis, side) until `fv/boundary.py` (Phase 2b) provides objects;
 the names are the ones every backend can honour and they are recorded in `DatasetRecord`.
 
-Concrete backends: `simulations.pyclaw.PyClawBackend` (Classic and SharpClaw; this branch),
-`simulations.trixi.TrixiBackend` (Julia subprocess; pending), `simulations.jax.JaxBackend`
-(own `fv/` stepper; Phase 4.7)."""
+Concrete backends: `backends.pyclaw.PyClawBackend` (Classic and SharpClaw),
+`backends.trixi.TrixiBackend` (DGSEM through juliacall), `backends.jax.JaxBackend` (own `fv/`
+stepper; Phase 4.7)."""
 
 from __future__ import annotations
 

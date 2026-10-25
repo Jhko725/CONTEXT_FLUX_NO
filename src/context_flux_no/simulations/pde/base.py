@@ -16,7 +16,7 @@ from typing import Any
 import equinox as eqx
 import numpy as np
 
-from context_flux_no.simulations.backend import normalize_bcs, SolverBackend
+from context_flux_no.simulations.backends.base import normalize_bcs, SolverBackend
 from context_flux_no.simulations.grid import Grid
 from context_flux_no.simulations.initial_conditions.base import InitialCondition
 
@@ -54,7 +54,7 @@ class AbstractPDEFamily(eqx.Module):
         raise NotImplementedError(f"{type(self).__name__} is not solved by Trixi")
 
     def default_backend(self, *, verbose: bool = False) -> SolverBackend:
-        from context_flux_no.simulations.pyclaw import PyClawBackend
+        from context_flux_no.simulations.backends.pyclaw import PyClawBackend
 
         return PyClawBackend("classic", verbose=verbose)
 

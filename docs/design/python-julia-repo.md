@@ -34,7 +34,7 @@ repository gets a working, *reproducible* Julia + Trixi.jl without a second tool
   lock file, so putting Trixi in it would give compat ranges, not exact reproducibility; it does
   take a `dev`/`path` entry for the local package [code: juliapkg 0.1.28 `PkgSpec`] — see
   §Decided.
-- Python side: `simulations/trixi.py` offers two transports over the same Julia function
+- Python side: `simulations/backends/trixi.py` offers two transports over the same Julia function
   (see C below): in-process through `juliacall` (default) or a subprocess
   `subprocess.run([juliapkg.executable(), f"--project={REF_TRIXI}", "--startup-file=no",
   "run.jl", request_json])`. Either way `juliapkg` only locates/installs Julia; the Trixi
@@ -93,7 +93,7 @@ multithreaded Julia from Python is a production pattern, not a corner case.
 *What remains true against C, for this repository.*
 - The import-order constraint (`juliacall` before `jax`/`numpy`) and the signal setting are
   process-wide invariants that every entry point must honour; PySR solves it by owning the
-  package `__init__`. Here they can be confined to one module (`simulations/trixi.py`, which
+  package `__init__`. Here they can be confined to one module (`simulations/backends/trixi.py`, which
   sets the environment and imports `juliacall` on first use) **provided** that module is
   imported before `jax` in the process that uses it — true for `scripts/data/generate_dataset.py`
   if the import is placed first, false for a notebook that already imported JAX. **[deduced]**
@@ -117,7 +117,7 @@ ergonomics, not thread safety. Design the Julia side as a **local package**
 `solve(family, params, u0::Array, grid, t_out, bcs; polydeg) -> Array`, so the transport is a
 thin layer either way, and implement **both** behind `TrixiBackend(transport=…)`:
 
-- `transport="juliacall"` — the default for development, tests and notebooks: `simulations/trixi.py`
+- `transport="juliacall"` — the default for development, tests and notebooks: `simulations/backends/trixi.py`
   sets `PYTHON_JULIACALL_HANDLE_SIGNALS=yes`, `PYTHON_JULIACALL_THREADS=auto` (and
   `PYTHON_JULIACALL_EXE`/`_PROJECT` to the `reference/trixi` project so `juliapkg.json` is
   not needed for packages) before importing `juliacall`, then calls
@@ -145,7 +145,7 @@ reference/trixi/
   ContextFluxTrixi/                       the Julia package: equations, node_coordinates, solve, versions; test/runtests.jl
   pyjuliapkg/                             juliapkg's state (Julia install, meta.json, lock) — git-ignored
 scripts/setup_julia.py                    resolve + instantiate + precompile + describe(); --test runs Pkg.test
-src/context_flux_no/simulations/trixi.py  TrixiSpec, TrixiBackend; sets the environment, imports juliacall on first solve
+src/context_flux_no/simulations/backends/trixi.py  TrixiSpec, TrixiBackend; sets the environment, imports juliacall on first solve
 ```
 
 - **`juliapkg.json` location.** juliapkg scans every `sys.path` entry *and its immediate

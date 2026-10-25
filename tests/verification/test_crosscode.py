@@ -11,14 +11,15 @@ are untouched (`SSP104`). The ratio criterion is V18a's (ADR-0011 §4)."""
 
 import numpy as np
 import pytest
-from context_flux_no.simulations import Grid, normalize_bcs, trixi
+from context_flux_no.simulations import Grid, normalize_bcs
+from context_flux_no.simulations.backends import trixi
 from context_flux_no.simulations.initial_conditions import FromFunction
 from context_flux_no.simulations.pde import CubicFlux2D
 
 
 pytest.importorskip("clawpack")
 
-from context_flux_no.simulations.pyclaw import PyClawBackend  # noqa: E402
+from context_flux_no.simulations.backends.pyclaw import PyClawBackend  # noqa: E402
 
 from tests.helpers import SHARPCLAW_SSP33  # noqa: E402
 from tests.unit.make_goldens_simulations import CASES  # noqa: E402
