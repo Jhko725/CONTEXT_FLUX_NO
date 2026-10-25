@@ -99,11 +99,17 @@ def test_writer_layout_and_boundary_conditions(tmp_path):
         assert sidecar_path(path).exists()
         w.write_trajectory(0, np.zeros((3, 1, 8)), pde.parameters)
         w.finalize(1, n_failed=3)
-        reopened = WellWriter.open(path)
-        assert len(reopened) == 1 and reopened.record.status == "complete"
-        assert reopened.record.n_failed == 3 and reopened.record.n_trajectories == 1
-        assert reopened[0]["t0_fields"]["u"].shape == (3, 8)
-        assert json.loads(sidecar_path(path).read_text())["n_trajectories"] == 1
+        root = zarr.open_group(path, mode="r")
+        rec = DatasetRecord.read(sidecar_path(path))
+        assert root.attrs["n_trajectories"] == 1 and root["t0_fields"]["u"].shape == (
+            1,
+            3,
+            8,
+        )
+        assert (
+            rec.status == "complete" and rec.n_failed == 3 and rec.n_trajectories == 1
+        )
+        assert DatasetRecord.from_dict(dict(root.attrs["dataset_record"])) == rec
 
 
 def test_generate_dataset_end_to_end(tmp_path):

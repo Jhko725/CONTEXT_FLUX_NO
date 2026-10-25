@@ -45,10 +45,10 @@ WELL_BC_TYPE = {"periodic": "periodic", "wall": "wall", "extrap": "open"}
 
 class WellWriter:
     """Create with `WellWriter.create(...)`, fill with `write_trajectory(idx, u, scalars)`,
-    close with `finalize(n_written)`; `WellWriter.open(path)` reopens a store read-only for
-    inspection (`record`, `__getitem__`, `__len__`)."""
+    close with `finalize(n_written)`. Reading a store back is `data.ZarrWellDatasetSource`'s
+    job; the record is read from the sidecar (`DatasetRecord.read(sidecar_path(store))`)."""
 
-    def __init__(self, root: zarr.Group, path: Path, record: DatasetRecord | None):
+    def __init__(self, root: zarr.Group, path: Path, record: DatasetRecord):
         self.root = root
         self.path = path
         self.record = record
@@ -158,20 +158,10 @@ class WellWriter:
         record.write(sidecar_path(path))
         return writer
 
-    @classmethod
-    def open(cls, path: str | Path, mode: str = "r") -> WellWriter:
-        path = Path(path)
-        root = zarr.open_group(path, mode=mode)
-        rec = root.attrs.get("dataset_record")
-        return cls(root, path, DatasetRecord.from_dict(dict(rec)) if rec else None)
-
     # ------------------------------------------------------------ data -----------
     @property
     def n_trajectories(self) -> int:
         return int(self.root.attrs["n_trajectories"])
-
-    def __len__(self) -> int:
-        return self.n_trajectories
 
     def write_trajectory(
         self, idx: int, u: np.ndarray, scalars: Mapping[str, float]
@@ -197,13 +187,6 @@ class WellWriter:
         for name in scalars_grp.attrs["field_names"]:
             scalars_grp[name][idx] = scalars[name]
 
-    def __getitem__(self, idx: int) -> dict[str, dict[str, np.ndarray]]:
-        out: dict[str, dict[str, np.ndarray]] = {}
-        for grp_name in ("scalars", "t0_fields", "t1_fields", "t2_fields"):
-            grp = self.root.get_group(grp_name)
-            out[grp_name] = {n: grp.get_array(n)[idx] for n in grp.attrs["field_names"]}
-        return out
-
     def finalize(
         self, n_written: int, *, n_failed: int = 0, status: str = "complete"
     ) -> None:
@@ -215,12 +198,11 @@ class WellWriter:
                 if arr.attrs["sample_varying"]:
                     arr.resize((n_written,) + arr.shape[1:])
         self.root.attrs["n_trajectories"] = int(n_written)
-        if self.record is not None:
-            self.record = copy.replace(
-                self.record,
-                n_trajectories=int(n_written),
-                n_failed=int(n_failed),
-                status=status,
-            )
-            self.root.attrs["dataset_record"] = dataclasses.asdict(self.record)
-            self.record.write(sidecar_path(self.path))
+        self.record = copy.replace(
+            self.record,
+            n_trajectories=int(n_written),
+            n_failed=int(n_failed),
+            status=status,
+        )
+        self.root.attrs["dataset_record"] = dataclasses.asdict(self.record)
+        self.record.write(sidecar_path(self.path))
