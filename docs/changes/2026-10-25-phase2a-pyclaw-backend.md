@@ -199,9 +199,9 @@ Joon's Review notes below. Resolutions, one commit per logical group (`code-conv
 | `tests/unit/test_generate_dataset.py` | Confirmed. | None |
 | `docs/decisions/0011-*.md`, `docs/design/simulation-backends.md` | Looks good. | None |
 | `docs/roadmap.md`, `architecture.md`, `verification.md`, `findings.md`, `glossary.md`, `index.md` | Had a readthrough. | None |
-| Round 1: `Grid.__init__` fix; Python 3.13 floor + `copy.replace` + `TID251` | | |
-| Round 1: `AbstractPDEFamily` rename, ADR-0001 amendment, layout split into `WellWriter.write_trajectory` | | |
-| Round 1: `utils/` package; records without wrappers; `sidecar_path` function; persistence verbs | | |
-| Round 1: `WellWriter` write-only; `SolverFailure` + narrowed except; PyClaw citations | | |
-| Round 1: `waveforms/` → `simulations/initial_conditions/`; `step_shallow.yaml` fix | | |
-| Round 1: agreement test to `tests/verification/`; Test contracts section; `CLAUDE.md` tests-green rule | | |
+| Round 1: `Grid.__init__` fix; Python 3.13 floor + `copy.replace` + `TID251` | Looks good. | None |
+| Round 1: `AbstractPDEFamily` rename, ADR-0001 amendment, layout split into `WellWriter.write_trajectory` | Looks good. |  None |
+| Round 1: `utils/` package; records without wrappers; `sidecar_path` function; persistence verbs | Looks good. | None |
+| Round 1: `WellWriter` write-only; `SolverFailure` + narrowed except; PyClaw citations | Looks good. | None |
+| Round 1: `waveforms/` → `simulations/initial_conditions/`; `step_shallow.yaml` fix | Looks good. | None |
+| Round 1: agreement test to `tests/verification/`; Test contracts section; `CLAUDE.md` tests-green rule | Looks good. | None |
