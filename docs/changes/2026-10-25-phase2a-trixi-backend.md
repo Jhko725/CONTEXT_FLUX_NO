@@ -74,7 +74,13 @@ Commit 1 — the `InitialCondition` contract (ledger 1):
 - `tests/unit/make_goldens_simulations.py` — cases wrap formulas in `FromFunction`/`Conserved`; goldens unchanged and still bit-identical.
 - `tests/unit/test_generate_dataset.py` — a sampler instead of a function.
 - `tests/unit/test_initial_conditions.py` — new.
-- `docs/changes/2026-10-25-phase2a-trixi-backend.md` — this document.
+- `docs/changes/2026-10-25-phase2a-trixi-backend.md` — this document; `docs/index.md` — its row.
+
+Commit 2 — the backend takes the function, not the array (D-IC, second half):
+- `src/context_flux_no/simulations/backend.py` — `SolverBackend.solve(pde, ic, grid, t_out, bcs)` and `check_inputs(pde, ic, grid, t_out)` take the `InitialCondition` (checks `n_eqn`/`n_spatial_dims` against the family and grid); `solve_batch` deleted (no caller).
+- `src/context_flux_no/simulations/pyclaw.py` — `solve` evaluates `ic.at_points(grid.meshgrid())` as the cell state (the ICLR convention; F12).
+- `src/context_flux_no/simulations/pde/base.py` — `solve` passes `ic` through; the check moved into `check_inputs`.
+- `tests/unit/test_pyclaw_backend.py` — input checks use a two-channel `FromFunction` instead of a wrong-shaped array.
 
 ## Design
 
@@ -82,6 +88,7 @@ Commit 1 — the `InitialCondition` contract (ledger 1):
 - **Per-axis coordinate arrays** rather than a stacked `[n_dims, *shape]`: what gstools, the step functions and `Grid.meshgrid()` already produce, and easier to read.
 - **Samplers draw positions in the domain** (`sample(key, x_spans)`), so a drawn field does not depend on the grid. This changes the 1-D step distribution (jumps were grid indices) and the 2-D Voronoi domain inference; the ICLR datasets are frozen and 4.4 regenerates, so no reported number moves.
 - **`Conserved(ic, pde)` chosen by `ic_in_primitive` in the pde config** rather than a `solve()` flag: the conversion needs the pde instance, which only `generate_dataset` has per trajectory; the family loses its only `solve` override.
+- **The backend receives the function** (commit 2). `AbstractPDEFamily.solve` first evaluated `ic` at the centers and handed the array to the backend, which would have forced Trixi to interpolate; now each backend evaluates where its scheme needs it. `solve_batch` (a Python loop over arrays, no caller) went with it — the deletion test: nothing concentrated elsewhere.
 - **Deleted samplers**: circulant-embedding GRF and the 2-D single-channel GRF were a second route to what the gstools sampler does; the deletion test passes (nothing concentrates elsewhere). Two legacy data-generation notebooks referenced them; they are Phase 6's to thin.
 
 ## Bugs fixed

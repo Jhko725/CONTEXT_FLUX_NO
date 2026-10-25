@@ -67,21 +67,14 @@ class AbstractPDEFamily(eqx.Module):
         verbose: bool = False,
         **kwargs: Any,
     ) -> tuple[np.ndarray, np.ndarray, list[np.ndarray]]:
-        """`(u[Nt+1, n_eqn, *N], t[Nt+1], centers per axis)`: `ic` evaluated at the cell
-        centers and evolved by `backend` over `linspace(*t_span, Nt + 1)`. (The PyClaw
-        backend takes point values at centers as the cell state — the ICLR convention; see
-        F12 for the averages-vs-points question.)"""
+        """`(u[Nt+1, n_eqn, *N], t[Nt+1], centers per axis)`: `ic` evolved by `backend`
+        over `linspace(*t_span, Nt + 1)`; the backend evaluates `ic` where its scheme needs
+        it (`SolverBackend`)."""
         if kwargs:
             raise TypeError(f"unexpected solve() arguments: {sorted(kwargs)}")
         grid = Grid(x_spans, Nxs)
         t_out = np.linspace(t_span[0], t_span[1], Nt + 1, endpoint=True)
-        if ic.n_eqn != self.n_eqns or ic.n_spatial_dims != self.n_spatial_dims:
-            raise ValueError(
-                f"initial condition is {ic.n_eqn} × {ic.n_spatial_dims}-D, "
-                f"{type(self).__name__} is {self.n_eqns} × {self.n_spatial_dims}-D"
-            )
-        u0 = ic.at_points(grid.meshgrid())
         backend = backend or self.default_backend(verbose=verbose)
         bcs = normalize_bcs(bc, grid.n_spatial_dims)
-        u = backend.solve(self, u0, grid, t_out, bcs)
+        u = backend.solve(self, ic, grid, t_out, bcs)
         return u, t_out, grid.centers

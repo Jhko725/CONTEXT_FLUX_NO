@@ -34,6 +34,7 @@ import numpy as np
 
 from context_flux_no.simulations.backend import BCs, SolverBackend, SolverFailure
 from context_flux_no.simulations.grid import Grid
+from context_flux_no.simulations.initial_conditions.base import InitialCondition
 
 
 Scheme = Literal["classic", "sharpclaw"]
@@ -126,14 +127,16 @@ class PyClawBackend(SolverBackend):
     def solve(
         self,
         pde: Any,
-        u0: np.ndarray,
+        ic: InitialCondition,
         grid: Grid,
         t_out: np.ndarray,
         bcs: BCs,
     ) -> np.ndarray:
         from clawpack import pyclaw
 
-        t_out = self.check_inputs(pde, u0, grid, t_out)
+        t_out = self.check_inputs(pde, ic, grid, t_out)
+        # point values at the cell centers as the cell state (the ICLR convention; F12)
+        u0 = ic.at_points(grid.meshgrid())
         if not self.verbose:  # https://www.clawpack.org/pyclaw/output.html#logging
             logging.getLogger("pyclaw").setLevel(logging.CRITICAL)
 
