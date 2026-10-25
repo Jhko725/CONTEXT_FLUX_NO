@@ -95,6 +95,21 @@ Commit 2 — `db62a07` records and writer (ledger 5–8):
 - `scripts/data/README.md` — families, ICs, backends, `dataset.json`.
 - `tests/unit/test_generate_dataset.py` — new.
 
+Review round 1 (commits `5f2d8a7` … `8cc83f5`), merged on top of Joon's `conventions-docs` branch
+(`c7eba47`, `502a3cf`: `CLAUDE.md`, `docs/coding-standards.md`, `docs/changes/2026-10-25-conventions-docs.md`,
+`scripts/check_spelling.py`, `docs/index.md`):
+- `src/context_flux_no/simulations/grid.py` — `__init__` fixed; `from_sequences` gone (`pde/base.py`, `tests/unit/test_pyclaw_backend.py` callers).
+- `pyproject.toml`, `.python-version`, `uv.lock` — Python floor 3.13, ruff `TID251` + banned `dataclasses.replace`, target py313.
+- `src/context_flux_no/training/trainer.py`, `src/context_flux_no/runs/record.py`, `src/context_flux_no/runs/run.py` — `copy.replace`; records lose `replace`/`to_dict`/`to_json`/`from_json`; `run.py` uses `copy.replace`/`dataclasses.asdict`.
+- `src/context_flux_no/utils/{__init__,arrays,provenance,serialization}.py` — new package (`arrays.py` was `utils.py`, `provenance.py` was top-level); importers `nn/hypernetwork.py`, `models/multiphysics/abstract.py`, `models/multiphysics/disco/disco.py`.
+- `src/context_flux_no/simulations/pde/base.py` — `AbstractPDEFamily`; `solution_to_well_schema`/`WellSchema` removed; `pde/{__init__,cubic,sine_1d,shallow_water,burgers,euler}.py` renamed base.
+- `src/context_flux_no/simulations/writer.py` — `write_trajectory(idx, u, scalars)` owns the layout split; `sidecar_path` function; `__len__`/`__getitem__`/`open` removed.
+- `src/context_flux_no/simulations/backend.py` — `SolverFailure`; `simulations/pyclaw.py` — raises it, cites the kernel constraint; `simulations/generate.py` — catches only it; `simulations/__init__.py` — export.
+- `src/context_flux_no/simulations/initial_conditions/{__init__,grf,step,fourier}.py` — moved from `waveforms/`; `scripts/data/configs/initial_condition/*.yaml` — targets, `step_shallow.yaml` named `waveforms:`.
+- `scripts/backfill_run_records.py`, `tests/unit/test_run_record.py`, `tests/unit/test_generate_dataset.py`, `tests/unit/test_pyclaw_backend.py` (+ `test_blow_up_is_a_solver_failure`) — adapted.
+- `tests/verification/test_backend_agreement.py` — moved from `tests/unit/`, `l1_classic_vs_sharpclaw`.
+- `CLAUDE.md` (floor; *Modifications* committed with tests green), `docs/coding-standards.md` (points at `pyproject.toml`; Test contracts; Persistence verbs), `docs/decisions/0001-tiered-pde-coupling.md` (amended), `docs/decisions/0011-*.md`, `docs/design/simulation-backends.md`, `docs/roadmap.md` (4.1 reworded), `docs/architecture.md`, `docs/glossary.md`, `docs/index.md`, `docs/verification.md`, `docs/findings.md` (path).
+
 Commit 3 — docs:
 - `docs/decisions/0011-solver-backends-and-dataset-provenance.md`, `docs/design/simulation-backends.md` — new.
 - `docs/changes/2026-10-25-phase2a-pyclaw-backend.md` — this document.
@@ -129,7 +144,7 @@ Commit 3 — docs:
 
 ## Tests
 
-Fast tier (`JAX_PLATFORMS=cpu uv run pytest tests/unit`, now 59 tests, ~65 s; the simulation ones need `clawpack`, which builds here after `apt-get install gfortran`):
+Fast tier (`JAX_PLATFORMS=cpu uv run pytest`, 84 passed / 8 deselected after review round 1 on Python 3.13, ~3.5 min incl. the example tests; the simulation ones need `clawpack`, which builds here after `apt-get install gfortran`):
 - `test_pyclaw_backend.py` — V25 bit identity on 5 families; SharpClaw runs on 5 families and starts from the identical state; `Grid` == PyClaw centres; `normalize_bcs` rules; input validation; `describe`; a non-periodic run.
 - `tests/verification/test_backend_agreement.py` — V18a on the four 1-D families (ratios ≥ 1.5 over 64/128/256); unmarked, runs in the fast tier.
 - `test_generate_dataset.py` — Hypothesis round trip of `DatasetRecord`; sidecar naming; writer layout incl. both BC layouts and `finalize`; `generate_dataset` → store + `dataset.json` → `ZarrWellDatasetSource` → `dataset_id` from the record.
@@ -184,4 +199,9 @@ Joon's Review notes below. Resolutions, one commit per logical group (`code-conv
 | `tests/unit/test_generate_dataset.py` | Confirmed. | None |
 | `docs/decisions/0011-*.md`, `docs/design/simulation-backends.md` | Looks good. | None |
 | `docs/roadmap.md`, `architecture.md`, `verification.md`, `findings.md`, `glossary.md`, `index.md` | Had a readthrough. | None |
-
+| Round 1: `Grid.__init__` fix; Python 3.13 floor + `copy.replace` + `TID251` | | |
+| Round 1: `AbstractPDEFamily` rename, ADR-0001 amendment, layout split into `WellWriter.write_trajectory` | | |
+| Round 1: `utils/` package; records without wrappers; `sidecar_path` function; persistence verbs | | |
+| Round 1: `WellWriter` write-only; `SolverFailure` + narrowed except; PyClaw citations | | |
+| Round 1: `waveforms/` → `simulations/initial_conditions/`; `step_shallow.yaml` fix | | |
+| Round 1: agreement test to `tests/verification/`; Test contracts section; `CLAUDE.md` tests-green rule | | |

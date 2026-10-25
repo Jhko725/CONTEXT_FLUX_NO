@@ -261,7 +261,7 @@ class WellDatasetSourceBase(grain.sources.RandomAccessDataSource):
     @cached_property
     def dataset_id(self) -> str:
         """`<dataset>:<split>:<8 hex>` — the identifier `RunRecord.index` records so runs on
-        different data versions are distinguishable. When every file carries a
+        different data versions are distinguishable; every source has one. When every file carries a
         `DatasetRecord` (stores written by `simulations.WellWriter`), the hash is over their
         record ids, so it is stable across machines and copies. Otherwise (ICLR-era stores)
         it is a provisional hash over the common metadata (field names, resolutions, grid
