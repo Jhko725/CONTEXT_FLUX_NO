@@ -5,6 +5,7 @@ import numpy as np
 
 from context_flux_no.simulations.pde.base import AbstractPDEFamily
 from context_flux_no.simulations.pyclaw import PyClawSpec
+from context_flux_no.simulations.trixi import TrixiSpec
 
 
 def riemann_sine_1D(q_l, q_r, aux_l, aux_r, problem_data):
@@ -58,3 +59,7 @@ class SineFlux1D(AbstractPDEFamily):
             problem_data=self.parameters,
             classic_options={"limiters": "MC", "cfl_desired": 0.5, "cfl_max": 0.9},
         )
+
+    @property
+    def trixi_spec(self) -> TrixiSpec:
+        return TrixiSpec("SineFluxEquation1D", self.parameters)

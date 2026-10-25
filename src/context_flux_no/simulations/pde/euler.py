@@ -23,6 +23,7 @@ from clawpack import riemann
 
 from context_flux_no.simulations.pde.base import AbstractPDEFamily
 from context_flux_no.simulations.pyclaw import PyClawSpec
+from context_flux_no.simulations.trixi import TrixiSpec
 
 
 _RHO_FLOOR = 1.0e-12
@@ -57,6 +58,10 @@ class Euler2D(AbstractPDEFamily):
             problem_data=self.parameters,
             classic_options={"transverse_waves": 2},
         )
+
+    @property
+    def trixi_spec(self) -> TrixiSpec:
+        return TrixiSpec("CompressibleEulerEquations2D", self.parameters)  # Trixi's own
 
     def to_conserved(self, rho, u, v, p):
         """`(rho, u, v, p)` → `[rho, rho u, rho v, E]` with `E = p/(γ−1) + ½ρ|v|²`; wrap a

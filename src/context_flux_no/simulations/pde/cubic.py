@@ -10,6 +10,7 @@ from jaxtyping import Array, Float
 from context_flux_no.simulations.grid import Grid
 from context_flux_no.simulations.pde.base import AbstractPDEFamily
 from context_flux_no.simulations.pyclaw import PyClawSpec
+from context_flux_no.simulations.trixi import TrixiSpec
 
 
 def riemann_cubic_1D(
@@ -81,6 +82,10 @@ class CubicFlux1D(AbstractPDEFamily):
             classic_options={"limiters": "MC", "cfl_desired": 0.5, "cfl_max": 0.9},
         )
 
+    @property
+    def trixi_spec(self) -> TrixiSpec:
+        return TrixiSpec("CubicFluxEquation1D", self.parameters)
+
 
 class CubicFlux2D(AbstractPDEFamily):
     """2-D cubic flux with the same `f` along both axes; **own first-order Rusanov stepper**
@@ -101,6 +106,10 @@ class CubicFlux2D(AbstractPDEFamily):
     @property
     def parameters(self) -> dict[str, float]:
         return {"a": self.a, "b": self.b, "c": self.c}
+
+    @property
+    def trixi_spec(self) -> TrixiSpec:
+        return TrixiSpec("CubicFluxEquation2D", self.parameters)
 
     def flux(self, u: Float[Array, "x y"]) -> Float[Array, "x y"]:
         return ((self.a * u + self.b) * u + self.c) * u

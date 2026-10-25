@@ -16,20 +16,23 @@ Everything is **[code]** on `phase2a-pyclaw-backend` unless marked.
 ```
 simulations/
   grid.py       Grid(x_spans, Nxs): centres (PyClaw arithmetic), dxs, axis_names, to_dict()
-  backend.py    SolverBackend.solve(pde, u0, grid, t_out, bcs); BCName = periodic|extrap|wall; normalize_bcs
+  backend.py    SolverBackend.solve(pde, ic, grid, t_out, bcs); BCName = periodic|extrap|wall; normalize_bcs
   pyclaw.py     PyClawSpec (per PDE class) · PyClawBackend(scheme="classic"|"sharpclaw", **solver_overrides)
+  trixi.py      TrixiSpec (per PDE class) · TrixiBackend(polydeg, cfl, surface_flux, shock_capturing); juliacall
+  initial_conditions/  InitialCondition (at_points) · samplers (sample(key, x_spans)) · FromFunction/Stacked/Conserved
   record.py     DatasetRecord (dataset.json + root attrs)
   writer.py     WellWriter.create / write_trajectory / finalize / open  (Well schema + boundary_conditions)
-  generate.py   generate_dataset(..., backend=None, ic_description=...)
+  generate.py   generate_dataset(..., initial_condition=sampler, backend=None, ic_description=..., ic_in_primitive=...)
   pde/          the PDE classes; AbstractPDEFamily (ADR-0001 tier 0, data-facing part; numerics methods arrive with fv/)
 ```
 
 A family needs `n_spatial_dims`, `field_rank_names` (Well layout, state order),
-`parameters` (the Well scalars) and, if PyClaw solves it, `pyclaw_spec`. The writer splits a
-`[time, n_eqn, *N]` solution into the Well rank groups with the layout it was created with
-(`write_trajectory(idx, u, scalars)`). `solve(ic_factory,
-x_spans, Nxs, t_span, Nt, bc, *, backend=None)` is inherited: it builds the `Grid`, evaluates
-`ic_factory(grid.centers)`, and runs the backend (Classic PyClaw by default).
+`parameters` (the Well scalars) and, if PyClaw solves it, `pyclaw_spec` (if Trixi, `trixi_spec`).
+The writer splits a `[time, n_eqn, *N]` solution into the Well rank groups with the layout it
+was created with (`write_trajectory(idx, u, scalars)`). `solve(ic, x_spans, Nxs, t_span, Nt,
+bc, *, backend=None)` is inherited: it builds the `Grid` and hands the `InitialCondition` to
+the backend (Classic PyClaw by default), which evaluates it where its scheme needs it —
+PyClaw at the centers, Trixi on the DG nodes (ADR-0011 §Initial conditions).
 
 ## Running
 
@@ -80,6 +83,19 @@ Adding a PyClaw family = a class with the four attributes above and a `pyclaw_sp
 backend = a `SolverBackend` subclass with `solve` and `describe` (Trixi: ADR-0004,
 `design/python-julia-repo.md`).
 
+## Trixi (`simulations/trixi.py`)
+
+DGSEM `polydeg=3` on a `StructuredMesh` with one element per cell, Lax–Friedrichs surface flux,
+Hennemann–Gassner shock capturing, SSPRK33 at `cfl=0.5` through `StepsizeCallback`, output =
+element means by LGL quadrature on the request's grid; periodic only (V17 adds the rest).
+Families: the five PyClaw ones and `CubicFlux2D` (custom equations in `ContextFluxTrixi` for
+cubic 1D/2D, sine and the parametrized shallow water; Trixi's own Burgers and Euler).
+Set-up once per machine: `uv run python scripts/setup_julia.py` (Julia `~1.12` via juliapkg,
+the committed `reference/trixi/` project; `docs/design/python-julia-repo.md`); until then
+`trixi.available()` is `False`, `TrixiBackend.solve` raises `TrixiUnavailable` and the V18
+tests skip. `describe()` records polydeg, CFL, flux, shock capturing, Trixi and Julia versions
+and the thread count. The Julia interface is specified in the module docstring.
+
 ## Boundary conditions in the store
 
 Per axis `d` with name `x`: periodic → one group `x_periodic` (`bc_type="periodic"`, mask True
@@ -97,8 +113,8 @@ reconstructs per side [cited: `the_well/the_well/data/datasets.py`].
 | `n_trajectories`, `n_failed` | written count after `finalize`; failures are logged with their parameters |
 | `grid`, `time`, `bcs`, `field_rank_names` | `Grid.to_dict()`, `{t_span, Nt, dt}`, per-axis `[lower, upper]`, Well layout |
 | `params` | names, ranges, sampling strategy, `n_coeffs`, `n_ics_per_coeff` |
-| `ic` | `{name, config}` from the Hydra IC config |
-| `backend` | `describe()`: name, scheme, Clawpack version, solver overrides |
+| `ic` | `{name, config, in_primitive}` from the Hydra IC config |
+| `backend` | `describe()`: PyClaw — name, scheme, Clawpack version, solver overrides; Trixi — polydeg, CFL, surface flux, shock capturing, Trixi/Julia versions, threads |
 | `git`, `package_version`, `extra.solve_kwargs`, `schema_version` | provenance |
 
 `WellDatasetSourceBase.dataset_record_ids` lists the ids of the files a source reads;
@@ -114,6 +130,12 @@ fifth-order scheme the ratio per halving tends to 4. The test requires ≥ 1.5 o
 SharpClaw, L1 ratios per halving): cubic 3.0 / 4.2, sine 4.1 / 4.3, Burgers 3.5 / 4.1,
 shallow water 4.7 / 5.0, Euler 2-D 8.3 / 3.5. Horizons: 0.05 (scalar), 0.03 (SW), 0.02
 (Euler) — before any shock forms for the test ICs.
+
+V18 (`test_crosscode.py::test_reference_backends_*`) pairs SharpClaw with `time_integrator=
+"SSP33"` against Trixi's SSPRK33 — the same SSP-RK3 on both sides, as in Shu's FD/FV-WENO vs
+DG comparisons [cited: Shu 2001, ICASE 2001-11 §4] — on the four 1-D families, 2-D Euler and
+`CubicFlux2D` (against its own first-order stepper, ratio → 2). Generator defaults keep
+`SSP104`. Ratios are measured on the laptop (change document, Laptop steps).
 
 ## Regenerating the bit-identity goldens
 

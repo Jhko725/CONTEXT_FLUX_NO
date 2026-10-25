@@ -49,3 +49,6 @@ checkpoints/
 
 # Tooling
 .ruff_cache/
+
+# juliapkg's state for the shared Julia project (Julia install, resolve record, lock)
+reference/trixi/pyjuliapkg/

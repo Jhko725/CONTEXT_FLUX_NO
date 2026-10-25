@@ -16,4 +16,5 @@ from .generate import (
 from .grid import Grid as Grid
 from .pyclaw import PyClawBackend as PyClawBackend, PyClawSpec as PyClawSpec
 from .record import DatasetRecord as DatasetRecord
+from .trixi import TrixiBackend as TrixiBackend, TrixiSpec as TrixiSpec
 from .writer import WellWriter as WellWriter

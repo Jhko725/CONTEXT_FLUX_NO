@@ -26,7 +26,7 @@ class AbstractPDEFamily(eqx.Module):
 
     Subclasses provide `n_spatial_dims`, `field_rank_names` (Well layout: `(rank, name)` in
     state order; a rank-`r` field has `n_spatial_dims**r` components) and `parameters`. A
-    family solved by PyClaw provides `pyclaw_spec`; the default `solve()` then runs the given
+    family solved by PyClaw provides `pyclaw_spec` (by Trixi, `trixi_spec`); the default `solve()` then runs the given
     backend (Classic PyClaw by default). A family with its own stepper overrides `solve()`."""
 
     n_spatial_dims: eqx.AbstractVar[int]
@@ -48,6 +48,10 @@ class AbstractPDEFamily(eqx.Module):
     @property
     def pyclaw_spec(self) -> Any:
         raise NotImplementedError(f"{type(self).__name__} is not solved by PyClaw")
+
+    @property
+    def trixi_spec(self) -> Any:
+        raise NotImplementedError(f"{type(self).__name__} is not solved by Trixi")
 
     def default_backend(self, *, verbose: bool = False) -> SolverBackend:
         from context_flux_no.simulations.pyclaw import PyClawBackend

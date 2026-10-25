@@ -8,6 +8,7 @@ from jaxtyping import Float
 
 from context_flux_no.simulations.pde.base import AbstractPDEFamily
 from context_flux_no.simulations.pyclaw import PyClawSpec
+from context_flux_no.simulations.trixi import TrixiSpec
 
 
 class Burgers1D(AbstractPDEFamily):
@@ -32,6 +33,12 @@ class Burgers1D(AbstractPDEFamily):
             problem_data={"efix": self.entropy_fix},
             classic_options={"limiters": "vanleer"},
         )
+
+    @property
+    def trixi_spec(self) -> TrixiSpec:
+        return TrixiSpec(
+            "InviscidBurgersEquation1D"
+        )  # Trixi's own; `nu` unused, as in PyClaw
 
 
 class ViscousBurgers1D(AbstractPDEFamily):
