@@ -51,7 +51,7 @@ src/context_flux_no/
 ├── data/                        sources.py: WellDatasetSourceBase · ZarrWellDatasetSource (current) · TheWellDataSource (re-implements base)  (~~transforms.py~~)
 ├── simulations/                 reference solvers + data generation (ADR-0011): grid.py (Grid), backend.py (SolverBackend, BC names),
 │                                pyclaw.py (PyClawSpec, PyClawBackend classic|sharpclaw), trixi.py (TrixiSpec, TrixiBackend via juliacall;
-│                                Julia side in reference/trixi/), record.py (DatasetRecord), writer.py (WellWriter,
+│                                Julia side in reference/trixi/ContextFluxTrixi/), record.py (DatasetRecord), writer.py (WellWriter,
 │                                Well boundary_conditions), generate.py (generate_dataset); pde/{base (minimal interface until 4.1), burgers,
 │                                cubic, euler, shallow_water, sine_1d} — 5 PyClaw families + CubicFlux2D/ViscousBurgers1D own steppers
 │                                (~~dataset.py~~, ~~utils.py~~, ~~pdesolve.py~~, ~~pyclaw_utils.py~~)
@@ -92,7 +92,7 @@ src/context_flux_no/
                           analytic · riemann · flux/{base (FluxPredictor, NumericalFlux), classical, neural}
   pde/           Phase 4  PDEFamily (tiered: flux, max_wave_speed, reflect, conversions | eigensystem… | riemann_flux | viscous_flux)
   simulations/initial_conditions/  2a-trixi ✓ InitialCondition contract (functions of position; backends discretize)
-  simulations/   Phase 2a ✓ PyClawBackend · DatasetRecord · WellWriter · generate · TrixiBackend (Python side);  pending: Julia package (laptop) · JaxBackend (4.7) · PDEFamily (4.1)
+  simulations/   Phase 2a ✓ PyClawBackend · DatasetRecord · WellWriter · generate · TrixiBackend + ContextFluxTrixi (V18 green);  pending: JaxBackend (4.7) · PDEFamily (4.1)
   models/incontext/  Phase 3  InContextOperator ⊃ InContextFluxOperator; conditioners; encoders
   models/baselines/  DISCO · DPOT · NaiveFNO …
   training/      Phase 5 ✓ Trainer · losses · loggers · checkpoint   (building blocks)
@@ -100,7 +100,7 @@ src/context_flux_no/
   experiment.py  Phase 5 ✓ config → objects incl. the wandb mirror; Phase 3/7 build() lands here
   evaluation/    Phase 6  rollout · metrics · tables · figures
   configs/       Phase 3/7  dataclass configs + ConfigStore
-reference/trixi/  Julia project (Project/Manifest) + ContextFluxTrixi package: equations, node_coordinates, solve (reference oracle, fallback generator)
+reference/trixi/  Julia project (committed Project/Manifest lock; Trixi 0.17.16, Julia 1.12.7) + ContextFluxTrixi 0.1.0: equations.jl (cubic 1D/2D, sine, parametrized SW; exact LF bound), solve.jl (node_coordinates, solve, versions), test/runtests.jl (72 checks) — reference oracle, fallback generator
 scripts/        generate.py · train.py · evaluate.py · bench_loader.py · check_configs.py · check_docs.py
 tests/          unit/ · property/ · regression/ · verification/
 third_party/icon

@@ -9,8 +9,10 @@ Model configuration and command line interface (CLI) is provided via the [Hydra]
   (`initial_condition=grf_euler_2d`/`step_euler_2d`).
 - `initial_condition=` `grf` or `step` (and the family-specific variants above).
 - `backend=` `default` (each family's own default: PyClaw Classic for the PyClaw families — what
-  the ICLR datasets used), `classic`, or `sharpclaw` (WENO5 + SSP104; the higher-order reference).
-  The JAX-stepped families accept only `default`.
+  the ICLR datasets used), `classic`, `sharpclaw` (WENO5 + SSP104; the higher-order reference), or
+  `trixi` (Trixi.jl DGSEM, polydeg 3; the high-order reference, V18; periodic only; needs
+  `uv run python scripts/setup_julia.py` once per machine). The viscous Burgers family accepts
+  only `default`; `cubic_2d` accepts `default` or `trixi`.
 - `bc=` `periodic` (default) or per-axis pairs, e.g. `bc=[[extrap,wall]]`.
 
 Every store gets a sidecar `<name>.dataset.json` (`DatasetRecord`: grid, parameters, initial

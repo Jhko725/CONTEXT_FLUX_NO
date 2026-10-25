@@ -24,10 +24,13 @@ boundary in both directions as plain numpy arrays; nothing calls back from Julia
 so the GIL is held for the whole solve and multithreading is Julia's own. The first call in a
 process pays Julia's start-up and precompilation; `scripts/setup_julia.py` does that once.
 PySR imports juliacall before numpy to dodge shared-library conflicts; here the import is
-lazy (first `solve`), which the laptop runs (ledger 5) confirm or refute **[deduced]**.
+lazy (first `solve`) and no clash was observed (pytest with JAX x64, the generate script;
+2026-10-26). Python's `faulthandler` is disabled before Julia starts: its SIGSEGV handler and
+Julia's threaded GC, whose safepoints are deliberate segfaults, crash the process at exit when
+both are installed (pytest enables `faulthandler` by default; exit 139 after a green run,
+2026-10-26).
 
-**Julia interface** (`reference/trixi/ContextFluxTrixi/`; written on the laptop, see the change
-document's *Laptop steps*). Every argument arrives as what PythonCall makes of a Python
+**Julia interface** (`reference/trixi/ContextFluxTrixi/`). Every argument arrives as what PythonCall makes of a Python
 object — `PyArray` for numpy arrays, `PyDict` for dicts, `String`, `Int`, `Float64` — so the
 Julia functions are typed on `AbstractArray`/`AbstractDict` and copy what they keep. Shapes
 are stated in index order; memory order differs between the two languages and both sides may
@@ -47,7 +50,9 @@ copy.
   package owns the name → constructor table. A failed integration (non-finite state, step
   limit, Trixi error) throws `ContextFluxTrixi.SolveFailed(msg)`; Python turns it into
   `SolverFailure("trixi", msg)`. Anything else propagates.
-- `versions() -> Dict{String, String}`: `"trixi"`, `"julia"`, `"threads"` for `describe()`.
+- `versions() -> Dict{String, String}`: `"trixi"`, `"julia"`, `"threads"`, `"context_flux_trixi"`
+  (the package's own version, which pins its numerical constants: volume flux, wave-speed
+  bound, shock-capturing parameters) for `describe()`.
 """
 
 from __future__ import annotations
@@ -118,6 +123,9 @@ def _julia() -> Any:
             "scripts/setup_julia.py`"
         )
     configure_environment()
+    import faulthandler
+
+    faulthandler.disable()  # see the module docstring: collides with Julia's GC signals
     try:
         from juliacall import Main as jl
     except ImportError as e:
@@ -204,4 +212,5 @@ class TrixiBackend(SolverBackend):
             "trixi_version": versions["trixi"],
             "julia_version": versions["julia"],
             "julia_threads": versions["threads"],
+            "julia_package_version": versions["context_flux_trixi"],
         }

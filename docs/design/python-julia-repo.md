@@ -176,14 +176,25 @@ src/context_flux_no/simulations/trixi.py  TrixiSpec, TrixiBackend; sets the envi
 - **Pinning policy.** `Manifest.toml` is updated deliberately (`Pkg.update()` in a branch,
   V18 re-run, change-document entry), like `uv.lock`.
 
-## What this means on Joon's laptop (ledger 4–5 of the change document)
+## What happened on Joon's laptop (ledger 4–5 of the change document, 2026-10-26) [code]
 
-`uv sync --group dev`; write `reference/trixi/ContextFluxTrixi/{Project.toml, src/
-ContextFluxTrixi.jl, test/runtests.jl}` (the interface is specified in
-`simulations/trixi.py`'s docstring); `julia --project=reference/trixi -e 'using Pkg;
-Pkg.develop(path="ContextFluxTrixi"); Pkg.add("PythonCall")'` once to seed the TOMLs (or let
-`setup_julia.py` write them — it needs an existing `Project.toml`, so `touch` it first);
-`uv run python scripts/setup_julia.py --test`; commit both TOMLs; then V18.
+`uv sync --group dev --extra cuda` (the CUDA extra is installed there; a sync without it
+removes it); write `reference/trixi/ContextFluxTrixi/` with a complete `Project.toml` (UUIDs
+from the General registry; compat `Trixi = "0.17"`, `OrdinaryDiffEqSSPRK = "2"`,
+`SciMLBase = "2.154, 3"`, `StaticArrays = "1"`, `julia = "1.10"`; `[extras]`/`[targets]` for
+`Test`, `Random`); `touch reference/trixi/Project.toml`; `uv run python scripts/setup_julia.py
+--test`. One run: juliapkg downloaded Julia 1.12.7 (1.1 GB) into `reference/trixi/pyjuliapkg/
+install`, wrote `Project.toml` (`ContextFluxTrixi` dev-ed, `PythonCall = "=0.9.37"`,
+`OpenSSL_jll`), resolved the `Manifest.toml` (Trixi 0.17.16, OrdinaryDiffEqSSPRK 2.3.2,
+SciMLBase 3.58.0, StaticArrays 1.9.24; 2042 lines), precompiled (~15 min), ran `Pkg.test`,
+started Julia through juliacall and printed `describe()` (34 s cold). Both TOMLs committed.
+
+Two Trixi 0.17 facts the design documents had not recorded: `SemidiscretizationHyperbolic`
+requires `boundary_conditions` explicitly (`boundary_condition_periodic`), and the shallow-water
+equations moved to TrixiShallowWater.jl (the runtests oracle for the parametrized shallow water
+is therefore the textbook flux and eigenvalues, LeVeque 2002 §13.1). Earlier a bare
+`import juliacall` probe had installed Julia into `.venv/julia_env/` (juliapkg's per-venv
+default); deleted, and `CLAUDE.md` now says to probe with `trixi.available()`.
 
 ## Sources
 

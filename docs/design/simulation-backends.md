@@ -89,7 +89,13 @@ DGSEM `polydeg=3` on a `StructuredMesh` with one element per cell, Lax–Friedri
 Hennemann–Gassner shock capturing, SSPRK33 at `cfl=0.5` through `StepsizeCallback`, output =
 element means by LGL quadrature on the request's grid; periodic only (V17 adds the rest).
 Families: the five PyClaw ones and `CubicFlux2D` (custom equations in `ContextFluxTrixi` for
-cubic 1D/2D, sine and the parametrized shallow water; Trixi's own Burgers and Euler).
+cubic 1D/2D, sine and the parametrized shallow water; Trixi's own Burgers and Euler). Constants
+fixed in the Julia package and pinned by its version (`julia_package_version` in the record):
+the DG part of the blended volume integral is `flux_central` (one method per family to swap
+to an entropy-conservative flux); the Lax–Friedrichs speed of the non-convex cubic and sine
+fluxes is the exact `max |f'|` over `[u_L, u_R]` (F13); the indicator inspects the state (scalar
+laws), the depth (shallow water) or `density_pressure` (Euler) with `alpha_max = 0.5`,
+`alpha_min = 0.001`, `alpha_smooth = true` [Hennemann et al. 2021].
 Set-up once per machine: `uv run python scripts/setup_julia.py` (Julia `~1.12` via juliapkg,
 the committed `reference/trixi/` project; `docs/design/python-julia-repo.md`); until then
 `trixi.available()` is `False`, `TrixiBackend.solve` raises `TrixiUnavailable` and the V18
@@ -114,7 +120,7 @@ reconstructs per side [cited: `the_well/the_well/data/datasets.py`].
 | `grid`, `time`, `bcs`, `field_rank_names` | `Grid.to_dict()`, `{t_span, Nt, dt}`, per-axis `[lower, upper]`, Well layout |
 | `params` | names, ranges, sampling strategy, `n_coeffs`, `n_ics_per_coeff` |
 | `ic` | `{name, config, in_primitive}` from the Hydra IC config |
-| `backend` | `describe()`: PyClaw — name, scheme, Clawpack version, solver overrides; Trixi — polydeg, CFL, surface flux, shock capturing, Trixi/Julia versions, threads |
+| `backend` | `describe()`: PyClaw — name, scheme, Clawpack version, solver overrides; Trixi — polydeg, CFL, surface flux, shock capturing, Trixi/Julia versions, threads, `ContextFluxTrixi` version (its numerical constants) |
 | `git`, `package_version`, `extra.solve_kwargs`, `schema_version` | provenance |
 
 `WellDatasetSourceBase.dataset_record_ids` lists the ids of the files a source reads;
@@ -135,7 +141,12 @@ V18 (`test_crosscode.py::test_reference_backends_*`) pairs SharpClaw with `time_
 "SSP33"` against Trixi's SSPRK33 — the same SSP-RK3 on both sides, as in Shu's FD/FV-WENO vs
 DG comparisons [cited: Shu 2001, ICASE 2001-11 §4] — on the four 1-D families, 2-D Euler and
 `CubicFlux2D` (against its own first-order stepper, ratio → 2). Generator defaults keep
-`SSP104`. Ratios are measured on the laptop (change document, Laptop steps).
+`SSP104`; the SSP33 CFL numbers are `tests/helpers.py::SHARPCLAW_SSP33` (Clawpack defaults
+them only for SSP104). Measured 2026-10-26: Burgers 3.98 / 4.01, cubic 3.82 / 4.79, shallow
+water 3.99 / 4.00, sine 4.53 / 4.16, Euler 2-D 3.98 / 4.00, cubic 2-D 2.33 / 2.24. The ≈ 4 on
+every SharpClaw pairing is the O(h²) floor of F12 (point values on one side, element means on
+the other), not the schemes' own rates; the two references cannot be compared closer than this
+until a store's state convention is one (4.4).
 
 ## Regenerating the bit-identity goldens
 

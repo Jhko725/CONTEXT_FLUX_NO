@@ -178,31 +178,28 @@ class CubicFlux2D(AbstractPDEFamily):
         x, y = grid.centers  # float64, the same arithmetic as every other backend
 
         t0, t1 = t_span
-        dt = (t1 - t0) / Nt
+        dt_out = (t1 - t0) / Nt
         t = np.linspace(t0, t1, Nt + 1, endpoint=True)
 
         u0: Float[Array, "Nx Ny"] = jnp.asarray(ic.at_points(grid.meshgrid())[0])
 
-        # Reduce dt using the CFL number (optional)
-        # max_speed ~ max |f'(u)|
+        # Equal substeps that land exactly on every output time, dt from the CFL number and
+        # the initial max |f'(u)| (the monotone scheme does not create new extrema; F14).
         max_speed = float(jnp.max(jnp.abs(self.flux_speed(u0))))
+        n_sub = 1
         if max_speed > 1e-12:
-            dt_cfl = cfl * min(dx, dy) / max_speed
-            dt_solve = min(dt, dt_cfl)
-            t_solve = jnp.linspace(*t_span, ceil(1 / dt_solve))
-        else:
-            t_solve = t
+            n_sub = max(1, ceil(dt_out / (cfl * min(dx, dy) / max_speed)))
+        dt = dt_out / n_sub
 
-        def _body_fn(u, _):
-            u_next = self._step_rusanov_2d(u, (dx, dy), t_solve[1] - t_solve[0])
+        def _frame(u, _):
+            u_next = jax.lax.fori_loop(
+                0, n_sub, lambda _, v: self._step_rusanov_2d(v, (dx, dy), dt), u
+            )
             return u_next, u_next
 
-        u0 = jnp.asarray(u0)
-        _, traj = jax.lax.scan(_body_fn, u0, jnp.arange(len(t_solve - 1)))
-        # include initial state
+        _, traj = jax.lax.scan(_frame, u0, None, length=Nt)
         U: Float[Array, "Nt+1 Nx Ny"] = jnp.concatenate(
             [jnp.expand_dims(u0, axis=0), traj], axis=0
         )
-        U = jax.image.resize(U, (len(t), *U.shape[1:]), method="cubic")
         U = jnp.expand_dims(U, axis=1)  # Add scalar channel dimension
         return U, t, (x, y)

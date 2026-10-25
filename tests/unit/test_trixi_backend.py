@@ -56,6 +56,22 @@ def test_backend_options_and_checks_before_julia():
         )
 
 
+@pytest.mark.skipif(
+    not trixi.available(), reason="Julia/Trixi not set up (setup_julia.py)"
+)
+def test_describe_records_the_julia_side_versions():
+    """`DatasetRecord.backend` pins the oracle: Trixi, Julia, threads and the package whose
+    version carries the numerical constants (D-PROV)."""
+    described = trixi.TrixiBackend().describe()
+    assert {
+        "trixi_version",
+        "julia_version",
+        "julia_threads",
+        "julia_package_version",
+    } <= described.keys()
+    assert described["julia_package_version"].count(".") == 2
+
+
 @pytest.mark.skipif(trixi.available(), reason="Julia is set up here")
 def test_unavailable_is_a_clear_configuration_error():
     backend = trixi.TrixiBackend()

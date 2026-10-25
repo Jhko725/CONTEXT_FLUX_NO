@@ -1,7 +1,7 @@
 ---
 type: change
-status: in-progress
-updated: 2026-10-25
+status: landed
+updated: 2026-10-26
 branch: phase2a-trixi-backend
 roadmap: Phase 2a (Trixi half); the InitialCondition contract
 base: phase2a-pyclaw-backend
@@ -12,9 +12,10 @@ base: phase2a-pyclaw-backend
 The Trixi.jl half of roadmap 2a, designed by interview on 2026-10-25 (decisions below), and
 the contract change it needs: initial conditions become *functions* that each backend
 discretizes itself. The Python side (contract, `trixi_spec`s, `simulations/trixi.py`, tests
-that skip without Julia, documents) is done in Claude's cloud session; the Julia package
-`reference/trixi/ContextFluxTrixi/` and the first runs are done in a Claude Code CLI session
-on Joon's laptop, where Julia can run. Steps for that session are in §Laptop steps.
+that skip without Julia, documents) was done in Claude's cloud session on 2026-10-25; the Julia
+package `reference/trixi/ContextFluxTrixi/`, the committed lock and the V18 runs in a Claude Code
+CLI session on Joon's laptop on 2026-10-26 (§Laptop steps says what happened; the Julia-side
+decisions were grilled first and are rows D-VF … D-CI below).
 
 **Base.** `phase2a-pyclaw-backend` (merge order: phase1 → phase5 → 2a-pyclaw → this).
 `check_docs.py --files --base phase2a-pyclaw-backend`.
@@ -34,6 +35,25 @@ on Joon's laptop, where Julia can run. Steps for that session are in §Laptop st
 | D-V18 | `tests/verification/test_crosscode.py::test_reference_backends`: SharpClaw (`SSP33`) vs Trixi (`SSPRK33`), N = 64/128/256, ratio ≥ 1.5, skipping without Julia; no CI Julia job until the laptop proves the setup. Generator defaults untouched (SharpClaw keeps `SSP104`). |
 | F12 | FV-generated stores hold cell averages labeled as center point values (O(h²)); what a store declares is decided at 4.4. |
 
+Julia side (grill of 2026-10-26; Design carries the rejected alternatives):
+
+| # | Decision |
+|---|---|
+| D-VF | `volume_flux_dg = flux_central` (standard weak-form DGSEM) for every family; one `volume_flux_dg(eq)` method per family so an entropy-conservative flux (e.g. `flux_ranocha` for Euler) is a one-method swap — not a `TrixiBackend` option. |
+| D-WS | Exact local Lax–Friedrichs bound for the non-convex scalar fluxes: `max |f'|` over `[u_ll, u_rr]` (cubic: the vertex `u* = −b/(3a)` checked; sine: `|ab|` when the interval contains an extremum of `cos`). Shallow water: `max |λ±|` over both states. Burgers/Euler: Trixi's own. **F13.** |
+| D-HG | `IndicatorHennemannGassner(alpha_max=0.5, alpha_min=0.001, alpha_smooth=true)` with `variable` = the state (scalar laws), the depth (shallow water), `density_pressure` (Euler); constants fixed in the package. |
+| D-FAIL | `SolveFailed` for a non-success return code, a non-finite state, a saved-time mismatch, or any exception raised inside the ODE solve; an `ArgumentError` (propagates) for unknown equations/flux names, missing or extra parameters, wrong shapes, a dimension mismatch. |
+| D-NODES | `node_coordinates` computed directly from the LGL nodes (no semidiscretization); `runtests.jl` pins them to Trixi's own `cache.elements.node_coordinates` (element and node order) at 1e-12 in 1-D and 2-D. |
+| D-PROV | `versions()` carries `"context_flux_trixi"`; `describe()` records it as `julia_package_version`; the package version is bumped whenever D-VF/D-WS/D-HG constants change, so a `DatasetRecord` pins the oracle's numerics. |
+| D-CONV | Convergence oracle: method of characteristics on `CubicFluxEquation1D(1, −0.5, 0.25)` (valid for any scalar law before breaking), exact cell averages by LGL quadrature, N = 16 → 32 ratio ≥ 8 at `polydeg = 3`, CFL 0.1 so SSPRK33's O(dt³) stays below the spatial error. |
+| D-PINS | Package compat `Trixi = "0.17"`, `OrdinaryDiffEqSSPRK = "2"`, `SciMLBase = "2.154, 3"`, `StaticArrays = "1"`, `julia = "1.10"`; exact versions only in the committed `reference/trixi/Manifest.toml`. |
+| D-JLTEST | `Pkg.test` runs through `setup_julia.py --test` and the opt-in CI job only, never from pytest. |
+| D-CLEAN | The `.venv/julia_env` install that a bare `import juliacall` probe created was deleted; the one install is `reference/trixi/pyjuliapkg/`. |
+| D-DOC | `CLAUDE.md` repository facts: probe the Julia side with `trixi.available()`, never by importing; `uv sync --group dev --extra cuda` on this machine. |
+| D-CI | Ledger 6 (CI job) built only after `Pkg.test` and V18 are green. |
+| F13 | The LF bound for non-convex fluxes is the interval maximum of `|f'|` (Trixi does this; the Python Riemann solvers are Roe-type and stay; 2b's `LocalLaxFriedrichs` inherits the rule). |
+| F14 | `CubicFlux2D.solve` resampled time with `jax.image.resize` and stepped once too often; fixed here (Bugs fixed). |
+
 ## Ledger
 
 | # | Where | Item | Done when |
@@ -41,26 +61,32 @@ on Joon's laptop, where Julia can run. Steps for that session are in §Laptop st
 | 1 ✓ | cloud | `InitialCondition`/`InitialConditionSampler` contract; samplers rewritten as functions of position (GRF via gstools unstructured evaluation — identical values on grid points; 1-D steps with jump *positions* drawn in the domain; 2-D Voronoi with seeds in the domain, torus distance); `FromFunction`, `Stacked`, `Conserved`, `Multichannel`; `solve(ic, …)` on every family; `generate_dataset(initial_condition=sampler, ic_in_primitive=)`; configs `sampler:`; goldens through the new path | goldens bit-identical; `test_initial_conditions.py` green; every IC config samples; script runs on cubic 1D (step), Euler 2D (primitive GRF), cubic 2D |
 | 2 ✓ | cloud | `trixi_spec` on the six families; `simulations/trixi.py`: env setup, lazy `juliacall` import, `TrixiBackend` per D-API with `SolverFailure` seam, `describe()`; `scripts/setup_julia.py`; `juliapkg.json`; `juliapkg`+`juliacall` in the dev group | imports without Julia; `TrixiBackend()` raises a clear configuration error when Julia/the project is absent |
 | 3 ✓ | cloud | V18 tests (skip), ADR-0011 §Initial conditions, ADR-0004 amendment, F12, `python-julia-repo.md` + `simulation-backends.md` updated, roadmap/architecture/glossary/index | `check_docs --files` clean |
-| 4 | laptop | `reference/trixi/`: `Project.toml`, `Manifest.toml`, `ContextFluxTrixi/` (equations, `node_coordinates(grid, polydeg)`, `solve(family, params, u0_nodes, grid, t_out, bcs; polydeg, cfl, surface_flux, shock_capturing) -> element means`, `test/runtests.jl`) | `Pkg.test` green; `setup_julia.py` green |
-| 5 | laptop | `TrixiBackend.solve` end to end on the six families; V18 ratios measured and recorded in `verification.md` | V18 green |
-| 6 | laptop | CI Julia job (opt-in), `scripts/data/configs/backend/trixi.yaml` | CI green |
+| 4 ✓ | laptop | `reference/trixi/`: `Project.toml`, `Manifest.toml` (written by juliapkg), `ContextFluxTrixi/` (`equations.jl`, `solve.jl`: `node_coordinates`, `solve`, `versions`; `test/runtests.jl`, 72 checks) | `Pkg.test` green 2026-10-26; `setup_julia.py` prints `describe()` |
+| 5 ✓ | laptop | `TrixiBackend.solve` end to end on the six families; V18 ratios measured and recorded in `verification.md`; `julia_package_version` in `describe()` (D-PROV) | V18 green 2026-10-26 (ratios in Tests) |
+| 6 | laptop | CI Julia job (opt-in: `workflow_dispatch` or `[julia]` in the commit message; depot and install cached on the lock files) written after 4–5 (D-CI); `scripts/data/configs/backend/trixi.yaml` ✓, README line ✓ | CI green — **unverified**: CI runs on Joon's push (a `[julia]` commit or a manual dispatch) |
 
-## Laptop steps (Claude Code CLI, repo root, this branch)
+## Laptop steps (done 2026-10-26; what happened)
 
-1. `uv sync --group dev` (brings `juliapkg`, `juliacall`).
-2. Write `reference/trixi/ContextFluxTrixi/` (`Project.toml` with uuid
-   `3bf3af66-f032-4e02-a37a-2ba6a792afcf` — the one in `src/context_flux_no/juliapkg.json` —
-   and deps Trixi, OrdinaryDiffEqSSPRK; `src/ContextFluxTrixi.jl`; `test/runtests.jl`) to the
-   interface in `simulations/trixi.py`'s docstring: `node_coordinates`, `solve`, `versions`,
-   `SolveFailed`, the equations table for the six `TrixiSpec.equations` names.
-3. `touch reference/trixi/Project.toml`; `uv run python scripts/setup_julia.py --test`
-   (juliapkg installs Julia `~1.12` if absent, `dev`s the package, adds PythonCall at
-   juliacall's version, resolves, precompiles; `--test` runs `Pkg.test`; then prints
-   `TrixiBackend().describe()`). Commit `reference/trixi/{Project,Manifest}.toml`.
-4. `JAX_PLATFORMS=cpu uv run pytest tests/unit/test_trixi_backend.py
-   tests/verification/test_crosscode.py -m "slow or not slow" -k "trixi or reference_backends"`
-   until green; paste the ratios into `docs/verification.md` V18 and `simulation-backends.md`.
-5. Watch for the import-order risk noted in `trixi.py` (juliacall imported after numpy/JAX).
+1. `uv sync --group dev --extra cuda` — the CUDA extra is installed on this machine; a sync
+   without it removes the CUDA packages (happened once, restored).
+2. `reference/trixi/ContextFluxTrixi/` written to the interface in `simulations/trixi.py`'s
+   docstring with a complete `Project.toml` (UUIDs from the General registry).
+3. `touch reference/trixi/Project.toml`; `uv run python scripts/setup_julia.py --test` — one
+   run installed Julia 1.12.7 into `reference/trixi/pyjuliapkg/install` (1.1 GB; the `~/.julia`
+   depot grows to 1.2 GB), wrote `Project.toml` (`ContextFluxTrixi` dev-ed, `PythonCall =
+   "=0.9.37"`, `OpenSSL_jll`), resolved `Manifest.toml` (Trixi 0.17.16, OrdinaryDiffEqSSPRK
+   2.3.2, SciMLBase 3.58.0), precompiled (~15 min). Three `Pkg.test` rounds: `Random` missing
+   from the test target; Trixi 0.17 requires `boundary_conditions` explicitly and no longer
+   ships `ShallowWaterEquations1D` (oracle → textbook formulas); `saveat` does not save at the
+   end time (→ `save_start`/`saveat` interior/`save_end`, each output time by one mechanism).
+   Then 72/72; `describe()` printed in 34 s cold.
+4. V18 pytest: five failures were on the SharpClaw side — Clawpack has no CFL default for
+   `SSP33` (`tests/helpers.py::SHARPCLAW_SSP33`); cubic-2D saturated because of F14 (fixed).
+   Ratios in Tests.
+5. Import order (juliacall after numpy/JAX in the same process): the pytest runs and the
+   generate script import JAX first and start Julia at the first `solve`; no shared-library
+   clash in any of them (`generate_dataset.py pde=cubic_1d backend=trixi`: 2 trajectories, 0
+   failed, the record's `backend` carries the Julia-side versions). The risk is retired.
 
 ## Files
 
@@ -108,6 +134,23 @@ Commit 3 — the Trixi backend's Python side (ledger 2–3):
 - `docs/roadmap.md` — 2a-trixi row; Done ledger.
 - `docs/architecture.md`, `docs/glossary.md`, `docs/index.md` — trixi.py, initial_conditions, setup script, terms, statuses.
 
+Commit 4 — the Julia side (ledger 4–5, laptop):
+- `reference/trixi/Project.toml`, `reference/trixi/Manifest.toml` — new: the committed lock, written by juliapkg (shared-project mode).
+- `reference/trixi/ContextFluxTrixi/Project.toml` — new: package 0.1.0, deps/compat (D-PINS), test target.
+- `reference/trixi/ContextFluxTrixi/src/ContextFluxTrixi.jl` — new: module, `SolveFailed`, exports.
+- `reference/trixi/ContextFluxTrixi/src/equations.jl` — new: `CubicFluxEquation1D/2D`, `SineFluxEquation1D`, `ParametrizedShallowWaterEquations1D` (exact LF bound, D-WS), `indicator_variable`, `volume_flux_dg`, the `EQUATIONS` table with strict parameter checking.
+- `reference/trixi/ContextFluxTrixi/src/solve.jl` — new: `node_coordinates`, `solve` (StructuredMesh periodic, DGSEM + HG, state injected via `wrap_array`, SSPRK33 + `StepsizeCallback`, element means), `versions`.
+- `reference/trixi/ContextFluxTrixi/test/runtests.jl` — new: 72 checks (node order pin, D-WS bound, flux oracles, conservation, Burgers equivalence, characteristics convergence, failure seam, versions).
+- `src/context_flux_no/simulations/trixi.py` — `describe()` records `julia_package_version` (D-PROV); `faulthandler.disable()` before Julia starts; docstring: `versions()` keys, import order observed, the faulthandler fact.
+- `src/context_flux_no/simulations/pde/cubic.py` — `CubicFlux2D.solve` steps exactly onto the output times (F14; Bugs fixed).
+- `tests/helpers.py` — new: `SHARPCLAW_SSP33`.
+- `tests/verification/test_crosscode.py` — the SharpClaw partner uses `SHARPCLAW_SSP33`.
+- `tests/unit/test_trixi_backend.py` — `describe()` keys pinned where Julia is available.
+- `scripts/data/configs/backend/trixi.yaml` — new (ledger 6b); `scripts/data/README.md` — the `backend=trixi` line.
+- `.github/workflows/test.yml` — `workflow_dispatch` trigger; opt-in `julia` job (ledger 6a).
+- `CLAUDE.md` — Julia probing and sync facts (D-DOC).
+- `docs/findings.md` — F13, F14. `docs/verification.md` — V18 ratios. `docs/design/{python-julia-repo,simulation-backends}.md`, `docs/architecture.md`, `docs/roadmap.md` — the Julia side as it is.
+
 ## Design
 
 - **Callable initial conditions, one contract** (D-IC; ADR-0011 amendment). Rejected: arrays everywhere (Trixi and any high-order oracle would interpolate, an O(h⁴) transfer error of the same order as the schemes V19 compares); `Array | Callable` (two routes); an array-backed `GridValues` adapter (no adopter: goldens use formulas, samplers evaluate anywhere, regression inputs never run a solver).
@@ -119,24 +162,38 @@ Commit 3 — the Trixi backend's Python side (ledger 2–3):
 - **`available()` = "juliapkg has resolved this project here"** (`reference/trixi/pyjuliapkg/meta.json`), not "Julia is importable": importing juliacall would *download Julia* on a machine without it, which a skipping test must never do. Rejected: an opt-in environment flag (a switch nobody asked for) and probing for a `julia` on `PATH` (misses juliapkg's own install).
 - **V18 partner for `CubicFlux2D`** is its own first-order Rusanov stepper (it has no `pyclaw_spec`; `solve` refuses `backend=`), so that test calls `TrixiBackend.solve` directly and expects the first-order rate (ratio → 2 ≥ 1.5).
 - **Julia receives names and plain data, never Python callables**: the equations constructor name and a `dict` of floats (D-SPEC), numpy arrays for nodes/state/times. PythonCall hands them over as `PyDict`/`PyArray` [cited: PythonCall docs, "Conversion to Julia": arguments are converted with `T=Any`], so the Julia functions are typed on the abstract containers and copy.
+- **Julia side, per the grill** (D-VF … D-CI). *Central volume flux* over entropy-conservative ones: a single rule, and no EC two-point flux exists for the custom families; the swap is one method per family. *Exact LF bound* over the endpoint max: the oracle should be the more trustworthy side (F13), V18 is indifferent to the convention. *Direct node coordinates* over reading Trixi's cache: cheap, and the test pins the order so a Trixi change cannot silently corrupt the injection. *State injected through `wrap_array`* over an `initial_condition` closure looking coordinates up: no interpolation, no lookup. *Textbook shallow-water oracle* over a TrixiShallowWater.jl test dependency: one flux formula does not justify a package. *Failure boundary at the ODE solve*: construction errors are the caller's (D-API "configuration propagates"), stepping errors are the oracle's. *Each output time saved by exactly one mechanism* (`save_start`, interior `saveat`, `save_end`): OrdinaryDiffEq does not save a `saveat` entry that coincides with the end time.
+- **`faulthandler.disable()` in `trixi._julia()`**, next to the environment variables, rather than `-p no:faulthandler` in `pyproject.toml`: the collision (Python's SIGSEGV handler vs Julia's segfault-based GC safepoints) is a property of the process once Julia is in it, not of pytest, so the module that owns the other process-wide Julia invariants owns this one; a pytest option would leave a notebook or script that enables `faulthandler` exposed.
+- **`SHARPCLAW_SSP33` as a named configuration** in `tests/helpers.py` rather than literals at the call site: Clawpack provides CFL defaults only for SSP104, so the SSP33 numbers are a choice that needs its reason next to it (same CFL per unit SSP coefficient as Clawpack's SSP104 defaults).
 - **Deleted samplers**: circulant-embedding GRF and the 2-D single-channel GRF were a second route to what the gstools sampler does; the deletion test passes (nothing concentrates elsewhere). Two legacy data-generation notebooks referenced them; they are Phase 6's to thin.
 
 ## Bugs fixed
 
 - `scripts/data/configs/pde/cubic_2d.yaml` had no `x_spans`/`Nxs`/`t_span`/`Nt`, so the config could not run; keys added (values mirror `euler_2d`, flagged to confirm).
 - `CubicFlux2D.solve` built its grid with float32 `jnp.linspace`, so its coordinates failed `generate_dataset`'s check against `Grid.centers`; now on `Grid`.
+- `CubicFlux2D.solve` resampled its trajectory onto the output times with `jax.image.resize(method="cubic")` — pixel-center alignment along *time* — and stepped once too often (`len(t_solve - 1)`): with `Nt = 1` the "final" frame was the state at ≈ 0.75 T. Found by V18 (the distance to Trixi saturated at an N-independent 1.8e-3). Now equal substeps that land exactly on every output time, dt from the CFL number; the Rusanov flux is unchanged. **F14.**
+- `tests/verification/test_crosscode.py` asked SharpClaw for `SSP33` without CFL numbers, which Clawpack only defaults for SSP104 (`KeyError: 'Maximum CFL number is not provided.'`); the test could never have run.
 
 ## Findings
 
+- **F13** — the Lax–Friedrichs bound for non-convex fluxes is the interval maximum of `|f'|`; the Trixi oracle uses it, the own schemes inherit it at 2b.
+- **F14** — `CubicFlux2D.solve`'s time resampling mislabeled the ICLR cubic-2D frames' times; fixed here, data regenerate at 4.4.
+
 ## Tests
 
-`tests/unit/test_trixi_backend.py` (3, fast): six `trixi_spec`s distinct and `ViscousBurgers1D` without one; option errors, non-periodic BCs and `n_eqn` mismatch raise before Julia starts; `TrixiUnavailable` from `solve`/`describe` on a machine without the setup (that test skips once Julia is set up). V18 in `tests/verification/test_crosscode.py` (`slow`): 6 tests, skipped here (`trixi.available()` is `False`); `scripts/setup_julia.py` exits 1 here with "no Julia project" as designed.
+`tests/unit/test_trixi_backend.py` (4, fast): six `trixi_spec`s distinct and `ViscousBurgers1D` without one; option errors, non-periodic BCs and `n_eqn` mismatch raise before Julia starts; `TrixiUnavailable` from `solve`/`describe` on a machine without the setup (skips once Julia is set up); `describe()` carries the four version keys where Julia is set up (starts Julia: ~7 s warm, 34 s cold).
 
-Fast tier: `tests/unit/test_initial_conditions.py` (16) — every sampler's condition is a function of position (same object on two grids agrees at shared points; same key, same function), step ranges and periodicity, Voronoi periodicity and shared geometry across channels, GRF equals gstools' structured evaluation, period mismatch refused, `Stacked`/`Conserved`/`FromFunction` shapes and errors, truncated Fourier periodicity. `test_pyclaw_backend.py` goldens still bit-identical through the callable path. Script run on cubic 1D (step IC), Euler 2D (primitive GRF through `Conserved`), cubic 2D.
+Julia: `uv run python scripts/setup_julia.py --test` → `Pkg.test("ContextFluxTrixi")`, 72 checks in ~85 s: node coordinates (shapes, every node in its cell, LGL quadrature exact on `x²`, **equal to Trixi's own node coordinates in Trixi's element/node order**, 1-D and 2-D); the D-WS bound (≥ the sampled `max |f'|` and within 1e-3 of it on 200 random intervals for two cubics and two sines; pointwise at a degenerate interval; the 2-D normal-vector flux and speed); flux oracles (cubic `(0, ½, 0)` ≡ Trixi Burgers flux and speeds; parametrized SW at `γ = α = 1` ≡ textbook `(hv, hv² + ½gh²)`, `|v| + √(gh)`); `solve` shapes, first slice = LGL means of `u0`, total mass conserved to 1e-12 (cubic 1D, SW, cubic 2D) / 1e-11 (Euler 2D), weak form and single-time paths; cubic `(0, ½, 0)` reproduces `"InviscidBurgersEquation1D"` to 1e-10; characteristics convergence ratio ≥ 8 at N = 16 → 32 (polydeg 3, CFL 0.1); the failure seam (six `ArgumentError`s, `SolveFailed` for a non-finite input and for Euler at negative pressure); `versions()` keys and values.
+
+V18 (`JAX_PLATFORMS=cpu uv run pytest tests/unit/test_trixi_backend.py tests/verification/test_crosscode.py -m "slow or not slow" -k "trixi or reference_backends or describe"`), SharpClaw `SSP33` (`SHARPCLAW_SSP33`) vs Trixi, L1 of the final frame, ratio per halving ≥ 1.5 — measured 2026-10-26: Burgers 3.98/4.01, cubic 3.82/4.79, SW 3.99/4.00, sine 4.53/4.16 (N = 64/128/256, T = 0.05 / SW 0.03), Euler-2D 3.98/4.00 (N = 16/32/64, T = 0.02), cubic-2D vs its own stepper 2.33/2.24 (first-order rate). Every SharpClaw pairing sits at ≈ 4: the distance is dominated by the O(h²) difference between SharpClaw's point-value state and Trixi's element means (F12), not by either scheme's own error; the cubic-2D pairing shows the Rusanov stepper's first-order rate. Wall time ≈ 6 min (sine 127 s, cubic 99 s). The pytest process first exited 139 after reporting a green run — pytest's `faulthandler` SIGSEGV handler against Julia's threaded GC at interpreter exit (reproduced on the 7-second `describe` test; gone with `-p no:faulthandler` or one Julia thread) — fixed by `faulthandler.disable()` in `trixi._julia()` before Julia starts; the same test then exits 0.
+
+Fast tier 2026-10-26 (`JAX_PLATFORMS=cpu uv run pytest -q`, Julia set up): 103 passed, 1 skipped (`test_unavailable…`), 3 min 12 s, exit 0. `tests/unit/test_initial_conditions.py` (16) — every sampler's condition is a function of position (same object on two grids agrees at shared points; same key, same function), step ranges and periodicity, Voronoi periodicity and shared geometry across channels, GRF equals gstools' structured evaluation, period mismatch refused, `Stacked`/`Conserved`/`FromFunction` shapes and errors, truncated Fourier periodicity. `test_pyclaw_backend.py` goldens still bit-identical through the callable path. Script run on cubic 1D (step IC), Euler 2D (primitive GRF through `Conserved`), cubic 2D.
 
 ## Open issues
 
-- The import-order risk (PySR imports juliacall before numpy to avoid shared-library clashes; here the import is lazy) is **[deduced]** either way until the laptop runs it. If it bites, `scripts/data/generate_dataset.py` imports `simulations.trixi` first and the module docstring says so.
+- Import order: juliacall is imported lazily after numpy/JAX in every run (pytest with JAX x64 enabled, `setup_julia.py`, the generate script) without a shared-library clash; the PySR precaution is not needed here. Observed on one machine (WSL2, CPU JAX); a GPU-JAX process is the remaining unobserved case.
+- Euler with `flux_central` + HG at longer horizons than V18's `T = 0.02`: if a generation run ever fails, the first thing to try is `volume_flux_dg(::CompressibleEulerEquations2D) = flux_ranocha` (one method, package version bump).
+- `SHARPCLAW_SSP33`'s CFL numbers (0.4 / 0.45) are Clawpack's SSP104 defaults per unit SSP coefficient, not a measured stability limit; a tighter or looser choice re-measures V18.
 - `Burgers1D.nu` is recorded as a Well scalar but used by neither reference (`pyclaw_spec` and `trixi_spec` both ignore it); a `nu != 0` request is silently inviscid. Pre-existing; belongs with the viscous-Burgers tier-3 work.
 - `CubicFlux2D` on Trixi and its own stepper are the only two solvers of that family; V18's cubic-2d case therefore tests first-order convergence, not two references against each other — JaxBackend (4.7) or a SharpClaw 2-D kernel would close that.
 
@@ -161,5 +218,16 @@ Fast tier: `tests/unit/test_initial_conditions.py` (16) — every sampler's cond
 | `tests/unit/make_goldens_simulations.py`, `test_generate_dataset.py`, `test_pyclaw_backend.py` — through the callable path | | |
 | `tests/unit/test_initial_conditions.py`, `tests/unit/test_trixi_backend.py` — new | | |
 | `tests/verification/test_crosscode.py` — V18 tests (skip) | | |
+| `reference/trixi/{Project,Manifest}.toml` — the committed Julia lock (juliapkg shared mode; Trixi 0.17.16) | | |
+| `reference/trixi/ContextFluxTrixi/{Project.toml, src/ContextFluxTrixi.jl}` — package, deps/compat, `SolveFailed` | | |
+| `reference/trixi/ContextFluxTrixi/src/equations.jl` — four custom equations, exact LF bound (D-WS), indicator variable, volume flux, `EQUATIONS` table | | |
+| `reference/trixi/ContextFluxTrixi/src/solve.jl` — `node_coordinates`, `solve`, `versions` | | |
+| `reference/trixi/ContextFluxTrixi/test/runtests.jl` — 72 checks | | |
+| `simulations/trixi.py` — `julia_package_version` (D-PROV); `faulthandler.disable()` before Julia starts | | |
+| `simulations/pde/cubic.py` — `CubicFlux2D.solve` time stepping (F14) | | |
+| `tests/helpers.py` — `SHARPCLAW_SSP33`; `tests/verification/test_crosscode.py` uses it; `tests/unit/test_trixi_backend.py` — `describe()` keys | | |
+| `scripts/data/configs/backend/trixi.yaml`, `scripts/data/README.md`, `CLAUDE.md` (D-DOC) | | |
+| `.github/workflows/test.yml` — opt-in `julia` job (unverified until a `[julia]` push) | | |
+| F13, F14; `verification.md` V18 ratios; `python-julia-repo.md` §what happened; `simulation-backends.md` §Trixi; architecture; roadmap | | |
 | ADR-0011 §Initial conditions, ADR-0004 §Amendment, F12 | | |
 | `design/python-julia-repo.md` (agreed; §Decided), `design/simulation-backends.md` (§Trixi), `verification.md`, roadmap, architecture, glossary, index | | |

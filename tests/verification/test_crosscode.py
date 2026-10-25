@@ -20,6 +20,7 @@ pytest.importorskip("clawpack")
 
 from context_flux_no.simulations.pyclaw import PyClawBackend  # noqa: E402
 
+from tests.helpers import SHARPCLAW_SSP33  # noqa: E402
 from tests.unit.make_goldens_simulations import CASES  # noqa: E402
 
 
@@ -65,7 +66,7 @@ def _l1_sharpclaw_vs_trixi(pde, ic, x_spans, Nxs, T) -> float:
         (0, T),
         1,
         "periodic",
-        backend=PyClawBackend("sharpclaw", time_integrator="SSP33"),
+        backend=PyClawBackend("sharpclaw", **SHARPCLAW_SSP33),
     )
     u_t, *_ = pde.solve(
         ic, x_spans, Nxs, (0, T), 1, "periodic", backend=trixi.TrixiBackend()
