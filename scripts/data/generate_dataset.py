@@ -44,7 +44,7 @@ def main(cfg: DictConfig) -> None:
         savedir=cfg.savedir,
         filename=cfg.savename,
         backend=backend,
-        ic_in_primitive=bool(cfg.pde.get("ic_in_primitive", False)),
+        primitive_ic=bool(cfg.pde.get("primitive_ic", False)),
         ic_description={
             "name": cfg.initial_condition.name,
             "config": OmegaConf.to_container(

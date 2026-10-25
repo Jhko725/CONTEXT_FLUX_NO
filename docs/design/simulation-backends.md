@@ -23,7 +23,7 @@ simulations/
   initial_conditions/  InitialCondition (at_points) · samplers (sample(key, x_spans)) · FromFunction/Stacked/Conserved
   record.py     DatasetRecord (dataset.json + root attrs)
   writer.py     WellWriter.create / write_trajectory / finalize / open  (Well schema + boundary_conditions)
-  generate.py   generate_dataset(..., initial_condition=sampler, backend=None, ic_description=..., ic_in_primitive=...)
+  generate.py   generate_dataset(..., initial_condition=sampler, backend=None, ic_description=..., primitive_ic=...)
   pde/          the PDE classes; AbstractPDEFamily (ADR-0001 tier 0, data-facing part; numerics methods arrive with fv/)
 ```
 
@@ -120,7 +120,7 @@ reconstructs per side [cited: `the_well/the_well/data/datasets.py`].
 | `n_trajectories`, `n_failed` | written count after `finalize`; failures are logged with their parameters |
 | `grid`, `time`, `bcs`, `field_rank_names` | `Grid.to_dict()`, `{t_span, Nt, dt}`, per-axis `[lower, upper]`, Well layout |
 | `params` | names, ranges, sampling strategy, `n_coeffs`, `n_ics_per_coeff` |
-| `ic` | `{name, config, in_primitive}` from the Hydra IC config |
+| `ic` | `{name, config, primitive}` from the Hydra IC config |
 | `backend` | `describe()`: PyClaw — name, scheme, Clawpack version, solver overrides; Trixi — polydeg, CFL, surface flux, shock capturing, Trixi/Julia versions, threads, `ContextFluxTrixi` version (its numerical constants) |
 | `git`, `package_version`, `extra.solve_kwargs`, `schema_version` | provenance |
 

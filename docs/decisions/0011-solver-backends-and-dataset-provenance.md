@@ -107,7 +107,7 @@ above).
 *Consequences.* The 1-D step and 2-D Voronoi distributions changed (positions in the domain
 instead of grid indices); the ICLR datasets are frozen, 4.4 regenerates. `Euler2D` lost its
 `solve` override: a primitive-variable IC is wrapped in `Conserved` by `generate_dataset`
-(`ic_in_primitive` in the pde config). The circulant-embedding GRF samplers were deleted (the
+(`primitive_ic` in the pde config). The circulant-embedding GRF samplers were deleted (the
 gstools Fourier sampler evaluates anywhere and agrees with its structured evaluation on grid
 points).
 

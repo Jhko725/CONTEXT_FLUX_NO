@@ -154,7 +154,7 @@ def test_generate_dataset_end_to_end(tmp_path):
     assert rec.status == "complete" and rec.n_trajectories == 4 and rec.n_failed == 0
     assert rec.backend["scheme"] == "classic" and rec.family == "CubicFlux1D"
     assert rec.params["ranges"]["a"] == [-1.0, 1.0]
-    assert rec.ic == {"name": "sine-phase", "in_primitive": False}
+    assert rec.ic == {"name": "sine-phase", "primitive": False}
     assert (
         tmp_path / "cubic_1d" / "data" / "train" / "cubic_1d_seed=3.dataset.json"
     ).exists()

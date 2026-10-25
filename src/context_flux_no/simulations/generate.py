@@ -84,13 +84,53 @@ def generate_dataset(
     seed: int = 0,
     backend: SolverBackend | None = None,
     ic_description: Mapping[str, Any] | None = None,
-    ic_in_primitive: bool = False,
+    primitive_ic: bool = False,
     **solve_kwargs: Any,
 ) -> WellWriter:
-    """Writes `<savedir>/<dataset_name>/data/<split>/<filename>` and returns the writer
-    (finalized). `backend=None` means each family's default (Classic PyClaw for the PyClaw
-    families, the family's own stepper otherwise). `ic_in_primitive` wraps each sampled
-    condition in `Conserved(ic, pde)` (Euler's `(rho, u, v, p)` samplers)."""
+    """Generates one Well-schema store of trajectories for a family of PDEs and returns its
+    writer, finalized.
+
+    `n_coeffs` parameter sets are drawn from `coeff_range_dict` (split-specific key folded
+    with `seed`); for each, `n_ics_per_coeff` initial conditions are sampled on the domain,
+    solved by `backend` and written in order. A trajectory whose solve raises
+    `SolverFailure` (or is non-finite) is counted in the record's `n_failed`, logged with its
+    parameters, and skipped; any other exception is a bug and propagates.
+
+    **Arguments:**
+
+    - `dataset_name`: Name of the dataset; the store is
+      `<savedir>/<dataset_name>/data/<dataset_type>/<filename>`.
+    - `n_coeffs`: Number of parameter sets.
+    - `n_ics_per_coeff`: Number of initial conditions per parameter set.
+    - `pde_factory`: Builds the family from one parameter set, called as
+      `pde_factory(**{name: value})` with the names of `coeff_range_dict`.
+    - `initial_condition`: Sampler of initial conditions, `sample(key, x_spans)`.
+    - `coeff_range_dict`: `{parameter name: (low, high)}` for every parameter that varies.
+    - `x_spans`: Domain, one `(low, high)` per axis.
+    - `Nxs`: Cells per axis.
+    - `t_span`: `(t0, t1)`.
+    - `Nt`: Number of output steps; `Nt + 1` frames at `linspace(t0, t1, Nt + 1)`.
+    - `bc`: Boundary condition name, or a `(lower, upper)` pair of names per axis
+      (`normalize_bcs`).
+    - `dataset_type`: `"train"`, `"valid"` or `"test"`; picks the split's base key.
+    - `coeff_sampling_strategy`: `"uniform"` draws, `"linspace"` grids each range.
+    - `savedir`: Root directory.
+    - `filename`: Store name; `"<dataset_name>_seed=<seed>.zarr"` by default.
+    - `codec`: Zarr compressor, `"default"`, or `None` for uncompressed.
+    - `seed`: Folded into the split's key; distinct seeds give disjoint draws.
+    - `backend`: `SolverBackend` for every trajectory; `None` means the family's default
+      (Classic PyClaw for the PyClaw families, the family's own stepper otherwise).
+    - `ic_description`: What goes into the record's `ic` field (the Hydra IC config);
+      `{"name": <sampler class>}` by default.
+    - `primitive_ic`: Whether the sampler draws primitive variables (Euler's
+      `(rho, u, v, p)`); each draw is then wrapped in `Conserved(ic, pde)` before solving.
+    - `**solve_kwargs`: Passed to the family's `solve` (recorded in `extra.solve_kwargs`).
+
+    **Returns:**
+
+    The `WellWriter`, finalized: its `record` carries the counts, provenance and
+    `backend.describe()`.
+    """
     filename = filename or f"{dataset_name}_{seed=}.zarr"
     savepath = Path(savedir) / dataset_name / "data" / dataset_type / filename
     grid = Grid(x_spans, Nxs)
@@ -128,7 +168,7 @@ def generate_dataset(
         },
         ic={
             **dict(ic_description or {"name": type(initial_condition).__name__}),
-            "in_primitive": bool(ic_in_primitive),
+            "primitive": bool(primitive_ic),
         },
         backend=(backend or pde0.default_backend()).describe(),
         seed=seed,
@@ -145,7 +185,7 @@ def generate_dataset(
         for key_ic in jax.random.split(key, n_ics_per_coeff):
             try:
                 ic = initial_condition.sample(key_ic, x_spans)
-                if ic_in_primitive:
+                if primitive_ic:
                     ic = Conserved(ic, pde)
                 u, t, xs = pde.solve(
                     ic,

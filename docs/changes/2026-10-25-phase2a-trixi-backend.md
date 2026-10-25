@@ -58,7 +58,7 @@ Julia side (grill of 2026-10-26; Design carries the rejected alternatives):
 
 | # | Where | Item | Done when |
 |---|---|---|---|
-| 1 ✓ | cloud | `InitialCondition`/`InitialConditionSampler` contract; samplers rewritten as functions of position (GRF via gstools unstructured evaluation — identical values on grid points; 1-D steps with jump *positions* drawn in the domain; 2-D Voronoi with seeds in the domain, torus distance); `FromFunction`, `Stacked`, `Conserved`, `Multichannel`; `solve(ic, …)` on every family; `generate_dataset(initial_condition=sampler, ic_in_primitive=)`; configs `sampler:`; goldens through the new path | goldens bit-identical; `test_initial_conditions.py` green; every IC config samples; script runs on cubic 1D (step), Euler 2D (primitive GRF), cubic 2D |
+| 1 ✓ | cloud | `InitialCondition`/`InitialConditionSampler` contract; samplers rewritten as functions of position (GRF via gstools unstructured evaluation — identical values on grid points; 1-D steps with jump *positions* drawn in the domain; 2-D Voronoi with seeds in the domain, torus distance); `FromFunction`, `Stacked`, `Conserved`, `Multichannel`; `solve(ic, …)` on every family; `generate_dataset(initial_condition=sampler, primitive_ic=)`; configs `sampler:`; goldens through the new path | goldens bit-identical; `test_initial_conditions.py` green; every IC config samples; script runs on cubic 1D (step), Euler 2D (primitive GRF), cubic 2D |
 | 2 ✓ | cloud | `trixi_spec` on the six families; `simulations/backends/trixi.py`: env setup, lazy `juliacall` import, `TrixiBackend` per D-API with `SolverFailure` seam, `describe()`; `scripts/setup_julia.py`; `juliapkg.json`; `juliapkg`+`juliacall` in the dev group | imports without Julia; `TrixiBackend()` raises a clear configuration error when Julia/the project is absent |
 | 3 ✓ | cloud | V18 tests (skip), ADR-0011 §Initial conditions, ADR-0004 amendment, F12, `python-julia-repo.md` + `simulation-backends.md` updated, roadmap/architecture/glossary/index | `check_docs --files` clean |
 | 4 ✓ | laptop | `reference/trixi/`: `Project.toml`, `Manifest.toml` (written by juliapkg), `ContextFluxTrixi/` (`equations.jl`, `solve.jl`: `node_coordinates`, `solve`, `versions`; `test/runtests.jl`, 72 checks) | `Pkg.test` green 2026-10-26; `setup_julia.py` prints `describe()` |
@@ -159,7 +159,11 @@ Commit 5 — review round 1, items 1–2 (initial conditions):
 - `tests/unit/test_initial_conditions.py` — the Fourier sampler in the function-of-position law; period = domain length. `tests/unit/test_generate_dataset.py` — the test sampler calls `super().__init__`.
 
 Commit 6 — review round 1, item 3 (`backends/` subpackage):
-- `src/context_flux_no/simulations/backends/{__init__,base,pyclaw,trixi}.py` — `simulations/{backend,pyclaw,trixi}.py` moved (`git mv`; `backend.py` → `base.py`); `REFERENCE_TRIXI` one level deeper; `simulations/__init__.py` re-exports from the subpackage; every import site, config target, document and `CLAUDE.md` updated (`docs/changes/2026-10-25-phase2a-pyclaw-backend.md` kept as the historical record).
+- `src/context_flux_no/simulations/backends/{__init__,base,pyclaw,trixi}.py` — `simulations/{backend,pyclaw,trixi}.py` moved (`git mv`; `backend.py` → `base.py`); `REFERENCE_TRIXI` one level deeper; `simulations/__init__.py` re-exports from the subpackage; every import site (`simulations/{generate,writer}.py`, `pde/*`, `scripts/setup_julia.py`, `tests/unit/test_{pyclaw,trixi}_backend.py`, `tests/verification/test_{crosscode,backend_agreement}.py`), config target, document and `CLAUDE.md` updated (`docs/changes/2026-10-25-phase2a-pyclaw-backend.md` kept as the historical record).
+
+Commit 7 — review round 1, item 4:
+- `src/context_flux_no/simulations/generate.py` — `ic_in_primitive` → `primitive_ic` (record key `ic.primitive`); `generate_dataset` docstring in the equinox/diffrax form.
+- `scripts/data/configs/pde/euler_2d.yaml`, `scripts/data/generate_dataset.py`, `tests/unit/test_generate_dataset.py`, `docs/design/simulation-backends.md`, ADR-0011 — the key.
 
 ## Design
 
@@ -221,6 +225,7 @@ Fast tier 2026-10-26 (`JAX_PLATFORMS=cpu uv run pytest -q`, Julia set up): 103 p
 | `simulations/initial_conditions/__init__.py` — exports | Trivial changes. | None |
 | **Round 2** `initial_conditions/base.py`, `grf.py`, `step.py` — dims set once in the base `__init__`s (item 1) | | |
 | **Round 2** `simulations/backends/` — `backend.py` → `backends/base.py`, `pyclaw.py`, `trixi.py` moved; call sites, configs, docs (item 3) | | |
+| **Round 2** `generate.py` — `primitive_ic`, docstring; config key, script, test, docs (item 4) | | |
 | **Round 2** `initial_conditions/fourier.py` — `RandomTruncatedFourier1D` sampler (item 2); `test_initial_conditions.py`, `test_generate_dataset.py` | | |
 | `simulations/backends/base.py` — `solve(pde, ic, grid, t_out, bcs)`; `check_inputs(ic)`; `solve_batch` deleted | Looks good. | None |
 | `simulations/backends/pyclaw.py` — evaluates `ic` at the centers | Looks good. | None |

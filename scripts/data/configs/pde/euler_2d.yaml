@@ -9,5 +9,5 @@ Nxs: [128,128]
 t_span: [0, 0.5]
 Nt: 100
 
-ic_in_primitive: true   # samplers draw (rho, u, v, p); Conserved(ic, pde) converts
+primitive_ic: true   # samplers draw (rho, u, v, p); Conserved(ic, pde) converts
 solve_kwargs: null
