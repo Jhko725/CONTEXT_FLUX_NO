@@ -99,3 +99,14 @@ def test_non_periodic_bcs_run(tmp_path: Path):
     pde, ic, x_spans, Nxs, t_span, Nt, _ = CASES["burgers_1d"]
     u, *_ = pde.solve(ic, x_spans, Nxs, t_span, Nt, [("extrap", "extrap")])
     assert np.isfinite(u).all()
+
+
+def test_blow_up_is_a_solver_failure():
+    from context_flux_no.simulations import SolverFailure
+
+    pde, ic, x_spans, Nxs, t_span, Nt, _ = CASES["cubic_1d"]
+    # cfl_desired above cfl_max makes PyClaw refuse the run with a bare Exception
+    backend = PyClawBackend("classic", cfl_desired=2.0, cfl_max=1.0)
+    with pytest.raises(SolverFailure) as info:
+        pde.solve(ic, x_spans, Nxs, t_span, Nt, "periodic", backend=backend)
+    assert info.value.backend == "pyclaw/classic"

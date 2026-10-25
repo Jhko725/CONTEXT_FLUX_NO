@@ -52,6 +52,17 @@ def normalize_bcs(bc: str | Sequence[Any], n_spatial_dims: int) -> BCs:
     return tuple(out)  # ty: ignore[invalid-return-type]
 
 
+class SolverFailure(RuntimeError):
+    """A backend could not produce a trajectory for an otherwise valid request (CFL blow-up,
+    step limit, non-finite state). `generate_dataset` counts these per trajectory; anything
+    else that escapes a backend is a bug and propagates."""
+
+    def __init__(self, backend: str, reason: str) -> None:
+        super().__init__(f"{backend}: {reason}")
+        self.backend = backend
+        self.reason = reason
+
+
 class SolverBackend(abc.ABC):
     """`solve(pde, u0, grid, t_out, bcs)`; subclasses set `name` and implement `solve`.
     `u0` is `[n_eqn, *grid.shape]` in conserved variables, `t_out` the strictly increasing

@@ -13,8 +13,10 @@ A PDE class tells the backend how PyClaw sees it through a `PyClawSpec` (`pde.py
 the Riemann solver (a Python callable with Clawpack's `rp(q_l, q_r, aux_l, aux_r,
 problem_data)` signature, or a compiled `clawpack.riemann` module), the number of waves, the
 kernel language, and per-scheme solver options (limiter, CFL numbers, transverse waves).
-PyClaw only supports Fortran kernels in 2-D [code: `SharpClawSolver2D.dq_hyperbolic`,
-`ClawSolver2D.step_hyperbolic`], so 2-D families need a compiled Riemann solver.
+PyClaw runs only Fortran kernels in more than one dimension [code: clawpack 5.14.0,
+`pyclaw/classic/solver.py:215` "Only Fortran kernels are supported in multi-D.",
+`pyclaw/sharpclaw/solver.py:890` (2-D) and `:975` (3-D)], so a Python-kernel family is 1-D
+on PyClaw and a 2-D family needs a compiled Riemann solver.
 
 Boundary conditions: the three `BCName`s map onto `pyclaw.BC.{periodic, extrap, wall}` per
 axis and side; `wall` relies on the Riemann solver's convention for which component is the
@@ -30,7 +32,7 @@ from typing import Any, Literal
 
 import numpy as np
 
-from context_flux_no.simulations.backend import BCs, SolverBackend
+from context_flux_no.simulations.backend import BCs, SolverBackend, SolverFailure
 from context_flux_no.simulations.grid import Grid
 
 
@@ -91,7 +93,9 @@ class PyClawBackend(SolverBackend):
             raise ValueError("PyClaw supports 1-, 2- and 3-D grids")
         if n_spatial_dims > 1 and spec.kernel_language != "Fortran":
             raise ValueError(
-                f"{type(pde).__name__}: PyClaw only runs Fortran kernels in {n_spatial_dims}-D"
+                f"{type(pde).__name__}: PyClaw runs only Fortran kernels in "
+                f"{n_spatial_dims}-D (clawpack 5.14.0, pyclaw/classic/solver.py:215, "
+                "pyclaw/sharpclaw/solver.py:890)"
             )
         if self.scheme == "classic":
             cls = {
@@ -158,7 +162,13 @@ class PyClawBackend(SolverBackend):
         controller.keep_copy = True
         controller.output_format = None
         controller.verbosity = 0
-        controller.run()
+        try:
+            controller.run()
+        except Exception as e:  # noqa: BLE001 — PyClaw raises bare Exception for CFL/step limits
+            # [code: clawpack 5.14.0 pyclaw/solver.py:651,664; pyclaw/controller.py:228-234]
+            raise SolverFailure(f"pyclaw/{self.scheme}", str(e)) from e
+        if not np.all(np.isfinite(controller.frames[-1].state.q)):
+            raise SolverFailure(f"pyclaw/{self.scheme}", "non-finite state")
 
         u = np.stack([frame.state.q for frame in controller.frames], axis=0)
         if u.shape[0] != len(t_out):

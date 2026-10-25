@@ -7,6 +7,7 @@ from .backend import (
     BCs as BCs,
     normalize_bcs as normalize_bcs,
     SolverBackend as SolverBackend,
+    SolverFailure as SolverFailure,
 )
 from .generate import (
     generate_dataset as generate_dataset,

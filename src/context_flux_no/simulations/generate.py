@@ -20,7 +20,11 @@ import numpy as np
 from jaxtyping import Array, PRNGKeyArray
 from tqdm import tqdm
 
-from context_flux_no.simulations.backend import normalize_bcs, SolverBackend
+from context_flux_no.simulations.backend import (
+    normalize_bcs,
+    SolverBackend,
+    SolverFailure,
+)
 from context_flux_no.simulations.grid import Grid
 from context_flux_no.simulations.record import DatasetRecord
 from context_flux_no.simulations.writer import WellWriter
@@ -149,11 +153,13 @@ def generate_dataset(
                     **solve_kwargs,
                 )
                 if not np.all(np.isfinite(u)):
-                    raise FloatingPointError("non-finite values in the solution")
+                    raise SolverFailure(
+                        type(pde).__name__, "non-finite values in the solution"
+                    )
                 np.testing.assert_allclose(t, t_out)
                 for x_i, x_ref in zip(xs, grid.centers):
                     np.testing.assert_allclose(x_i, x_ref)
-            except Exception:  # noqa: BLE001 — a failed trajectory is recorded, not fatal
+            except SolverFailure:  # a failed trajectory is recorded; a bug propagates
                 n_failed += 1
                 log.exception("solve failed for coefficients %s", pde.parameters)
                 continue
