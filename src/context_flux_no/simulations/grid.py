@@ -22,20 +22,17 @@ class Grid:
     Nxs: tuple[int, ...]
 
     def __init__(self, x_spans: Sequence[Sequence[float]], Nxs: Sequence[int]):
-        if len(self.x_spans) != len(self.Nxs):
-                    raise ValueError("x_spans and Nxs must have the same length.")
-        if len(self.Nxs) > len(AXIS_NAMES):
-                    raise ValueError("at most three spatial dimensions are supported.")
-        if any(n < 1 for n in self.Nxs):
-                    raise ValueError("every Nx must be >= 1.")
-        
-        # Initialization workarounds for frozen dataclasses
-        # See https://docs.python.org/3/library/dataclasses.html#frozen-instances
-        object.__setattr__(
-                    self, "x_spans", tuple((float(a), float(b)) for a, b in x_spans)
-                )
-        object.__setattr__(self, "Nxs", tuple(int(n) for n in Nxs))
-
+        x_spans = tuple((float(lo), float(hi)) for lo, hi in x_spans)
+        Nxs = tuple(int(n) for n in Nxs)
+        if len(x_spans) != len(Nxs):
+            raise ValueError("x_spans and Nxs must have the same length.")
+        if len(Nxs) > len(AXIS_NAMES):
+            raise ValueError("at most three spatial dimensions are supported.")
+        if any(n < 1 for n in Nxs):
+            raise ValueError("every Nx must be >= 1.")
+        # frozen dataclass: https://docs.python.org/3/library/dataclasses.html#frozen-instances
+        object.__setattr__(self, "x_spans", x_spans)
+        object.__setattr__(self, "Nxs", Nxs)
 
     @property
     def n_spatial_dims(self) -> int:

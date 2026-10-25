@@ -147,6 +147,13 @@ Verification tier (`JAX_PLATFORMS=cpu uv run pytest tests/verification -m slow`)
 - **`zarr` shard-shape inference warning** (`shards="auto"`, pre-existing) — harmless; pin explicit shards when the dataset sizes are settled in 4.4.
 - **Goldens policy** — `goldens_simulations/` are regenerated only with a change-document entry (as the regression goldens).
 
+## Review round 1 (2026-10-25)
+
+Joon's Review notes below. Resolutions, one commit per logical group (`code-conventions` §1.3):
+
+- **`grid.py`** — the review commit's `__init__` read `self.x_spans`/`self.Nxs` before assigning them (every `Grid(...)` raised `AttributeError`), and `from_sequences` still had callers at `pde/base.py:86` and `test_pyclaw_backend.py:71`. Fixed: arguments are normalized, validated, then assigned. The `__init__`-over-`__post_init__` form is kept. Instruction gap closed in `CLAUDE.md` (a *Modifications* entry is committed with the touched tests green).
+- *(further rows resolved below as their commits land)*
+
 ## Review notes
 
 | Change | Thoughts | Modifications |

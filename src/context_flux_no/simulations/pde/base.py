@@ -83,7 +83,7 @@ class AbstractHyperbolicConservationLaw(eqx.Module):
         `ic_factory(centres)` evolved by `backend` over `linspace(*t_span, Nt + 1)`."""
         if kwargs:
             raise TypeError(f"unexpected solve() arguments: {sorted(kwargs)}")
-        grid = Grid.from_sequences(x_spans, Nxs)
+        grid = Grid(x_spans, Nxs)
         t_out = np.linspace(t_span[0], t_span[1], Nt + 1, endpoint=True)
         u0 = np.asarray(ic_factory(grid.centers), dtype=float)
         backend = backend or self.default_backend(verbose=verbose)

@@ -68,7 +68,7 @@ def test_normalize_bcs():
 def test_backend_input_checks_and_describe():
     pde, ic, x_spans, Nxs, t_span, Nt, _ = CASES["cubic_1d"]
     backend = PyClawBackend("classic", cfl_desired=0.3)
-    grid = Grid.from_sequences(x_spans, Nxs)
+    grid = Grid(x_spans, Nxs)
     with pytest.raises(ValueError):
         backend.solve(
             pde,

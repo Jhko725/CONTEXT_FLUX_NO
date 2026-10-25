@@ -112,7 +112,7 @@ class PyClawBackend(SolverBackend):
         solver.num_waves = spec.num_waves
         solver.kernel_language = spec.kernel_language
         solver.fwave = spec.fwave
-        for key, value in (options|self.solver_overrides).items():
+        for key, value in (options | self.solver_overrides).items():
             if key == "limiters" and isinstance(value, str):
                 value = _LIMITERS[value]
             setattr(solver, key, value)
