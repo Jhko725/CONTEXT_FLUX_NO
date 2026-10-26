@@ -226,7 +226,7 @@ Fast tier 2026-10-26 (`JAX_PLATFORMS=cpu uv run pytest -q`, Julia set up): 103 p
 | **Round 2** `initial_conditions/base.py`, `grf.py`, `step.py` — dims set once in the base `__init__`s (item 1) | Looks good. | None |
 | **Round 2** `simulations/backends/` — `backend.py` → `backends/base.py`, `pyclaw.py`, `trixi.py` moved; call sites, configs, docs (item 3) | Looks good. | None |
 | **Round 2** `generate.py` — `primitive_ic`, docstring; config key, script, test, docs (item 4) | Looks good for now. Will do a revision across all docs in the codebase later. | None for now. |
-| **Round 2** `initial_conditions/fourier.py` — `RandomTruncatedFourier1D` sampler (item 2); `test_initial_conditions.py`, `test_generate_dataset.py` | | |
+| **Round 2** `initial_conditions/fourier.py` — `RandomTruncatedFourier1D` sampler (item 2); `test_initial_conditions.py`, `test_generate_dataset.py` | Looks good. | None |
 | `simulations/backends/base.py` — `solve(pde, ic, grid, t_out, bcs)`; `check_inputs(ic)`; `solve_batch` deleted | Looks good. | None |
 | `simulations/backends/pyclaw.py` — evaluates `ic` at the centers | Looks good. | None |
 | `simulations/backends/trixi.py` — `TrixiSpec`, `TrixiBackend`, `available()`, environment, Julia interface spec | Looks good. Feel that `simulations` need a `backends` subpackage though. It will contain the current `backends..py`, `pyclaw.py` and `trixi.py`. | To be discussed with Claude. |
