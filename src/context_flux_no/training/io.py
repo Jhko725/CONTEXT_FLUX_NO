@@ -19,6 +19,11 @@ log = logging.getLogger(__name__)
 # 10 of 12 configs, F1) fell through `HypernetworkHead` to the default initialization. The
 # loaded weights make the choice irrelevant to the forward pass; the stored value is left in
 # the checkpoint as evidence for the 0.7 audit.
+# orbax <= 0.11 `save_pytree` wrote the tree under this checkpointable name; 0.12 writes
+# `state` (`STATE_CHECKPOINTABLE_KEY`) and `load_pytree` became an alias of `load`, which
+# looks for `state` unless told otherwise.
+LEGACY_CHECKPOINTABLE = "pytree"
+
 _LEGACY_CONFIG_FIXES: dict[tuple[str, Any], Any] = {
     ("hypernet_init", "bias_hyperinit"): "default",
 }
@@ -73,7 +78,9 @@ def load_model(
         model_backbone = instantiate(OmegaConf.create(model_config))
 
         template, rest = checkpoint_template(model_backbone)
-        weights_load = mngr_load.load_pytree(step_number, template)
+        weights_load = mngr_load.load(
+            step_number, template, checkpointable_name=LEGACY_CHECKPOINTABLE
+        )
 
     return eqx.combine(weights_load, rest)
 

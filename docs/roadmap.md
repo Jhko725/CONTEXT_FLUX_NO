@@ -186,7 +186,7 @@ IMEX) — see `design/fv-conventions.md` §Extensibility.
 - Multi-device training — single GPU assumed throughout; Phase 5.5 only keeps the door open.
 - Nonconservative products, incompressible Navier–Stokes — out of `fv/` scope (ADR-0001 §Extensibility).
 - `CFLAdaptive` implementation (`scan` with bounded substeps vs diffrax controller) — when first needed.
-- ~~`orbax-checkpoint==0.11.25` pin~~ — upgraded to `>=0.12.8` in Phase 5 (review round 1; typed PRNG keys restore natively). Whether 0.12 reads the 0.11.25 ICLR checkpoints is checked by the regression tier; re-save under the shim if not.
+- ~~`orbax-checkpoint==0.11.25` pin~~ — upgraded to `>=0.12.8` in Phase 5 (review round 1; typed PRNG keys restore natively). 0.12 reads the 0.11.25 ICLR checkpoints once `load_model` names the legacy checkpointable (`pytree`, renamed `state` in 0.12) — confirmed by the regression tier 2026-10-26; no re-save needed.
 - Whether `TrixiBackend` remains a permanent generator after WENO5 is verified.
 - DISCO `operatornet_scale` as checkpointed array leaves (F15), with the `operatornet.py` `keys_bot` fix and the hygiene xfail flip — Phase 3 (baselines), when legacy checkpoints get the leaf filled at load.
 

@@ -8,7 +8,11 @@ import equinox as eqx
 import jax
 import jax.numpy as jnp
 import numpy as np
-from context_flux_no.training.io import checkpoint_template, translate_legacy_config
+from context_flux_no.training.io import (
+    checkpoint_template,
+    LEGACY_CHECKPOINTABLE,
+    translate_legacy_config,
+)
 from orbax.checkpoint import v1 as ocp
 
 
@@ -31,14 +35,16 @@ def test_template_asks_for_every_saved_leaf(tmp_path):
         lambda m: m.p, saved, jnp.asarray(saved.p)
     )  # stored as an array
     with ocp.training.Checkpointer(tmp_path / "ckpt") as c:
-        c.save_pytree(0, saved)
+        c.save_checkpointables(
+            0, {LEGACY_CHECKPOINTABLE: saved}
+        )  # as orbax 0.11 laid it out
         c.close()
     rebuilt = eqx.tree_at(lambda m: m.p, _Model(), np.float64(0.0))  # a fresh rebuild
     template, rest = checkpoint_template(rebuilt)
     with warnings.catch_warnings(record=True) as caught:
         warnings.simplefilter("always")
         with ocp.training.Checkpointer(tmp_path / "ckpt") as c:
-            loaded = c.load_pytree(0, template)
+            loaded = c.load(0, template, checkpointable_name=LEGACY_CHECKPOINTABLE)
     assert not [w for w in caught if "harding" in str(w.message)]
     model = eqx.combine(loaded, rest)
     assert float(model.p) == np.float32(0.1) and model.s == 0.5  # stored as f32 by jnp

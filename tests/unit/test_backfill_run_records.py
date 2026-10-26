@@ -10,6 +10,7 @@ import equinox as eqx
 import jax
 from context_flux_no import runs
 from context_flux_no.runs import Run
+from context_flux_no.training.io import LEGACY_CHECKPOINTABLE
 from orbax.checkpoint import v1 as ocp
 
 
@@ -45,7 +46,11 @@ def _write_legacy(root: Path) -> Path:
     with ocp.training.Checkpointer(
         str(ckpt.resolve()), custom_metadata=dict(MODEL_CONFIG)
     ) as c:
-        c.save_pytree(7, eqx.filter(model, eqx.is_array), metrics={"valid_loss": 0.5})
+        c.save_checkpointables(  # the orbax 0.11 layout: the tree under "pytree"
+            7,
+            {LEGACY_CHECKPOINTABLE: eqx.filter(model, eqx.is_array)},
+            metrics={"valid_loss": 0.5},
+        )
     return ckpt
 
 
