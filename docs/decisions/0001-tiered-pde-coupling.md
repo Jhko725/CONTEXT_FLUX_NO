@@ -1,14 +1,14 @@
 ---
 type: decision
 id: ADR-0001
-status: accepted
-updated: 2026-09-26
+status: amended
+updated: 2026-10-25
 verified_by: joon (discussed 2026-09-26/27)
 ---
 
 # ADR-0001 — PDE ↔ solver coupling is tiered; fluxes declare `requires`
 
-**Status**: accepted (2026-09-26).
+**Status**: accepted (2026-09-26); amended 2026-10-25 (§Amendment).
 
 ## Context
 
@@ -41,3 +41,17 @@ tier-0 fluxes only (Rusanov, Lax–Friedrichs, Godunov-scalar via Osher's formul
 The "PDE-family-agnostic Flux NO" claim of the paper becomes structural (`requires = ∅`). Invalid
 flux × PDE pairings fail at config composition. Nonconservative products and incompressible
 Navier–Stokes are declared out of `fv/` scope (see `design/fv-conventions.md` §Extensibility).
+
+## Amendment (2026-10-25, review of `phase2a-pyclaw-backend`)
+
+`PDEFamily` is not introduced in one step in Phase 4.1. `simulations/pde/base.py::AbstractPDEFamily`
+exists now with the data-facing part of tier 0 (`n_spatial_dims`, `field_rank_names`,
+`parameters`, `to_conserved` where a family has one) plus the reference-backend hooks
+(`pyclaw_spec`, a default `solve()`), and the numerics part of tier 0 — `flux(u, params,
+axis, x)`, `max_wave_speed(u, params, axis)`, `reflect(u, axis)`, the flags — is added to the
+same class as Phase 2b–2e's `fv/` consumes it. Phase 4.1 becomes the conformance step: every
+family implements tier 0 in JAX and the `requires ⊆ capabilities` check runs for every flux ×
+family pairing in the configs. Reason: the interim base written for 2a already carried half of
+tier 0, and a separate 4.1 rewrite would have done that work twice. A backend-specific
+descriptor on the family (`pyclaw_spec`) is in the spirit of tier 2's `riemann_flux`: the family
+may describe itself to a solver; the solver never reaches into the family.

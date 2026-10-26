@@ -2,13 +2,19 @@
 
 Model configuration and command line interface (CLI) is provided via the [Hydra](https://github.com/facebookresearch/hydra) library, with the hydra-submitit-plugin to interoperate with slurm.
 
-## 1D Conservation law
+## Families, initial conditions, backends
 
-### Flux functions
-Supported values are `cubic_1d` for 1D cubic flux and `sine_1d` for 1D sine flux
+- `pde=` one of `cubic_1d`, `sine_1d`, `burgers_1d` (viscous, own JAX stepper), `shallow_water_1d`
+  (use `initial_condition=grf_shallow`/`step_shallow`), `cubic_2d` (own JAX stepper), `euler_2d`
+  (`initial_condition=grf_euler_2d`/`step_euler_2d`).
+- `initial_condition=` `grf` or `step` (and the family-specific variants above).
+- `backend=` `default` (each family's own default: PyClaw Classic for the PyClaw families — what
+  the ICLR datasets used), `classic`, or `sharpclaw` (WENO5 + SSP104; the higher-order reference).
+  The JAX-stepped families accept only `default`.
+- `bc=` `periodic` (default) or per-axis pairs, e.g. `bc=[[extrap,wall]]`.
 
-### Initial conditions
-Supported values are `grf` for Gaussian random field and `step` for step functions
+Every store gets a sidecar `<name>.dataset.json` (`DatasetRecord`: grid, parameters, initial
+condition, backend, seed, git SHA, number written/failed); see `docs/design/simulation-backends.md`.
 
 ## Example usage
 To generate training data with default settings (Gaussian random field initial conditions and cubic flux) for multiple seeds using slurm job arrays (sbatch),

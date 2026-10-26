@@ -1,12 +1,11 @@
-from collections.abc import Callable
-from typing import ClassVar, Literal
+from typing import ClassVar
 
 import equinox as eqx
 import numpy as np
-from clawpack import pyclaw
 from jaxtyping import Float
 
-from ..pdesolve import pdesolve_pyclaw
+from context_flux_no.simulations.pde.base import AbstractPDEFamily
+from context_flux_no.simulations.pyclaw import PyClawSpec
 
 
 def riemann_param_shallow_water_1D(
@@ -121,9 +120,13 @@ def riemann_param_shallow_water_1D(
     return wave, s, amdq, apdq
 
 
-class ParametrizedShallowWater1D(eqx.Module):
-    n_dim: ClassVar[int] = 1
-    n_eqns: ClassVar[int] = 2
+class ParametrizedShallowWater1D(AbstractPDEFamily):
+    """The three-parameter shallow-water-like system of the Riemann solver above; Classic
+    PyClaw, MC limiter. `h_floor` is a numerical floor, not a physical parameter, so it is
+    passed to the solver but not recorded as a Well scalar."""
+
+    n_spatial_dims: ClassVar[int] = 1
+    field_rank_names: ClassVar[tuple[tuple[int, str], ...]] = ((0, "h"), (1, "m"))
 
     gamma: float = eqx.field(static=True)
     alpha: float = eqx.field(static=True)
@@ -143,58 +146,15 @@ class ParametrizedShallowWater1D(eqx.Module):
         self.h_floor = h_floor
 
     @property
-    def coeffs(self) -> dict[str, float]:
-        return {
-            "gamma": self.gamma,
-            "alpha": self.alpha,
-            "beta": self.beta,
-            "h_floor": self.h_floor,
-        }
+    def parameters(self) -> dict[str, float]:
+        return {"gamma": self.gamma, "alpha": self.alpha, "beta": self.beta}
 
-    def solve(
-        self,
-        ic_factory: Callable[
-            [Float[np.ndarray, " Nx"]],
-            Float[np.ndarray, " dim Nx"],
-        ],
-        x_span: tuple[float, float],
-        Nx: int,
-        t_span: tuple[float, float],
-        Nt: int,
-        bc: Literal["periodic"],
-        **pdesolve_kwargs,
-    ) -> tuple[
-        Float[np.ndarray, "time dim x_grid"],
-        Float[np.ndarray, " time"],
-        Float[np.ndarray, " x_grid"],
-    ]:
-        solver = pyclaw.ClawSolver1D(riemann_param_shallow_water_1D)
-
-        solver.limiters = pyclaw.limiters.tvd.MC
-        solver.num_eqn = self.n_eqns
-        solver.num_waves = 2
-        solver.kernel_language = "Python"
-        solver.cfl_desired = 0.5
-        solver.cfl_max = 0.9
-        solver.fwave = False
-
-        problem_data = {
-            "gamma": self.gamma,
-            "alpha": self.alpha,
-            "beta": self.beta,
-            "h_floor": self.h_floor,
-        }
-
-        u, t, x_grid = pdesolve_pyclaw(
-            solver,
-            problem_data,
-            ic_factory,
-            x_span,
-            Nx,
-            t_span,
-            Nt,
-            bc,
-            **pdesolve_kwargs,
+    @property
+    def pyclaw_spec(self) -> PyClawSpec:
+        return PyClawSpec(
+            riemann_solver=riemann_param_shallow_water_1D,
+            num_waves=2,
+            kernel_language="Python",
+            problem_data={**self.parameters, "h_floor": self.h_floor},
+            classic_options={"limiters": "MC", "cfl_desired": 0.5, "cfl_max": 0.9},
         )
-
-        return u, t, x_grid

@@ -20,6 +20,8 @@ continuation through grain's iterator state is a follow-up (roadmap Phase 5, ope
 
 from __future__ import annotations
 
+import copy
+import dataclasses
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -126,7 +128,8 @@ class Run:
                 )
             previous = cls.open(directory, layout=layout)
             changes = config_changes(previous.config, cfg)
-            record = previous.record.replace(
+            record = copy.replace(
+                previous.record,
                 status="running",
                 resumed={
                     "from_step": previous.latest_step,
@@ -169,7 +172,7 @@ class Run:
     # ------------------------------------------------------------ record ---------
     def update(self, **changes: Any) -> RunRecord:
         """Replace fields of the record and rewrite `metadata.json`."""
-        self.record = self.record.replace(**changes)
+        self.record = copy.replace(self.record, **changes)
         self.record.write(self.metadata_path)
         return self.record
 
@@ -200,7 +203,7 @@ class Run:
         kwargs.setdefault(
             "custom_metadata",
             {
-                "run_record": self.record.to_dict(),
+                "run_record": dataclasses.asdict(self.record),
                 "model_config": self.record.model_config,
             },
         )

@@ -20,7 +20,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Literal
 
-from context_flux_no.provenance import git_state, package_version
+from context_flux_no.utils.provenance import git_state, package_version
+from context_flux_no.utils.serialization import dumps
 
 
 SCHEMA_VERSION = 1
@@ -156,16 +157,7 @@ class RunRecord:
             extra=dict(extra or {}),
         )
 
-    def replace(self, **changes: Any) -> RunRecord:
-        return dataclasses.replace(self, **changes)
-
-    # ------------------------------------------------------------ (de)serialise --
-    def to_dict(self) -> dict[str, Any]:
-        return dataclasses.asdict(self)
-
-    def to_json(self, indent: int | None = 2) -> str:
-        return json.dumps(self.to_dict(), indent=indent, default=str, sort_keys=True)
-
+    # ------------------------------------------------------------ (de)serialize --
     @classmethod
     def from_dict(cls, d: dict[str, Any]) -> RunRecord:
         known = {f.name for f in dataclasses.fields(cls)}
@@ -175,16 +167,12 @@ class RunRecord:
             kwargs["extra"] = {**kwargs.get("extra", {}), "_unknown": unknown}
         return cls(**kwargs)
 
-    @classmethod
-    def from_json(cls, text: str) -> RunRecord:
-        return cls.from_dict(json.loads(text))
-
     def write(self, path: Path) -> None:
-        path.write_text(self.to_json() + "\n")
+        path.write_text(dumps(dataclasses.asdict(self)) + "\n")
 
     @classmethod
     def read(cls, path: Path) -> RunRecord:
-        return cls.from_json(path.read_text())
+        return cls.from_dict(json.loads(path.read_text()))
 
     # ------------------------------------------------------------ views ----------
     def row(self) -> dict[str, Any]:

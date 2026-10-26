@@ -23,11 +23,11 @@ Design, inspired by Levanter's `TrainerState` and `deep_isochron.training.traine
 
 from __future__ import annotations
 
+import copy
 import itertools
 import math
 import warnings
 from collections.abc import Callable, Iterable, Mapping
-from dataclasses import replace
 from functools import cached_property
 from typing import Any, Self, TypeVar
 
@@ -89,7 +89,7 @@ class TrainerState[M: eqx.Module](eqx.Module):
             self.filter_trainable(self.model),  # ty: ignore[invalid-argument-type]
         )
         model_next = eqx.apply_updates(self.model, updates)
-        return replace(
+        return copy.replace(
             self,
             step=self.step + 1,
             model=model_next,

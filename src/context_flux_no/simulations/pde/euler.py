@@ -11,20 +11,23 @@ Consequently, primitive initial data must be converted with
 
     E = p / (gamma - 1) + kinetic_energy.
 
-The 1-D solver uses an HLL Riemann solver through PyClaw.  The 2-D solver
-uses a the 2-D Roe solver with entropy corrections also through PyClaw.
+The 2-D solver uses Clawpack's compiled 4-wave Roe solver (`riemann.euler_4wave_2D`) with
+transverse propagation through PyClaw (the Clawpack quadrants gallery setting).
 """
 
-from collections.abc import Callable, Sequence
-from typing import ClassVar, Literal
+from collections.abc import Sequence
+from typing import Any, ClassVar
 
 import equinox as eqx
 import numpy as np
-from clawpack import pyclaw, riemann
-from jaxtyping import Float
+from clawpack import riemann
 
-from ..pdesolve import pdesolve_pyclaw
-from .base import AbstractHyperbolicConservationLaw
+from context_flux_no.simulations.backend import SolverBackend
+from context_flux_no.simulations.pde.base import (
+    AbstractPDEFamily,
+    ICFactory,
+)
+from context_flux_no.simulations.pyclaw import PyClawSpec
 
 
 _RHO_FLOOR = 1.0e-12
@@ -32,9 +35,9 @@ _PRESSURE_FLOOR = 1.0e-12
 _SPEED_GAP_FLOOR = 1.0e-12
 
 
-class Euler2D(AbstractHyperbolicConservationLaw):
+class Euler2D(AbstractPDEFamily):
     n_spatial_dims: ClassVar[int] = 2
-    field_rank_names: ClassVar[tuple[tuple[int, str]]] = (
+    field_rank_names: ClassVar[tuple[tuple[int, str], ...]] = (
         (0, "rho"),
         (1, "m"),
         (0, "E"),
@@ -49,45 +52,52 @@ class Euler2D(AbstractHyperbolicConservationLaw):
     def parameters(self) -> dict[str, float]:
         return {"gamma": self.gamma}
 
+    @property
+    def pyclaw_spec(self) -> PyClawSpec:
+        # https://www.clawpack.org/gallery/pyclaw/gallery/quadrants.html
+        return PyClawSpec(
+            riemann_solver=riemann.euler_4wave_2D,
+            num_waves=4,
+            kernel_language="Fortran",
+            problem_data=self.parameters,
+            classic_options={"transverse_waves": 2},
+        )
+
+    def to_conserved(self, rho, u, v, p):
+        """`(rho, u, v, p)` → `[rho, rho u, rho v, E]` with `E = p/(γ−1) + ½ρ|v|²`."""
+        E = 0.5 * rho * (u**2 + v**2) + p / (self.gamma - 1)
+        return np.stack([rho, rho * u, rho * v, E], axis=0)
+
     def solve(
         self,
-        ic_factory: Callable[[Float[np.ndarray, " Nx"]], Float[np.ndarray, " Nx"]],
-        x_spans: Sequence[tuple[float, float]],
+        ic_factory: ICFactory,
+        x_spans: Sequence[Sequence[float]],
         Nxs: Sequence[int],
         t_span: tuple[float, float],
         Nt: int,
-        bc: Literal["periodic"],  # TODO: extend to other types as well
+        bc: str | Sequence[Any] = "periodic",
+        *,
+        backend: SolverBackend | None = None,
+        verbose: bool = False,
         use_rho_v_p_ics: bool = False,
-        **pdesolve_kwargs,
-    ) -> tuple[
-        Float[np.ndarray, "time dim x_grid"],
-        Float[np.ndarray, " time"],
-        list[Float[np.ndarray, " ?x"]],
-    ]:
-        # Setting from https://www.clawpack.org/gallery/pyclaw/gallery/quadrants.html
-        solver = pyclaw.ClawSolver2D(riemann.euler_4wave_2D)
-        solver.transverse_waves = 2
-
-        solver.num_eqn = self.n_eqns
-
-        problem_data = self.parameters
-
+        **kwargs: Any,
+    ):
+        """As the base class; with `use_rho_v_p_ics` the initial condition returns
+        primitive `(rho, u, v, p)` and is converted with `to_conserved`."""
         if use_rho_v_p_ics:
-            # Transform (rho, u, v, p) to (rho, rho u, rho v, E)
-            def ic_factory_new(xs):
-                rho, u, v, p = ic_factory(xs)
-                E = 0.5 * rho * (u**2 + v**2) + p / (self.gamma - 1)
-                return np.stack([rho, rho * u, rho * v, E], axis=0)
+            primitive = ic_factory
 
-        u, t, xs = pdesolve_pyclaw(
-            solver,
-            problem_data,
-            ic_factory if not use_rho_v_p_ics else ic_factory_new,
+            def ic_factory(xs):  # noqa: F811
+                return self.to_conserved(*primitive(xs))
+
+        return super().solve(
+            ic_factory,
             x_spans,
             Nxs,
             t_span,
             Nt,
             bc,
-            **pdesolve_kwargs,
+            backend=backend,
+            verbose=verbose,
+            **kwargs,
         )
-        return u, t, xs

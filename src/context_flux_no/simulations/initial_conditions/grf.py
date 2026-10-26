@@ -189,8 +189,8 @@ class GaussianRandomField(eqx.Module):
     def __init__(
         self,
         covariance_fns: Sequence[gs.CovModel],
-        means: Sequence[float] | None,
-        scales: Sequence[float] | None,
+        means: Sequence[float] | None = None,
+        scales: Sequence[float] | None = None,
         period: float = 1.0,
         num_modes: int = 32,
         transforms=None,

@@ -260,13 +260,30 @@ class WellDatasetSourceBase(grain.sources.RandomAccessDataSource):
 
     @cached_property
     def dataset_id(self) -> str:
-        """`<dataset>:<split>:<8 hex>` — a provisional identifier of the data this source
-        reads, stable across machines: the hash covers the common metadata (field names,
-        resolutions, grid shape, trajectory count, normalisation statistics) and the window
-        parameters, not the file paths. Recorded in `RunRecord.index` so runs on different
-        data versions are distinguishable; replaced by `DatasetRecord.id` in Phase 4."""
+        """`<dataset>:<split>:<8 hex>` — the identifier `RunRecord.index` records so runs on
+        different data versions are distinguishable; every source has one. When every file carries a
+        `DatasetRecord` (stores written by `simulations.WellWriter`), the hash is over their
+        record ids, so it is stable across machines and copies. Otherwise (ICLR-era stores)
+        it is a provisional hash over the common metadata (field names, resolutions, grid
+        shape, trajectory count, normalisation statistics) and the window parameters, not
+        the file paths."""
         import hashlib
         import json
+
+        record_ids = self.dataset_record_ids
+        if record_ids:
+            digest = hashlib.sha256(
+                json.dumps(
+                    {
+                        "record_ids": record_ids,
+                        "window_size": self.window_size,
+                        "restrict_trajectory_lengths_to": self.restrict_trajectory_lengths_to,
+                        "exclude_field_names": list(self.exclude_field_names),
+                    },
+                    sort_keys=True,
+                ).encode()
+            ).hexdigest()[:8]
+            return f"{self.well_dataset_name}:{self.well_split_name}:{digest}"
 
         def default(o: Any) -> Any:
             if isinstance(o, np.ndarray):
@@ -286,6 +303,19 @@ class WellDatasetSourceBase(grain.sources.RandomAccessDataSource):
             json.dumps(payload, sort_keys=True, default=default).encode()
         ).hexdigest()[:8]
         return f"{self.well_dataset_name}:{self.well_split_name}:{digest}"
+
+    @cached_property
+    def dataset_record_ids(self) -> list[str]:
+        """`DatasetRecord.id` of every file, in path order; empty unless **all** files carry
+        a record in their root attributes."""
+        ids = []
+        for datapath in self.datapaths:
+            with self.open_datapath(datapath) as file:
+                rec = file.attrs.get("dataset_record")
+                if not rec:
+                    return []
+                ids.append(str(rec["id"]))
+        return ids
 
     def __len__(self) -> int:
         return self.file_index_offsets[-1]

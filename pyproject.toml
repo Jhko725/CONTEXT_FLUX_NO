@@ -6,7 +6,7 @@ readme = "README.md"
 authors = [
     { name = "Joon-Hyuk Ko", email = "jhko725@kias.re.kr" }
 ]
-requires-python = ">=3.12"
+requires-python = ">=3.13"
 dependencies = [
     "clawpack>=5.12.0",
     "colorcet>=3.1.0",
@@ -64,7 +64,11 @@ fixable = ["I001", "F401"]
 # E501: ruff format governs line length; long strings/comments are allowed.
 # F722/F821: jaxtyping shape strings (Float[Array, "channels *grids"]) are not forward references.
 ignore = ["E402", "E501", "E721", "E731", "E741", "F722", "F821"]
-select = ["E", "F", "I001"]
+select = ["E", "F", "I001", "TID251"]
+
+[tool.ruff.lint.flake8-tidy-imports.banned-api]
+# Python floor is 3.13 (requires-python): copy.replace is the one way to copy-with-changes.
+"dataclasses.replace".msg = "use copy.replace (Python >= 3.13)"
 
 [tool.ruff.lint.isort]
 combine-as-imports = true

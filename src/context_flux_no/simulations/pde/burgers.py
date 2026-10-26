@@ -1,54 +1,40 @@
-from collections.abc import Callable
-from typing import ClassVar, Literal
+from typing import ClassVar
 
 import equinox as eqx
 import jax.numpy as jnp
 import numpy as np
-from clawpack import pyclaw, riemann
+from clawpack import riemann
 from jaxtyping import Float
 
-from ..pdesolve import pdesolve_pyclaw
+from context_flux_no.simulations.pde.base import AbstractPDEFamily
+from context_flux_no.simulations.pyclaw import PyClawSpec
 
 
-class Burgers1D(eqx.Module):
-    n_dim: ClassVar[int] = 1
-    n_eqns: ClassVar[int] = 1
+class Burgers1D(AbstractPDEFamily):
+    """Inviscid Burgers through Clawpack's compiled `riemann.burgers_1D` (entropy fix on by
+    default), van Leer limiter."""
+
+    n_spatial_dims: ClassVar[int] = 1
+    field_rank_names: ClassVar[tuple[tuple[int, str], ...]] = ((0, "u"),)
     nu: float = eqx.field(static=True, default=0.0)
     entropy_fix: bool = eqx.field(static=True, default=True)
 
     @property
-    def coeffs(self) -> dict[str, float]:
+    def parameters(self) -> dict[str, float]:
         return {"nu": self.nu}
 
-    def solve(
-        self,
-        ic_factory: Callable[[Float[np.ndarray, " Nx"]], Float[np.ndarray, " Nx"]],
-        x_span: tuple[float, float],
-        Nx: int,
-        t_span: tuple[float, float],
-        Nt: int,
-        bc: Literal["periodic"],
-        **pdesolve_kwargs,
-    ):
-        solver = pyclaw.ClawSolver1D(riemann.burgers_1D)
-        solver.limiters = pyclaw.limiters.tvd.vanleer
-
-        problem_data = {"efix": self.entropy_fix}
-        u, t, x_grid = pdesolve_pyclaw(
-            solver,
-            problem_data,
-            ic_factory,
-            x_span,
-            Nx,
-            t_span,
-            Nt,
-            bc,
-            **pdesolve_kwargs,
+    @property
+    def pyclaw_spec(self) -> PyClawSpec:
+        return PyClawSpec(
+            riemann_solver=riemann.burgers_1D,
+            num_waves=1,
+            kernel_language="Fortran",
+            problem_data={"efix": self.entropy_fix},
+            classic_options={"limiters": "vanleer"},
         )
-        return u, t, x_grid
 
 
-class ViscousBurgers1D(eqx.Module):
+class ViscousBurgers1D(AbstractPDEFamily):
     """
     Parametric viscous Burgers-type equation:
 
@@ -66,8 +52,8 @@ class ViscousBurgers1D(eqx.Module):
     This solver assumes periodic boundary conditions.
     """
 
-    n_dim: ClassVar[int] = 1
-    n_eqns: ClassVar[int] = 1
+    n_spatial_dims: ClassVar[int] = 1
+    field_rank_names: ClassVar[tuple[tuple[int, str], ...]] = ((0, "u"),)
 
     a: float = eqx.field(static=True)
     b: float = eqx.field(static=True)
@@ -77,11 +63,8 @@ class ViscousBurgers1D(eqx.Module):
         self.b = b
 
     @property
-    def coeffs(self) -> dict[str, float]:
-        return {
-            "a": self.a,
-            "b": self.b,
-        }
+    def parameters(self) -> dict[str, float]:
+        return {"a": self.a, "b": self.b}
 
     def flux(
         self,
@@ -91,12 +74,12 @@ class ViscousBurgers1D(eqx.Module):
 
     def solve(
         self,
-        ic_factory: Callable[[Float[np.ndarray, " Nx"]], Float[np.ndarray, " Nx"]],
-        x_span: tuple[float, float],
-        Nx: int,
+        ic_factory,
+        x_spans,
+        Nxs,
         t_span: tuple[float, float],
         Nt: int,
-        bc: Literal["periodic"],
+        bc: str = "periodic",
         cfl: float = 0.4,
         max_steps: int = 10_000_000,
         **kwargs,
@@ -119,21 +102,26 @@ class ViscousBurgers1D(eqx.Module):
         Returns:
             (u, t, xs) with u.shape = (Nt, 1, Nx), xs = (x_grid,)
         """
+        if kwargs.pop("backend", None) is not None:
+            raise ValueError(
+                f"{type(self).__name__} uses its own stepper; backend= is not supported"
+            )
 
         if bc != "periodic":
             raise NotImplementedError(
                 "Currently only periodic boundary conditions are supported."
             )
 
-        x0, x1 = x_span
+        ((x0, x1),) = (tuple(s) for s in x_spans)  # 1-D only
+        (Nx,) = Nxs
         t0, t1 = t_span
 
         dx = (x1 - x0) / Nx
-        x_grid = np.linspace(x0, x1, Nx, endpoint=False)
+        x_grid = x0 + (np.arange(Nx) + 0.5) * dx  # cell centres (F8: was left edges)
 
         t_save = np.linspace(t0, t1, Nt + 1)
 
-        u = jnp.squeeze(ic_factory(x_grid))
+        u = jnp.squeeze(ic_factory([x_grid]))
 
         if u.ndim != 1:
             raise ValueError(
@@ -151,7 +139,7 @@ class ViscousBurgers1D(eqx.Module):
         def _step_fn(u, dt):
             return self._step_periodic(u, dx, dt)
 
-        while save_idx < Nt:
+        while save_idx <= Nt:  # F8: `< Nt` never wrote the last frame
             if step > max_steps:
                 raise RuntimeError(
                     f"Maximum number of steps exceeded: {max_steps}. "

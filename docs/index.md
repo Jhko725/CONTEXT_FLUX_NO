@@ -1,7 +1,7 @@
 ---
 type: index
 status: current
-updated: 2026-10-24
+updated: 2026-10-25
 ---
 
 # `context_flux_no` documentation — index
@@ -22,14 +22,15 @@ document is listed here and has frontmatter.
 | [`architecture.md`](architecture.md) | architecture | what the code is now, module by module; what it becomes; where each decision is recorded |
 | [`roadmap.md`](roadmap.md) | roadmap | the single current plan: tracks, phase tables with *Done when*, Parked, the Done ledger |
 | [`../CLAUDE.md`](../CLAUDE.md) | conventions | how Claude works here: session protocol, change documents, review notes, repo facts |
+| [`coding-standards.md`](coding-standards.md) | reference | where each convention is enforced here: tiers, goldens and tolerances, scope, the checks that replace prose |
 | [`glossary.md`](glossary.md) | glossary | the vocabulary the other documents use |
 
 ## Ledgers
 
 | Document | What it holds |
 |---|---|
-| [`findings.md`](findings.md) | append-only: anything that bears on a *reported result* or constrains a later phase (F1–F10 so far) |
-| [`verification.md`](verification.md) | claim → test → oracle → tolerance → status, for every numerics claim (V1–V24) |
+| [`findings.md`](findings.md) | append-only: anything that bears on a *reported result* or constrains a later phase (F1–F11 so far) |
+| [`verification.md`](verification.md) | claim → test → oracle → tolerance → status, for every numerics claim (V1–V25) |
 
 ## Design documents (`design/`)
 
@@ -37,13 +38,16 @@ document is listed here and has frontmatter.
 |---|---|---|
 | [`fv-conventions.md`](design/fv-conventions.md) | agreed | grid/face/stencil conventions, ghost cells and BCs, N-D handling, the three-part numerical flux, integrators, the `PDEFamily` tiers, analytic solutions, extensibility table |
 | [`run-identity.md`](design/run-identity.md) | agreed | run directory layout, `RunRecord` fields and index columns, finding/loading runs, training/resume/warm-start commands, what the trainer sees |
+| [`simulation-backends.md`](design/simulation-backends.md) | agreed | running/adding/verifying reference solvers: `PyClawBackend` options, family table, Well `boundary_conditions` layout, `DatasetRecord` fields, V18a protocol and measured ratios, goldens policy |
+| [`fv-core-plan.md`](design/fv-core-plan.md) | tentative | Phase 2b/2c for Joon: reading path (LeVeque, Shu, GST, Hesthaven, Clawpack, JAX/Hypothesis), module specs with invariants and tests for `stencil`/`boundary`/`divergence`/`split`/`integrate`/`analytic`, build order |
+| [`python-julia-repo.md`](design/python-julia-repo.md) | tentative | how Julia/Trixi.jl lives in the uv repo: juliapkg as installer + committed Project/Manifest, subprocess vs juliacall assessed, recommended layout |
 | `weno5.md` | — (Phase 2, [R]) | derivation of the WENO5 stencil coefficients, smoothness indicators, LF splitting, next to the code |
 
 ## Decision records (`decisions/`)
 
 | ADR | Status | Decision |
 |---|---|---|
-| [0001](decisions/0001-tiered-pde-coupling.md) | accepted | PDE ↔ solver coupling is tiered; fluxes declare `requires` |
+| [0001](decisions/0001-tiered-pde-coupling.md) | amended 2026-10-25 | PDE ↔ solver coupling is tiered; fluxes declare `requires` |
 | [0002](decisions/0002-nd-stepping.md) | accepted | no per-dimension solver hierarchy; FD-WENO, unsplit dimension-by-dimension |
 | [0003](decisions/0003-boundary-conditions-as-objects.md) | accepted | boundary conditions are objects applied by ghost-cell padding |
 | [0004](decisions/0004-weno5-and-reference-backends.md) | accepted | own WENO5, time-boxed; PyClaw/SharpClaw and Trixi.jl as reference backends |
@@ -53,6 +57,7 @@ document is listed here and has frontmatter.
 | [0008](decisions/0008-four-tier-testing.md) | accepted | unit / property / regression / verification tiers |
 | [0009](decisions/0009-tracks.md) | accepted | work organised as Common → MVP → Rest |
 | [0010](decisions/0010-run-identity.md) | accepted | a run is a directory (`metadata.json` + whole-state checkpoints, Hydra output dir); trainer has no side effects; wandb is a mirror |
+| [0011](decisions/0011-solver-backends-and-dataset-provenance.md) | accepted | reference solvers behind one `SolverBackend` (PyClaw Classic bit-identical, SharpClaw); minimal PDE interface until 4.1; agreement by mutual convergence; every store carries a `DatasetRecord` |
 
 Smaller decisions without an ADR (D1 drop `DPOTEncoder`/LSK; D2 ICLR shim through Phase 3; D4
 `icon/` submodule; D15 `bias-hyperinit` default; D16 extensibility interfaces reserved) are
@@ -65,6 +70,8 @@ recorded in the roadmap tables and the change documents that implement them.
 | `phase0-freeze` | landed on `main` (0.7 run and 0.8 goldens pending) | [`2026-10-04-phase0-freeze.md`](changes/2026-10-04-phase0-freeze.md) |
 | `phase1-prune` | landed (merge gated on the regression tier) | [`2026-10-04-phase1-prune.md`](changes/2026-10-04-phase1-prune.md) |
 | `phase5-run-identity` | landed (based on `phase1-prune`; merge after it) | [`2026-10-24-phase5-run-identity.md`](changes/2026-10-24-phase5-run-identity.md) |
+| `phase2a-pyclaw-backend` | landed (based on `phase5-run-identity`; Trixi half pending) | [`2026-10-25-phase2a-pyclaw-backend.md`](changes/2026-10-25-phase2a-pyclaw-backend.md) |
+| `conventions-docs` | in-progress (based on `phase2a-pyclaw-backend`; rebases onto `main` cleanly) | [`2026-10-25-conventions-docs.md`](changes/2026-10-25-conventions-docs.md) |
 
 ## Historical
 

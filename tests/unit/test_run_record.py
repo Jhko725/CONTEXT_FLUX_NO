@@ -1,5 +1,7 @@
 """`RunRecord`: JSON round trip, index extraction from a config, forward compatibility."""
 
+import copy
+import dataclasses
 import json
 
 from context_flux_no.runs.record import (
@@ -8,6 +10,7 @@ from context_flux_no.runs.record import (
     new_run_id,
     RunRecord,
 )
+from context_flux_no.utils.serialization import dumps
 from hypothesis import given, settings, strategies as st
 from omegaconf import OmegaConf
 
@@ -31,16 +34,19 @@ _flat = st.dictionaries(st.text(min_size=1, max_size=10), _scalar, max_size=6)
     status=st.sampled_from(["running", "finished", "failed", "legacy"]),
 )
 def test_json_round_trip(index, model_config, best_step, best_metric, status):
-    rec = RunRecord.create(index=index, model_config=model_config).replace(
-        status=status, best_step=best_step, best_metric=best_metric
+    rec = copy.replace(
+        RunRecord.create(index=index, model_config=model_config),
+        status=status,
+        best_step=best_step,
+        best_metric=best_metric,
     )
-    back = RunRecord.from_json(rec.to_json())
+    back = RunRecord.from_dict(json.loads(dumps(dataclasses.asdict(rec))))
     assert back == rec
 
 
 def test_unknown_fields_survive_as_extra():
     rec = RunRecord.create(index={}, model_config={})
-    d = rec.to_dict() | {"future_field": 1}
+    d = dataclasses.asdict(rec) | {"future_field": 1}
     back = RunRecord.from_dict(d)
     assert back.extra["_unknown"] == {"future_field": 1}
     assert back.run_id == rec.run_id

@@ -124,7 +124,8 @@ Conventions: `design/fv-conventions.md`. Decisions: ADR-0001 (tiered coupling), 
 
 | # | Track | Item | Done when |
 |---|---|---|---|
-| 2a | C | `sim/pyclaw.py::PyClawBackend` (Classic + SharpClaw) and `reference/trixi/` + `sim/trixi.py::TrixiBackend`; both write Well-schema files for every family | backend-agreement test green |
+| 2a-pyclaw | C | `simulations/pyclaw.py::PyClawBackend` (Classic + SharpClaw) behind `SolverBackend`; Classic bit-identical to the ICLR `solve()`; writes Well-schema stores for every family | V18a green, V25 green — **done 2026-10-25** (`phase2a-pyclaw-backend`) |
+| 2a-trixi | C | `reference/trixi/` (`ContextFluxTrixi.jl`, elixirs) + `simulations/trixi.py::TrixiBackend` (subprocess; layout per `design/python-julia-repo.md`) | V18 green — **pending: needs Julia (Joon's machine / cluster)** |
 | 2b | C | `fv/stencil.py`, `boundary.py` (Periodic, Extrapolate, Reflective, Dirichlet, Inflow), `divergence.py`, `split.py` | property tests green at N = 1, 2, 3 |
 | 2c | C | `fv/integrate.py`: `RHS(hyperbolic, parabolic, source)`, ForwardEuler, SSPRK2/3, `CFLAdaptive` stub; `fv/analytic.py` | — |
 | 2d | C | `FluxPredictor` with `requires`; `NumericalFlux(reconstruction, base, dissipation)`; `StencilMLPFlux` (Fused), `NDStencilFlux` | — |
@@ -150,13 +151,13 @@ Exit: `hyperfluxfno.py` deleted; conditioner ablation is a one-key config change
 
 | # | Track | Item | Done when |
 |---|---|---|---|
-| 4.1 | M | `pde/PDEFamily` tier 0 (`flux(u, params, axis, x)`, `max_wave_speed`, `reflect`, conversions, flags); all families conform | `requires ⊆ capabilities` check passes for every config |
+| 4.1 | M | tier-0 conformance: every family implements `flux(u, params, axis, x)`, `max_wave_speed`, `reflect`, conversions, flags on `AbstractPDEFamily` (the class exists since 2a; the numerics methods arrive with 2b–2e, ADR-0001 amendment) | `requires ⊆ capabilities` check passes for every config |
 | 4.2 | M | `ic/InitialCondition.sample(key, grid, layout, bcs)`; one GRF, one RandomStep | property: valid for the PDE for any seed |
-| 4.3 | M | `DatasetRecord`; backend-agnostic writer; `bcs` + backend in Well metadata | — |
-| 4.4 | M | Regen cubic 1D · sine · Burgers · SW · cubic 2D via reference backends (backend: ____); Euler stays on Clawpack | datasets on disk with `dataset.json` |
+| 4.3 | M | `DatasetRecord`; backend-agnostic writer; `bcs` + backend in Well metadata | **done 2026-10-25** with 2a (`simulations/{record,writer}.py`; `dataset_id` from records) |
+| 4.4 | M | Regen cubic 1D · sine · Burgers · SW · cubic 2D via reference backends (backend: ____ — `backend=sharpclaw` available now; cubic 2D needs Trixi or `JaxBackend`); Euler stays on Clawpack | datasets on disk with `dataset.json` |
 | 4.5 | M | `TheWellDataSource` folded into base; `SegmentLoaderBackground` deleted; xarray/h5netcdf/netcdf4/dask gone from `src` | `grep xarray src` empty |
 | 4.6 | M | `bench_loader.py`; GC/prefetch fixes into the loader factory (P3) | before/after numbers in change doc |
-| 4.7 | R | `sim/jax.py::JaxBackend`; second regen with verified WENO5 (new `DatasetRecord` version) | cross-code agreement |
+| 4.7 | R | `simulations/jax.py::JaxBackend`; second regen with verified WENO5 (new `DatasetRecord` version) | cross-code agreement |
 | 4.8 | R | Baselines under non-periodic data (FNO padding; DISCO mask) | — |
 
 ## Phase 6 — Evaluation module  [M] / [R]
@@ -212,4 +213,7 @@ IMEX) — see `design/fv-conventions.md` §Extensibility.
 | 2026-10-24 | `phase5-run-identity` | 5.2 (run side), 5.4 script, 5.5: `wandb_run.py` (mirror), `experiment.py`, Hydra `runs/<date>/<time>` run dir, `wandb=disabled|offline|online`, scripts on the new API, the_well optimizer chain in config, `backfill_run_records.py`; ADR-0010, `design/run-identity.md` | `changes/2026-10-24-phase5-run-identity.md` |
 | 2026-10-24 | `phase5-run-identity` | review round 1: `orbax-checkpoint>=0.12.8` (typed-key wrapper gone); `runs/` package + `experiment.py` at package top, `training/` = building blocks; `RunLayout`; `block` removed | `changes/2026-10-24-phase5-run-identity.md` |
 | 2026-10-25 | `phase5-run-identity` | review round 2: wandb mirror functions moved from `runs/wandb_mirror.py` into `experiment.py` (config-driven assembly); `runs/` = `record`, `run`, `index` | `changes/2026-10-24-phase5-run-identity.md` |
+| 2026-10-25 | `phase2a-pyclaw-backend` | 2a-pyclaw: `simulations/{grid,backend,pyclaw}.py`, `PyClawSpec` on every PDE class (all seven now on the common base), Classic bit-identity goldens (V25), SharpClaw on every PyClaw family, backend-agreement tests (V18a; `tests/verification/` tier scaffold) | `changes/2026-10-25-phase2a-pyclaw-backend.md` |
+| 2026-10-25 | `phase2a-pyclaw-backend` | 4.3: `DatasetRecord`, `WellWriter` (Well `boundary_conditions` group, `dataset.json`), `generate_dataset(backend)`, data-script `backend` group, `dataset_id` from records; `simulations/{dataset,utils,pdesolve,pyclaw_utils}.py` deleted; GRF defaults (F11) and `ViscousBurgers1D` (F8) fixed; ADR-0011, `design/simulation-backends.md` | `changes/2026-10-25-phase2a-pyclaw-backend.md` |
+| 2026-10-25 | `phase2a-pyclaw-backend` | review round 1: Python floor 3.13 + `copy.replace` (TID251); `AbstractPDEFamily` (ADR-0001 amended: tier 0 grows in place, 4.1 = conformance); `utils/` package; `WellWriter` owns the layout and writes only; `SolverFailure`; `waveforms/` → `simulations/initial_conditions/`; agreement test in `tests/verification/`; Test-contracts and persistence-verb sections in coding-standards | `changes/2026-10-25-phase2a-pyclaw-backend.md` |
 | 2026-10-26 | `main`, `phase1-prune` | 0.8: regression goldens from the ICLR checkpoints (7 cases; `translate_legacy_config` F1, `checkpoint_template` for DISCO's `DropPath.p` leaves); V22 green twice on `main`; on `phase1-prune` after parking the `operatornet` key fix (F15: DISCO's forward pass depends on un-checkpointed `operatornet_scale`) | `changes/2026-10-04-phase0-freeze.md`, `changes/2026-10-04-phase1-prune.md` |
