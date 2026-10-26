@@ -4,11 +4,10 @@ from typing import ClassVar, Literal
 import equinox as eqx
 import jax.numpy as jnp
 import numpy as np
-import xarray as xr
 from clawpack import pyclaw, riemann
 from jaxtyping import Float
 
-from ..pdesolve import pdesolve_pyclaw, solution_to_dataset
+from ..pdesolve import pdesolve_pyclaw
 
 
 class Burgers1D(eqx.Module):
@@ -30,7 +29,7 @@ class Burgers1D(eqx.Module):
         Nt: int,
         bc: Literal["periodic"],
         **pdesolve_kwargs,
-    ) -> xr.DataArray:
+    ):
         solver = pyclaw.ClawSolver1D(riemann.burgers_1D)
         solver.limiters = pyclaw.limiters.tvd.vanleer
 
@@ -46,7 +45,7 @@ class Burgers1D(eqx.Module):
             bc,
             **pdesolve_kwargs,
         )
-        return solution_to_dataset(u, t, x_grid, self.coeffs)
+        return u, t, x_grid
 
 
 class ViscousBurgers1D(eqx.Module):
@@ -118,10 +117,7 @@ class ViscousBurgers1D(eqx.Module):
             - periodic boundary condition
 
         Returns:
-            solution_to_dataset(u, t, x_grid, self.coeffs)
-
-        Expected raw solution shape before solution_to_dataset:
-            u_save.shape = (Nt, 1, Nx)
+            (u, t, xs) with u.shape = (Nt, 1, Nx), xs = (x_grid,)
         """
 
         if bc != "periodic":
@@ -196,7 +192,7 @@ class ViscousBurgers1D(eqx.Module):
                 u_save[save_idx, 0, :] = u
                 save_idx += 1
 
-        return solution_to_dataset(u_save, t_save, (x_grid,), self.coeffs)
+        return u_save, t_save, (x_grid,)
 
     def _step_periodic(
         self,

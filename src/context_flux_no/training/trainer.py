@@ -15,6 +15,7 @@ from jaxtyping import Array, PRNGKeyArray, PyTree
 from orbax.checkpoint import v1 as ocp
 
 from context_flux_no.custom_types import FilterSpec, FloatScalar, IntScalar
+from context_flux_no.training.loss import AbstractTrainLoss
 
 
 # Inspired by levanter
@@ -83,7 +84,7 @@ M = TypeVar("M", bound=eqx.Module)
 
 
 class Trainer:
-    loss_fn: Callable
+    loss_fn: AbstractTrainLoss
     optimizer: optax.GradientTransformation
     checkpoint_path: Path
     wandb_kwargs: dict[str, Any]
@@ -91,7 +92,7 @@ class Trainer:
     def __init__(
         self,
         optimizer: optax.GradientTransformation,
-        loss_fn: Callable,
+        loss_fn: AbstractTrainLoss,
         checkpoint_dir: str | Path,
         checkpoint_name: str | None,
         wandb_kwargs: dict[str, Any],

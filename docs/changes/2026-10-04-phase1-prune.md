@@ -1,66 +1,166 @@
 ---
 type: change
-status: planned
-updated: 2026-10-24
+status: landed
+updated: 2026-10-26
 branch: phase1-prune
 roadmap: Phase 1
 ---
 
-# 2026-10-04 — `phase1-prune` (planned)
+# 2026-10-04 — `phase1-prune`
 
-Phase 1 of `docs/roadmap.md`: delete dead symbols and the legacy xarray slice in dependency
-order, behind the regression tier built in Phase 0. Written before the work as the plan of record;
-**Files** below is the planned list and will be rewritten to match `git diff --stat main...HEAD`
-as the work lands.
+Phase 1 of `docs/roadmap.md`: delete dead symbols and the legacy xarray slice in dependency order,
+behind the regression tier built in Phase 0. Executed by Claude on 2026-10-24 from the ledger Joon
+confirmed; the **Steps** section below is the original plan of record and is kept for reference.
+`src/` goes from 10,765 to 9,297 lines.
+
+**Merge gate.** This branch is not merged until `tests/regression` is green on the ICLR goldens
+(Phase 0.8, deferred while the cluster is down). ~~Nothing here changes the forward pass of loaded
+weights~~ — **the gate found one** (2026-10-26, §Findings F15): DISCO's forward pass depends on its
+construction-time initialization through the un-checkpointed `operatornet_scale`, so the F6 key fix
+in `operatornet.py` moved the two DISCO goldens by ≤ 2e-5. That fix is parked (Files, commit 6); the
+five other cases were bit-green.
 
 ## Summary
 
-Remove 14 dead symbols (assessment §5 plus `DPOTEncoder`, `LSKFluxNOTargetNetwork` per D1), the
-legacy xarray loaders/scripts/notebooks (keeping `SegmentLoaderBackground` under a DEPRECATED
-header until Phase 4 regenerates the 1D datasets), switch the legacy PDE classes to the
-`(u, t, xs)` return, and apply four isolated correctness fixes. Target: ~9.5k → ~7.5k LOC in `src`.
+Removes 14 dead symbols (assessment §5 plus `DPOTEncoder` and `LSKFluxNOTargetNetwork` per D1),
+the legacy xarray training path (loaders, one script, three data configs, five notebooks; keeping
+`SegmentLoaderBackground` under a DEPRECATED header until Phase 4), switches the legacy PDE classes
+to the `(u, t, xs)` return and deletes `solution_to_dataset`, fixes four PRNG-key-reuse bugs (F5,
+F6) and guards against their recurrence with a key-hygiene test, fixes a `jax.flatten_util` import
+that broke model construction on JAX 0.9, repairs CI (ruff was not a dependency) and the Phase 0
+hypernetwork test.
 
-## Files *(planned)*
+## Files
 
-See the Steps tables below; every row names its file. The final list is produced by
-`scripts/check_docs.py --files` at landing.
+Commit 0 — CI and test repair:
+- `pyproject.toml`, `uv.lock` — `ruff==0.15.11` in the dev group (CI's `uv run ruff` had nothing to run).
+- `.pre-commit-config.yaml` — ruff rev aligned to `v0.15.11`.
+- `scripts/import_all.py` — new: imports every package module; missing `clawpack` reported as skipped unless `--strict`.
+- `tests/test_nn_hypernetwork.py` — fixed keyword names (`in_size`, `target_network`, …); now also checks both valid initialisations build.
+- `src/context_flux_no/nn/hypernetwork.py`, `src/context_flux_no/models/multiphysics/disco/disco.py` — `from jax import flatten_util` and `flatten_util.ravel_pytree(...)` (see Bugs fixed; review round 1 replaced the initial `import jax.flatten_util  # noqa` form).
+
+Commit 1 — dead symbols (ledger 1–11):
+- `src/context_flux_no/models/fluxfno.py` — deleted (`FluxFNO1D`).
+- `src/context_flux_no/models/multiphysics/wrapper.py` — deleted (`MultiphysicsWrapper`); `models/multiphysics/__init__.py` re-export removed.
+- `src/context_flux_no/nn/vit.py` — deleted (`VisionTransformer`).
+- `src/context_flux_no/models/multiphysics/disco/disco.py` — `LinearVariableInFeatures` removed.
+- `src/context_flux_no/nn/operators/fourier.py` — `SpectralConv1D/2D/3D`, `Fourier1D/2D/3D` removed; `nn/operators/__init__.py` exports `Fourier` only.
+- `src/context_flux_no/nn/position_encoding/relative.py` — `rel_pos_to_bucket_bin` removed.
+- `src/context_flux_no/training/batching.py` — deleted; `training/__init__.py` updated.
+- `src/context_flux_no/data/transforms.py` — deleted (`SpatialDownsample`); `data/__init__.py` updated.
+- `src/context_flux_no/simulations/pde/euler.py` — `Euler1D`, `riemann_euler_hll_1D`, `_pressure_flux_1d` removed.
+- `src/context_flux_no/simulations/utils.py` — `sample_coefficients_uniform`, `BASE_KEY_DICT` removed.
+- `src/context_flux_no/waveforms/grf.py` — `ExponentialCov` removed.
+
+Commit 2 — D1 (ledger 12–13):
+- `src/context_flux_no/models/multiphysics/hyperfluxfno/encoders/dpot_encoder.py` — deleted; `encoders/__init__.py` updated.
+- `src/context_flux_no/models/multiphysics/hyperfluxfno/target_networks/lskflux.py` — deleted; `target_networks/__init__.py` updated.
+- `src/context_flux_no/models/multiphysics/hyperfluxfno/utils.py` — `make_encoder` loses the `DPOT` branch and `Literal`; `TARGET_NETWORK_DICT` loses `LSKFluxNO`.
+
+Commit 3 — legacy training path (ledger 14–17):
+- `src/context_flux_no/training/trainer.py` — `loss_fn: AbstractTrainLoss` (kept on purpose).
+- `src/context_flux_no/training/loader.py` — `SegmentLoaderNaive`, `SegmentLoader`, `ContextSegmentLoader` removed; DEPRECATED module docstring naming Phase 4; `SegmentLoaderBackground` + `make_segment_axis` kept.
+- `src/context_flux_no/training/dataset.py` — deleted (`PDEDataset`); `training/__init__.py` exports `SegmentLoaderBackground` only.
+- `scripts/training/train_shallow_water.py`; `scripts/training/configs/data/{burgers_1d,shallow_water_1d,2d_scalar}.yaml` — deleted.
+- `notebooks/training/{fluxfno_burgers,shallow_water_1d,multiphysics_cubic_2d,viscous_burgers_1d}.ipynb`, `notebooks/misc/prototype_dataloading.ipynb`, `notebooks/misc/debug_dataloader.py` — deleted (recoverable from the `pre-nbstripout` tag).
+
+Commit 4 — PDE returns (ledger 18):
+- `src/context_flux_no/simulations/pde/{burgers,cubic,sine_1d,shallow_water}.py` — `solve` returns `(u, t, xs)`; `solution_to_dataset` import and `xarray` annotation removed.
+- `src/context_flux_no/simulations/pdesolve.py` — `solution_to_dataset` and `import xarray` removed.
+
+Commit 5 — correctness (ledger 19–21, 25):
+- `src/context_flux_no/models/multiphysics/disco/disco.py` — `split(key, 4)`.
+- `src/context_flux_no/models/multiphysics/hyperfluxfno/hyperfluxfno.py` — `HyperNeuralOperator`: `split(key, 6)`, head on `keys[5]`.
+- `src/context_flux_no/models/multiphysics/disco/operatornet.py`, `src/context_flux_no/models/multiphysics/hyperfluxfno/target_networks/unet.py` — second bottleneck conv on `keys_bot[1]`.
+- `tests/test_models_disco.py` — missing `assert` at the 3D check.
+- `tests/unit/__init__.py`, `tests/unit/test_key_hygiene.py` — new.
+
+Commit 6 — bookkeeping: this document, `docs/roadmap.md`, `docs/architecture.md`, `docs/findings.md`, `docs/verification.md`, `docs/index.md`; `scripts/check_docs.py` accepts path suffixes in Files entries.
+
+Commit 6 — goldens gate, 2026-10-26 (after merging `main` with the goldens):
+- `src/context_flux_no/models/multiphysics/disco/operatornet.py` — the second bottleneck conv back on `keys_bot[0]` (F15; comment at the site). `target_networks/unet.py` keeps `keys_bot[1]`.
+- `tests/unit/test_key_hygiene.py` — DISCO case `xfail(strict=True, reason=F15)`, so the fix's return flips the test.
+- `docs/findings.md` — F15; F6 action amended. `docs/verification.md` — V22 green, V24 note. `docs/roadmap.md` — 1.3 row, deferred item, Done row.
 
 ## Design
 
-- **Keep `SegmentLoaderBackground`** (contrary to the assessment's dead list) because seven
-  evaluation notebooks still read the ICLR-era 1D datasets through xarray; it carries a DEPRECATED
-  header naming Phase 4 as its removal.
-- **Keep `AbstractTrainLoss`** and wire it into `Trainer` type hints; flux-space losses (Phase 6)
-  need the interface.
-- **Base-class/`coeffs` naming of the legacy PDE classes is not touched** — that is Phase 4's
-  `PDEFamily`; doing it now means doing it twice.
+- **Keep `SegmentLoaderBackground`** (contrary to the assessment's dead list): seven evaluation
+  notebooks still read the ICLR-era 1D datasets through xarray; it carries a DEPRECATED header naming
+  Phase 4 as its removal. Rejected: a `legacy/` folder (Principle 3).
+- **Keep `AbstractTrainLoss`** and type `Trainer.loss_fn` with it: flux-space losses (Phase 6) need
+  the interface (plan §10.8).
+- **Base-class / `coeffs` naming of the legacy PDE classes is not touched** — Phase 4's
+  `PDEFamily`; doing it now means doing it twice. Only the return type is unified so that
+  `solution_to_dataset` can go.
+- **Key-hygiene test as the guard for F5/F6** rather than seed-parity goldens: bit-parity of fresh
+  trainings with the ICLR runs stopped being a property of this repo at D15, and GPU training is not
+  bitwise reproducible anyway. The test records every key passed to `jax.random.{split, fold_in,
+  samplers}` during `__init__` and fails on any repeat; traced keys (under `vmap`) are skipped because
+  they cannot be compared. It was verified to fail with the `keys_bot[0]` bug reinstated. Models are
+  built from their Hydra configs on 16-cell grids so the real constructors are exercised; this also
+  makes it the first test that covers the method's model classes at all.
+- **Park the `operatornet` half of F6 rather than regenerate the DISCO goldens** (2026-10-26). The tier's claim is "the refactor reproduces the submitted behavior"; regenerating goldens on the branch would have made them pin a model that is not the ICLR DISCO, for a two-line fix. Rejected: regenerating with a change-document entry (allowed by policy, but it retires the DISCO baselines from V22); loosening the DISCO tolerance (0.4% relative is not a tolerance); restoring the training-time scales by re-running the buggy init behind a legacy flag (a second route to one result). The fix returns with checkpointed `operatornet_scale` (Phase 3).
+- **Fix F6 now** (the two UNet copies) although the plan deferred it to Phase 2g: the hygiene test
+  found it, the fix is one index, and leaving a known-failing test behind is worse than a one-line
+  deviation from the ledger.
+- **ruff pinned in the dev group**: `uv run ruff` in CI needs ruff to be a project dependency;
+  `uvx ruff` would have been the alternative but pins nothing. `ruff format` on the ledger's files
+  used 0.15.11, so the pre-commit rev follows.
 
-## Bugs fixed *(planned)*
+## Bugs fixed
 
-`test_models_disco.py:286` missing assert; DISCO `split(key, 3)`/`keys[3]`; `HyperNeuralOperator`
-key reuse; `train_the_well.py` valid sampler length (F5 and assessment §6).
+- **`jax.flatten_util` never imported.** `HypernetworkHead` and DISCO's `HyperNetworkHead` access
+  `jax.flatten_util.ravel_pytree`, but on JAX 0.9 `flatten_util` is not an attribute of `jax` until
+  the submodule is imported. Model construction raised `AttributeError` in isolation; in training
+  scripts optax/equinox had imported it first, which is why it never surfaced. Found by the corrected
+  hypernetwork test.
+- **PRNG key reuse** (F5, F6): DISCO `keys[3]` out of range (clamped to `keys[2]`); `HyperNeuralOperator`
+  `keys[3]` shared by `project_operator` and `hypernetwork_head`; both UNet copies `keys_bot[0]` for both
+  bottleneck convolutions.
+- `tests/test_models_disco.py:286` had no `assert`; the 3D `OperatorNetwork` shape check was a no-op.
+- `tests/test_nn_hypernetwork.py` (Phase 0) raised `TypeError` from wrong keyword names and never
+  exercised the guard.
+- Ledger 22 (`train_the_well.py` valid sampler length) was already correct; no change.
 
 ## Findings
 
-Deferred correctness items are recorded in `docs/findings.md` (F3, F4, F6) rather than fixed here.
+- F5 and F6 are fixed (commit 5); appended to `docs/findings.md` with the commit. F6's `operatornet` half is parked again in commit 6 (below).
+- **F15** (2026-10-26): DISCO's forward pass depends on `operatornet_scale`, floats computed from the fresh init and never checkpointed; the ICLR DISCO checkpoints are reproducible only with the original init code and key. Caught by the regression tier: `disco_cubic1d` 47/100 points off by ≤ 1.9e-5 (0.4% relative), `disco_euler2d` 622/65536 by ≤ 4.9e-6; the five other cases bit-identical. Bears on every DISCO baseline number's reproducibility and on any later change to `OperatorNetwork`'s init.
+- New: the `jax.flatten_util` import (F9) — a latent breakage, not a result-affecting one, recorded
+  because any standalone model construction (e.g. the regression tier's `load_model`) would have hit it.
 
 ## Tests
 
-`scripts/import_all.py` (new) must be clean; fast tiers after every group; regression tier at the
-end of 1.1 and 1.2.
+- Fast tier: `JAX_PLATFORMS=cpu uv run pytest` → 33 passed (was 21 + 1 failing at the start of the
+  branch). Runs on CPU in ~3.5 min because the DISCO/DPOT shape tests build large models.
+- `uv run python scripts/import_all.py` → 0 failed (5 skipped here for missing `clawpack`; CI has
+  gfortran and runs `--strict` implicitly through `uv sync`).
+- `tests/unit/test_key_hygiene.py` — 6 models × no-reuse, 3 models × seed determinism.
+- Regression tier — skips until the goldens exist (merge gate).
 
 ## Open issues
 
 - Burgers / shallow-water / 2D-cubic *training* is unavailable between Phase 1 and the Phase 4 regen.
-- **Merge gate**: this branch is not merged until `tests/regression` is green on the ICLR goldens
-  (Phase 0.8, deferred while the cluster is down). The work itself does not depend on them — see
-  the roadmap's Phase 1 note — so the branch can be completed and self-reviewed first.
+- `SegmentLoaderBackground` and the `xarray`/`h5netcdf`/`netcdf4`/`dask` dependencies remain until Phase 4.
+- F3 (`rfftn` axes), F4 (`stack_grid` ignored), DISCO's double `standardize`, and the four face
+  conventions stay deferred to Phase 2g/3 as recorded in `findings.md`.
+- DISCO's hygiene case is a strict `xfail` until `operatornet_scale` is checkpointed and the `keys_bot` fix returns (F15).
+- The hygiene test builds DPOT with `vmap`-initialised blocks whose keys are traced and therefore
+  not checked; a reuse inside those blocks would not be caught.
 
 ## Review notes
 
 | Change | Thoughts | Modifications |
 |---|---|---|
-| *(rows added as files land)* | | |
+| **Commit 6** `disco/operatornet.py` `keys_bot[0]` restored (F15); `test_key_hygiene.py` DISCO strict xfail; F15, V22/V24, roadmap | | |
+| Commit 0 — `ruff` dev pin, pre-commit rev, `scripts/import_all.py`, hypernetwork test fix, `jax.flatten_util` imports | Mostly looks good. One thing - meybe to an `from jax import flatten_util` and replace `jax.flatten_util` with `flatten_util`? This would remove the need for #noqas. | Deferred to discussions with Claude. |
+| Commit 1 — dead symbols (ledger 1–11) | Confirmed. | None |
+| Commit 2 — `DPOTEncoder`, `LSKFluxNOTargetNetwork`, `make_encoder`/`TARGET_NETWORK_DICT` | Confirmed. | None |
+| Commit 3 — legacy loaders/script/configs/notebooks; `SegmentLoaderBackground` DEPRECATED; `Trainer.loss_fn: AbstractTrainLoss` | Confirmed. | None |
+| Commit 4 — PDE `solve` returns `(u, t, xs)`; `solution_to_dataset` removed | Confirmed. | None |
+| Commit 5 — key-reuse fixes (DISCO, HNO, both UNets); `tests/unit/test_key_hygiene.py`; missing assert | Looks good. | None |
+| Commit 6 — docs bookkeeping | Looks good. | None |
+| Review round 1 (`a`) — `from jax import flatten_util`, call sites `flatten_util.ravel_pytree`; no `noqa` | | |
 
 ---
 

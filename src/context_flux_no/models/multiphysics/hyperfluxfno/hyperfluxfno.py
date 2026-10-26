@@ -352,7 +352,7 @@ class HyperNeuralOperator(AbstractMultiphysicsOperator):
     ):
         self.boundary_condition = boundary_condition
 
-        keys = jax.random.split(key, 5)
+        keys = jax.random.split(key, 6)
 
         self.context_encoder = make_encoder(
             encoder_type,
@@ -421,7 +421,7 @@ class HyperNeuralOperator(AbstractMultiphysicsOperator):
             target_network=target_network_init,
             num_blocks=blocks_hyper,
             initialization=hypernet_init,
-            key=keys[3],
+            key=keys[5],
         )
 
         self.num_spatial_dims = num_spatial_dims

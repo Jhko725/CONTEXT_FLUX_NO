@@ -73,9 +73,9 @@ Exit: `pytest -m "not regression"` green; regression tier green on CPU; `check_c
 has no import/attribute/init-string failures; `train_multiphysics.py
 model=hyperfluxno_2d_euler_v2 training.max_steps=20` runs and checkpoints.
 
-## Phase 1 — Delete dead and legacy code  [C]  (branch `phase1-prune`; may start before the goldens exist)
+## Phase 1 — Delete dead and legacy code  [C]  (branch `phase1-prune`; **landed 2026-10-24, awaiting the regression gate to merge**)
 
-Change document: `changes/2026-10-04-phase1-prune.md` (planned). Dependency-ordered
+Change document: `changes/2026-10-04-phase1-prune.md` (landed). Dependency-ordered
 deletion; `ruff check` (F401) and the fast tiers after each group; regression tier at the
 end of each sub-phase.
 
@@ -89,17 +89,20 @@ self-reviewed now; **merging `phase1-prune` waits for the regression tier to be 
 goldens, which is the mechanical confirmation of the argument above. If a golden fails after the
 merge of Phase 1 work, the bisect is one branch long.
 
-| # | Item | Done when |
-|---|---|---|
-| 1.1 | 14 dead symbols (assessment §5 + D1: `DPOTEncoder`, `LSKFluxNOTargetNetwork`) | grep list empty; `import_all.py` clean |
-| 1.1 | Keep `AbstractTrainLoss`; wire into `Trainer` type hints | — |
-| 1.2 | Legacy xarray path removed except `SegmentLoaderBackground` (+`make_segment_axis`), kept with DEPRECATED header until Phase 4 because seven evaluation notebooks still read the ICLR-era 1D datasets | `grep xarray src` → only `training/loader.py` |
-| 1.2 | Legacy PDE classes return `(u, t, xs)`; `solution_to_dataset` gone | — |
-| 1.3 | Safe correctness fixes, one commit each: `test_models_disco.py:286` assert; DISCO `split(key, 4)`; `HyperNeuralOperator` key reuse; `train_the_well.py` valid sampler length | regression unchanged |
-| 1.3 | Deferred correctness items recorded in `findings.md` (rfftn axes, `stack_grid`, UNet keys/mask, DISCO double standardize, four face conventions) | — |
+| # | Item | Done when | Status |
+|---|---|---|---|
+| 1.1 | 14 dead symbols (assessment §5 + D1: `DPOTEncoder`, `LSKFluxNOTargetNetwork`) | grep list empty; `import_all.py` clean | done (`359c773`, `0e3241e`) |
+| 1.1 | Keep `AbstractTrainLoss`; wire into `Trainer` type hints | — | done (`9c16792`) |
+| 1.2 | Legacy xarray path removed except `SegmentLoaderBackground` (+`make_segment_axis`), kept with DEPRECATED header until Phase 4 because seven evaluation notebooks still read the ICLR-era 1D datasets | `grep xarray src` → only `training/loader.py` | done (`9c16792`) |
+| 1.2 | Legacy PDE classes return `(u, t, xs)`; `solution_to_dataset` gone | — | done (`24df75c`) |
+| 1.3 | Correctness fixes: `test_models_disco.py:286` assert; DISCO `split(key, 4)`; `HyperNeuralOperator` key reuse; UNet `keys_bot` (F6, pulled forward; the `operatornet` copy parked 2026-10-26, F15); `jax.flatten_util` import (F9); key-hygiene test | regression unchanged | done (`134dfdb`, `518ee62`); `train_the_well.py` was already correct |
+| 1.3 | Deferred correctness items recorded in `findings.md` (rfftn axes, `stack_grid`, UNet mask channel, DISCO double standardize, four face conventions) | — | done (F3, F4, F6 remainder, F2) |
 
-Exit: `import_all.py` and `ruff check` clean; fast and regression tiers green;
-`evaluate_cubic.ipynb` reaches its first metric cell.
+Exit: `import_all.py` and `ruff check` clean ✔; fast tier green (33 tests) ✔; regression tier — pending goldens; `evaluate_cubic.ipynb` reaches its first metric cell — to be checked by Joon on the cluster.
+
+| # | Item | Done when | Status |
+|---|---|---|---|
+| 1.0 | CI repair: `ruff` in the dev group; `scripts/import_all.py` | CI green on `phase1-prune` | done (`758600f`) |
 
 ## Phase 5 — Run identity  [C]  (directly after Phase 1; P9, P10)
 
@@ -183,6 +186,7 @@ IMEX) — see `design/fv-conventions.md` §Extensibility.
 - `CFLAdaptive` implementation (`scan` with bounded substeps vs diffrax controller) — when first needed.
 - `orbax-checkpoint==0.11.25` pin — choose a version deliberately in Phase 5 and re-save the ICLR checkpoints once under the shim.
 - Whether `TrixiBackend` remains a permanent generator after WENO5 is verified.
+- DISCO `operatornet_scale` as checkpointed array leaves (F15), with the `operatornet.py` `keys_bot` fix and the hygiene xfail flip — Phase 3 (baselines), when legacy checkpoints get the leaf filled at load.
 
 ---
 
@@ -197,3 +201,8 @@ IMEX) — see `design/fv-conventions.md` §Extensibility.
 | 2026-10-04 | `phase0-freeze` | 0.10: README; training README model names; hello-world stub removed | `changes/2026-10-04-phase0-freeze.md` |
 | 2026-10-24 | `phase0-freeze` (via `main`) | 0.1/0.4 tags pushed; 0.2 breakages confirmed; 0.6a–e: `bias-hyperinit` fixed + guarded + default, dangling configs and `train_multiphysics_2d.py` removed, `lskflux`→`convnext` config, `data/__init__` exports, `check_configs.py`; 0.5: `icon/` → `third_party/icon` submodule (`icon-baseline`) | `changes/2026-10-04-phase0-freeze.md` |
 | 2026-10-24 | `phase0-freeze` | 0.8 machinery: `tests/regression/` (cases, helpers, `make_inputs.py`, `make_goldens.py`, skip modes); 0.7 script `scripts/audit_bias_hyperinit.py`; `the-well` (and with it `torch`) removed; README build prerequisites | `changes/2026-10-04-phase0-freeze.md` |
+| 2026-10-24 | `phase1-prune` | 1.0: CI repaired (`ruff` dev pin), `scripts/import_all.py`; hypernetwork test fixed; `jax.flatten_util` import (F9) | `changes/2026-10-04-phase1-prune.md` |
+| 2026-10-24 | `phase1-prune` | 1.1: 14 dead symbols removed (incl. `DPOTEncoder`, `LSKFluxNOTargetNetwork`, D1); `AbstractTrainLoss` wired into `Trainer` | `changes/2026-10-04-phase1-prune.md` |
+| 2026-10-24 | `phase1-prune` | 1.2: legacy xarray training path removed (loaders, script, 3 data configs, 5 notebooks); `SegmentLoaderBackground` DEPRECATED until Phase 4; PDE classes return `(u, t, xs)`; `solution_to_dataset` gone | `changes/2026-10-04-phase1-prune.md` |
+| 2026-10-24 | `phase1-prune` | 1.3: key-reuse fixes (F5, F6) + `tests/unit/test_key_hygiene.py`; missing assert; `src/` 10,765 → 9,297 lines | `changes/2026-10-04-phase1-prune.md` |
+| 2026-10-26 | `main`, `phase1-prune` | 0.8: regression goldens from the ICLR checkpoints (7 cases; `translate_legacy_config` F1, `checkpoint_template` for DISCO's `DropPath.p` leaves); V22 green twice on `main`; on `phase1-prune` after parking the `operatornet` key fix (F15: DISCO's forward pass depends on un-checkpointed `operatornet_scale`) | `changes/2026-10-04-phase0-freeze.md`, `changes/2026-10-04-phase1-prune.md` |

@@ -78,6 +78,7 @@ dev = [
     "pre-commit>=4.0",
     "ty",
     "nbstripout>=0.8",
+    "ruff==0.15.11",
 ]
 
 [tool.pytest.ini_options]

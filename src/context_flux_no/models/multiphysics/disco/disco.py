@@ -6,6 +6,7 @@ import equinox as eqx
 import jax
 import jax.numpy as jnp
 from einops import reduce
+from jax import flatten_util
 from jaxtyping import Array, Float, PRNGKeyArray, PyTree
 
 from ....nn.misc import destandardize, standardize
@@ -13,10 +14,6 @@ from ....utils import num_parameters
 from ..abstract import AbstractMultiphysicsOperator
 from .hypernet import HyperNetwork
 from .operatornet import OperatorNetwork
-
-
-class LinearVariableInFeatures(eqx.Module):
-    """Same as equinox.nn.Linear, but accepts arrays with varying in_features."""
 
 
 class HyperNetworkHead[NN: eqx.Module](eqx.Module):
@@ -50,7 +47,7 @@ class HyperNetworkHead[NN: eqx.Module](eqx.Module):
         target_params, target_static = eqx.partition(
             target_subnetwork, eqx.is_inexact_array
         )
-        _, unflatten_fn = jax.flatten_util.ravel_pytree(target_params)
+        _, unflatten_fn = flatten_util.ravel_pytree(target_params)
         self.target_static: NN = target_static
         self.unflatten_fn = unflatten_fn
         self.where = where
@@ -118,7 +115,7 @@ class DISCO(AbstractMultiphysicsOperator):
         *,
         key: PRNGKeyArray,
     ):
-        keys = jax.random.split(key, 3)
+        keys = jax.random.split(key, 4)
         # For now, will consider fixed spatial dimensions
         # TODO: Do I need to specify padding mode based on boundary conditions?
         self.hypernet = HyperNetwork(

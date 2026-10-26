@@ -5,6 +5,7 @@ import equinox as eqx
 import jax
 import jax.numpy as jnp
 from einops import rearrange
+from jax import flatten_util
 from jaxtyping import Array, Float, PRNGKeyArray
 
 from context_flux_no.utils import is_floating_array, num_parameters
@@ -94,7 +95,7 @@ class HypernetworkHead[NN: eqx.Module](eqx.Module):
         if num_params == 0:
             return None, None
         else:
-            params_flat, unflatten_fn = jax.flatten_util.ravel_pytree(target)
+            params_flat, unflatten_fn = flatten_util.ravel_pytree(target)
             linear = BlockDiagonalLinear(
                 in_features=self.in_size,
                 out_features=num_params,

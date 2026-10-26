@@ -21,7 +21,7 @@ conditioning mechanism (hypernetwork) specialises a target network, and the targ
 — a finite-volume *flux* network — predicts the next state. Families: cubic, sine and
 Burgers scalar laws, shallow water, 2D Euler. Baselines: DISCO, DPOT, FNO variants.
 
-## Module map — as found at `iclr2027-submission` (2026-10-04)
+## Module map — after Phase 1 (`phase1-prune`, 2026-10-24); struck-through = removed in Phase 1
 
 ```
 src/context_flux_no/
@@ -31,32 +31,29 @@ src/context_flux_no/
 │   │   ├── hyperfluxfno/        the method (four generations side by side)
 │   │   │   ├── hyperfluxfno.py  HyperFluxFNOLocal · HyperNeuralOperator · HyperNeuralOperatorv2 ·
 │   │   │   │                    ContextAppendedFluxNO; InterfaceReconstructor; FluxModel; ContextConditionedFluxModel
-│   │   │   ├── encoders/        ViTEncoder · TRecViTEncoder · DPOTEncoder(dead, D1)
-│   │   │   ├── target_networks/ FluxNO · NDFluxNO · UNet · FNO · ConvNeXtV2 · LSKFluxNO(dead, D1); each does its own FV update
+│   │   │   ├── encoders/        ViTEncoder · TRecViTEncoder · ~~DPOTEncoder~~
+│   │   │   ├── target_networks/ FluxNO · NDFluxNO · UNet · FNO · ConvNeXtV2 · ~~LSKFluxNO~~; each does its own FV update
 │   │   │   └── utils.py         make_encoder / make_target_network (string dispatch)
 │   │   ├── disco/               DISCO baseline (own HyperNetworkHead, UNet blocks byte-identical to target_networks/unet.py)
 │   │   ├── dpot.py              DPOT baseline
 │   │   ├── fno.py, fluxno.py    NaiveFNO · SpatiotemporalFNO · NaiveFluxNO (thin wrappers)
-│   │   └── wrapper.py           MultiphysicsWrapper (dead)
-│   ├── fno.py                   FNO — the one real FNO implementation
-│   └── fluxfno.py               FluxFNO1D (dead; constructor broken)
+│   │   └── ~~wrapper.py~~
+│   └── fno.py                   FNO — the one real FNO implementation          (~~fluxfno.py~~)
 ├── nn/                          attention (fork of eqx), hypernetwork.HypernetworkHead, embedding, position_encoding,
-│                                operators/fourier (SpectralConv, Fourier + 6 dead subclasses), ssm, convtranspose, misc, …
-├── training/                    trainer.py (Levanter-style, orbax + wandb), loss.py (OneStep/Denoising/Pushforward),
-│                                loader.py (legacy xarray SegmentLoader*), dataset.py (PDEDataset, legacy), batching.py (dead), io.py (load_model)
-├── data/                        sources.py: WellDatasetSourceBase · ZarrWellDatasetSource (current) · TheWellDataSource (re-implements base);
-│                                transforms.py (dead)
+│                                operators/fourier (SpectralConv, Fourier), ssm, convtranspose, misc, … (~~vit.py~~)
+├── training/                    trainer.py (Levanter-style, orbax + wandb; loss_fn: AbstractTrainLoss), loss.py (OneStep/Denoising/Pushforward),
+│                                loader.py (DEPRECATED: SegmentLoaderBackground only, until Phase 4), io.py (load_model)  (~~dataset.py~~, ~~batching.py~~)
+├── data/                        sources.py: WellDatasetSourceBase · ZarrWellDatasetSource (current) · TheWellDataSource (re-implements base)  (~~transforms.py~~)
 ├── simulations/                 pde/{burgers, cubic, euler, shallow_water, sine_1d, base}: 2 classes on AbstractHyperbolicConservationLaw,
-│                                6 plain eqx.Modules; pdesolve.py (PyClaw wrapper + xarray solution_to_dataset); utils.generate_dataset;
+│                                5 plain eqx.Modules (~~Euler1D~~), all returning (u, t, xs); pdesolve.py (PyClaw wrapper); utils.generate_dataset;
 │                                dataset.py ZarrWellDataset (writer); pyclaw_utils.py
 ├── waveforms/                   GaussianRandomField{,1D,2D}, PeriodicRandomStepFunction{1D,2D}, MultichannelWaveform, TruncatedFourier1D
 ├── plotting/, metrics.py, utils.py, custom_types.py
 scripts/
-├── training/  train_multiphysics.py (current, zarr) · train_the_well.py (broken import) · train_shallow_water.py (legacy) ·
-│              train_multiphysics_2d.py (broken import); configs/ (26 model yamls, 2 data schemas)
+├── training/  train_multiphysics.py (current, zarr) · train_the_well.py; configs/ (22 model yamls, 3 data yamls, one schema)  (~~train_shallow_water.py~~, ~~train_multiphysics_2d.py~~)
 └── data/      generate_dataset.py; configs/
-notebooks/    data_generation/ evaluation/ misc/ nn/ training/ — evaluation logic (compute_metrics ×7, metrics_long_rollout ×4) lives here
-tests/        5 example files (DISCO/DPOT blocks, nn utils) + test_nn_hypernetwork.py; tests/regression/ machinery (goldens pending)
+notebooks/    data_generation/ evaluation/ misc/ nn/ training/ — evaluation logic (compute_metrics ×7, metrics_long_rollout ×4) lives here; 5 legacy notebooks removed
+tests/        5 example files + test_nn_hypernetwork.py; tests/unit/test_key_hygiene.py (first test over the method's model classes); tests/regression/ machinery (goldens pending)
 third_party/icon   submodule → Jhko725/icon-baseline (upstream ICON + Joon's HDF5 data path); not imported by src   [0.5 done]
 ```
 

@@ -3,4 +3,3 @@ from .sources import (
     WellDatasetSourceBase as WellDatasetSourceBase,
     ZarrWellDatasetSource as ZarrWellDatasetSource,
 )
-from .transforms import SpatialDownsample as SpatialDownsample
