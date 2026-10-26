@@ -1,4 +1,6 @@
+import logging
 from pathlib import Path
+from typing import Any
 
 import equinox as eqx
 import jax
@@ -7,6 +9,30 @@ from hydra.utils import instantiate
 from jaxtyping import PyTree
 from omegaconf import OmegaConf
 from orbax.checkpoint import v1 as ocp
+
+
+log = logging.getLogger(__name__)
+
+# Values the ICLR checkpoints stored in their model config that the current code no longer
+# accepts, and what they meant when those models were trained: `bias_hyperinit` (misspelled in
+# 10 of 12 configs, F1) fell through `HypernetworkHead` to the default initialization. The
+# loaded weights make the choice irrelevant to the forward pass; the stored value is left in
+# the checkpoint as evidence for the 0.7 audit.
+_LEGACY_CONFIG_FIXES: dict[tuple[str, Any], Any] = {
+    ("hypernet_init", "bias_hyperinit"): "default",
+}
+
+
+def translate_legacy_config(model_config: dict[str, Any]) -> dict[str, Any]:
+    """The stored model config with `_LEGACY_CONFIG_FIXES` applied (top level); a copy."""
+    fixed = dict(model_config)
+    for (key, legacy), current in _LEGACY_CONFIG_FIXES.items():
+        if fixed.get(key) == legacy:
+            log.warning(
+                "legacy checkpoint config %s=%r read as %r (F1)", key, legacy, current
+            )
+            fixed[key] = current
+    return fixed
 
 
 def _infer_step(ckpt_dir: Path) -> int:
@@ -40,7 +66,9 @@ def load_model(
         step_number = _infer_step(loaddir)
 
     with ocp.training.Checkpointer(loaddir) as mngr_load:
-        model_config = mngr_load.root_metadata().custom_metadata
+        model_config = translate_legacy_config(
+            dict(mngr_load.root_metadata().custom_metadata)
+        )
         model_backbone = instantiate(OmegaConf.create(model_config))
 
         weights_backbone, rest = eqx.partition(

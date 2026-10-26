@@ -63,12 +63,20 @@ Claude's second pass (2026-10-24):
 
 - `tests/__init__.py`, `tests/regression/{__init__,common,conftest,make_inputs,make_goldens,test_regression}.py`, `tests/regression/{README.md,cases.yaml}`, `tests/regression/{inputs,goldens}/.gitkeep` — regression-tier machinery (0.8); goldens deferred.
 - `scripts/audit_bias_hyperinit.py` — the 0.7 audit as a script, run when the cluster is back.
+
+Goldens preparation (2026-10-26, cluster back):
+- `src/context_flux_no/training/io.py` — `translate_legacy_config`: the stored `hypernet_init: bias_hyperinit` of the 1D ICLR checkpoints is read as `default` (F1) before `instantiate`, with a warning; the 0.6a guard had refused those checkpoints.
+- `tests/test_training_io.py` — new: the translation and its pass-through.
+- `tests/regression/{README.md, make_inputs.py, make_goldens.py}` — run as modules (`python -m tests.regression.make_inputs`): as scripts their `from tests.regression.common import …` failed with "No module named tests".
+- `docs/findings.md` — F1 action updated.
 - `pyproject.toml`, `uv.lock` — `pythonpath = ["."]` for pytest; `the-well` removed (unused; it pulled in `torch`).
 - `scripts/check_configs.py`, `src/context_flux_no/nn/hypernetwork.py`, `tests/test_nn_hypernetwork.py` — `ruff format` only (`style:` commit).
 - `README.md` — PyClaw build prerequisites.
 - `docs/roadmap.md`, `docs/architecture.md`, `docs/verification.md`, this document — bookkeeping.
 
 ## Design
+
+- **Legacy config translation lives in the legacy loader** (`training/io.py::load_model`, the loader the regression tier and the 5.4 backfill use, to be retired with the ICLR shim). The misspelled value is mapped to `"default"` — what it meant when those models were trained (F1) — not to `"bias-hyperinit"`, so the rebuilt model describes the trained one truthfully; the loaded weights make the choice irrelevant to the forward pass either way. Rejected: accepting the typo in `HypernetworkHead`'s guard (a second spelling for one value, keeping alive what 0.6a removed); editing the checkpoints' `custom_metadata` (the ICLR tree is the archive); generating the goldens at the `iclr2027-submission` tag (no harness there).
 
 - **Documentation system** — adopted from `Jhko725/deep_isochron` with these refinements:
   change documents double as the branch plan (`status: planned → in-progress → landed → merged`);
@@ -143,6 +151,7 @@ tier (`JAX_PLATFORMS=cpu uv run pytest tests/regression --checkpoints-root ./che
 | Change | Thoughts | Modifications |
 |---|---|---|
 | `CLAUDE.md` — session protocol and conventions | Looks good. | None |
+| `training/io.py` — `translate_legacy_config` (F1, goldens prep 2026-10-26); `tests/test_training_io.py`; regression scripts run as modules | | |
 | `docs/roadmap.md` — tracks, phase tables, Done ledger | Looks good. | None |
 | `docs/architecture.md` — as-found + planned | Looks good. | None |
 | `docs/verification.md` — claim → test matrix (all planned) | Looks good. | None |

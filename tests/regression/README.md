@@ -11,9 +11,9 @@ Three one-off steps on the machine that has `./checkpoints/` and `./data/dataset
 ```bash
 # 1. fill in the checkpoint directories in cases.yaml (ls checkpoints/*/*/*/seed=0/)
 # 2. extract one context window per dataset (self-contained inputs, committed once)
-JAX_PLATFORMS=cpu uv run python tests/regression/make_inputs.py --data-root ./data/datasets
+JAX_PLATFORMS=cpu uv run python -m tests.regression.make_inputs --data-root ./data/datasets
 # 3. generate the goldens
-JAX_PLATFORMS=cpu uv run python tests/regression/make_goldens.py --checkpoints-root ./checkpoints
+JAX_PLATFORMS=cpu uv run python -m tests.regression.make_goldens --checkpoints-root ./checkpoints
 ```
 
 Then, on every machine with the checkpoints:
