@@ -44,7 +44,7 @@ def test_sharpclaw_runs_on_every_family(name):
     assert np.abs(u[-1] - u_c[-1]).max() < 0.25 * (np.abs(u_c[-1]).max() + 1e-12)
 
 
-def test_grid_matches_pyclaw_centres():
+def test_grid_matches_pyclaw_centers():
     from clawpack import pyclaw
 
     g = Grid(((0.0, 1.0), (-1.0, 2.0)), (7, 5))

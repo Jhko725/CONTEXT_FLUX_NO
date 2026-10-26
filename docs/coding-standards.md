@@ -75,18 +75,19 @@ one claim — a file edited for unrelated reasons is split.
 
 ## Checks that replace prose
 
-The configuration lives in `pyproject.toml` (`[tool.ruff.lint]` with `TID251` selected and
-`[tool.ruff.lint.flake8-tidy-imports.banned-api]`; `[tool.codespell]` once the spelling sweep
-lands) — this document names the rule and the reason, not the settings, so it cannot go stale.
+The configuration lives in `pyproject.toml` (`[tool.ruff.lint]` with `TID251` selected,
+`[tool.ruff.lint.flake8-tidy-imports.banned-api]`, `[tool.codespell]`), with a comment
+there on each non-obvious setting. This section says what each check is for; read the file
+for the current values.
 
-| Rule | Check |
-|---|---|
-| American English, irregulars and typos | `codespell` (`[tool.codespell]`) |
-| American English, the productive families | `scripts/check_spelling.py` |
-| `copy.replace`, never `dataclasses.replace` (Python floor 3.13) | ruff `TID251` banned-api |
-| change-document *Files* matches the diff; frontmatter; index coverage; Done-ledger order | `scripts/check_docs.py` |
-| every model config instantiates | `scripts/check_configs.py` |
-| every module imports | `scripts/import_all.py` |
+| Rule | Check | Runs in |
+|---|---|---|
+| American English, irregulars and typos | `codespell` 2.4.3 | pre-commit, CI |
+| American English, the productive families | `scripts/check_spelling.py` | pre-commit, CI |
+| `copy.replace`, never `dataclasses.replace` (Python floor 3.13) | ruff `TID251` banned-api | pre-commit, CI |
+| change-document *Files* matches the diff; frontmatter; index coverage; Done-ledger order | `scripts/check_docs.py` | pre-commit, CI |
+| every model config instantiates | `scripts/check_configs.py` | by hand |
+| every module imports | `scripts/import_all.py` | by hand |
 
 **Two spelling checks, because one tool cannot do both jobs.** `codespell` is a
 535-entry British-to-American word list: the right shape for irregulars (*behaviour*, <!-- codespell:ignore -->
@@ -101,20 +102,13 @@ correct in American English. `-isation` and `-isable` have no exceptions at all;
 is left out of the rule on purpose, since it is also the plural of `-ysis` (*the
 analyses*, which is correct).
 
-As configured, `codespell` reports 80 findings on this branch and `check_spelling.py`
-reports 38. Run both commands for the current lists rather than reading one from here;
-what matters is that the findings fall into two groups needing different treatment:
-
-- **Prose and docstrings**, about 60 of them: the `-ise`/`-isation` family across the
-  documents and a handful of `src` docstrings, two Latin-derived alternates, and four
-  genuine typos. One `style:` commit.
-- **The British spelling of *cell center*, thirteen occurrences, which reaches an
-  identifier**: docstrings in `simulations/grid.py` and `simulations/pde/{base,burgers}.py`,
-  the glossary and three design documents — and a test function name in
-  `tests/unit/test_pyclaw_backend.py`. Renaming a test is a code change, so it belongs in
-  a commit of its own rather than in the spelling sweep.
-
-Turn the check on after both commits, so its first CI run is green.
+Both checks report 0 findings in scope. Out of scope, for both: `docs/changes/` (a change
+document is the record of its branch, British spellings included), `notebooks/`, the
+vendored trees, and the Julia `Manifest.toml` (package names such as `Missings` are not <!-- codespell:ignore -->
+words). Neither check sees a British spelling inside a hyphenated compound (`cell-centred`), <!-- codespell:ignore -->
+so a sweep ends with a grep for the project's compounds. The 2026-10-26 cleanup took two
+commits rather than one, because the British spelling of *cell center* reached a test name
+as well as docstrings, and renaming a test is a code change.
 
 ## Persistence verbs
 

@@ -21,7 +21,7 @@ class T5RelativePositionalEncoding(eqx.Module):
     distances will be ignored.
 
     Note that this encoding scheme uses two different strategies - small distances are
-    binned using their exact values; larger values are binned in a logarithmical manner,
+    binned using their exact values; larger values are binned in a logarithmically manner,
     which corresponds to using larger bins for larger distances.
 
     [1] C. Raffel et al. Exploring the Limits of Transfer Learning with a Unified

@@ -77,7 +77,7 @@ explicit resume semantics. Joon asked to study it and adopt what fits.
 ## Rejected alternatives
 
 - **Checkpoint folder named by the wandb run id** (the Phase 5 ledger's first draft). Makes
-  the local artefact depend on a remote service and on `wandb=online`; a locally generated id
+  the local artifact depend on a remote service and on `wandb=online`; a locally generated id
   recorded alongside wandb's gives the same join without the dependency. [deduced]
 - **A local SQLite / Parquet database of runs** (Joon's own suggestion, "feels a bit like
   overkill"). `runs.index(root)` reads the `metadata.json` files directly — fast enough for

@@ -1,7 +1,7 @@
 """Audit which wandb runs actually used Bias-HyperInit (docs/findings.md F1; Phase 0.7).
 
 Ten of twelve model configs spelled `hypernet_init: bias_hyperinit`, which the code did not
-recognise, so those runs trained with the default initialisation. The resolved config of every
+recognize, so those runs trained with the default initialization. The resolved config of every
 run is stored on wandb, so the string is queryable. Produces docs/bias_hyperinit_audit.csv and a
 summary table; append the conclusion to docs/findings.md (F1) and the post-submission plan.
 

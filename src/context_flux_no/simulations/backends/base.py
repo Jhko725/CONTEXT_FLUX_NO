@@ -3,7 +3,7 @@
 A backend turns an initial state on a `Grid` into a trajectory at requested output times. It
 knows nothing about datasets, files or sampling: `simulations.generate` owns those. Boundary
 conditions are *names* per (axis, side) until `fv/boundary.py` (Phase 2b) provides objects;
-the names are the ones every backend can honour and they are recorded in `DatasetRecord`.
+the names are the ones every backend can honor and they are recorded in `DatasetRecord`.
 
 Concrete backends: `backends.pyclaw.PyClawBackend` (Classic and SharpClaw),
 `backends.trixi.TrixiBackend` (DGSEM through juliacall), `backends.jax.JaxBackend` (own `fv/`

@@ -15,7 +15,7 @@ verified in the tree at `iclr2027-submission`, **[deduced]** inference.
 
 ## 1. Grid, cells, faces
 
-- Uniform Cartesian grid, cell-centred values `u_i` with `i = 0 … N−1` along each axis; `dx` per axis.
+- Uniform Cartesian grid, cell-centered values `u_i` with `i = 0 … N−1` along each axis; `dx` per axis.
 - Faces along `axis` are indexed `i + ½`, `i = −1 … N−1`, so a face array has **`N + 1` entries**
   along that axis; entry `k` is face `k − ½` (between cells `k−1` and `k`).
 - `flux_divergence(F, dx, axis) = jnp.diff(F, axis=axis) / dx` returns `N` entries: `(F_{i+½} − F_{i−½})/dx`.
@@ -82,7 +82,7 @@ NumericalFlux(reconstruction, base, dissipation):   F̂ = base(rec(u)) − dissi
   when first needed.
 - The flux is stateless: no `dt` inside a `FluxPredictor`. Data `Δt` vs solver `Δt` is the
   integrator's concern.
-- Scale normalisation (ADR-0006) wraps the flux, never the integrator: the integrator always sees
+- Scale normalization (ADR-0006) wraps the flux, never the integrator: the integrator always sees
   physical `u`, so discrete conservation holds exactly.
 
 ## 6. PDE family interface (ADR-0001)

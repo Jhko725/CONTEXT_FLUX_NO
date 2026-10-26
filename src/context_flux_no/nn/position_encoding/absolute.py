@@ -75,7 +75,7 @@ class SineCosinePosEncoding2D(AbstractPositionEncoding):
     L. Beyer et al, Better plain ViT baselines for ImageNet-1k, arXiv:2205.01580v1
     (2022).
 
-    The code follows that of the original implmentation at
+    The code follows that of the original implementation at
     https://github.com/google-research/big_vision/blob/main/big_vision/models/vit.py"""
 
     channels: int = eqx.field(static=True)

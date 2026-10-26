@@ -1,6 +1,6 @@
 """Run identity (ADR-0010): a training run as a directory, its typed record, finding and
 loading runs, and the wandb mirror. `training/` holds the building blocks the trainer uses;
-this package holds what identifies and catalogues a run."""
+this package holds what identifies and catalogs a run."""
 
 from .index import (
     from_wandb as from_wandb,

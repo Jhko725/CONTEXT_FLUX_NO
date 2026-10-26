@@ -55,7 +55,7 @@ document is listed here and has frontmatter.
 | [0006](decisions/0006-operator-hierarchy-and-scale.md) | accepted | `InContextOperator` ⊃ `InContextFluxOperator`; scale wraps the conditioned module |
 | [0007](decisions/0007-dataclass-configs.md) | accepted | dataclass component configs in Hydra `ConfigStore` |
 | [0008](decisions/0008-four-tier-testing.md) | accepted | unit / property / regression / verification tiers |
-| [0009](decisions/0009-tracks.md) | accepted | work organised as Common → MVP → Rest |
+| [0009](decisions/0009-tracks.md) | accepted | work organized as Common → MVP → Rest |
 | [0010](decisions/0010-run-identity.md) | accepted | a run is a directory (`metadata.json` + whole-state checkpoints, Hydra output dir); trainer has no side effects; wandb is a mirror |
 | [0011](decisions/0011-solver-backends-and-dataset-provenance.md) | accepted | reference solvers behind one `SolverBackend` (PyClaw Classic bit-identical, SharpClaw); minimal PDE interface until 4.1; agreement by mutual convergence; every store carries a `DatasetRecord` |
 
@@ -72,7 +72,7 @@ recorded in the roadmap tables and the change documents that implement them.
 | `phase5-run-identity` | merged 2026-10-26 (orbax 0.12 reads the ICLR checkpoints by the legacy name) | [`2026-10-24-phase5-run-identity.md`](changes/2026-10-24-phase5-run-identity.md) |
 | `phase2a-pyclaw-backend` | merged 2026-10-26 | [`2026-10-25-phase2a-pyclaw-backend.md`](changes/2026-10-25-phase2a-pyclaw-backend.md) |
 | `phase2a-trixi-backend` | merged 2026-10-26 (Python side 2026-10-25; Julia package `ContextFluxTrixi`, committed lock and V18 green 2026-10-26; opt-in CI Julia job unverified) | [`2026-10-25-phase2a-trixi-backend.md`](changes/2026-10-25-phase2a-trixi-backend.md) |
-| `conventions-docs` | in-progress (based on `phase2a-pyclaw-backend`; rebases onto `main` cleanly) | [`2026-10-25-conventions-docs.md`](changes/2026-10-25-conventions-docs.md) |
+| `conventions-docs` | landed (recreated from `main` 2026-10-26: spelling checks wired, sweep applied) | [`2026-10-25-conventions-docs.md`](changes/2026-10-25-conventions-docs.md) |
 
 ## Historical
 

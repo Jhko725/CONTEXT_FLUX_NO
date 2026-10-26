@@ -24,7 +24,7 @@ To generate training data with default settings (Gaussian random field initial c
 uv run python ./scripts/data/generate_dataset.py seed=0,1,2,3,4,5,6,7,8,9 --multirun
 ```
 
-To generate test data for cubic flux and step initial conditions in the local terminal (recommand using tmux so that the process is not canceled when the terminal is exited),
+To generate test data for cubic flux and step initial conditions in the local terminal (recommend using tmux so that the process is not canceled when the terminal is exited),
 ```bash
 uv run python ./scripts/data/generate_dataset.py initial_condition=step dataset_type=test seed=10
 ```

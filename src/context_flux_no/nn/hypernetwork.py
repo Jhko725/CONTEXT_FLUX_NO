@@ -51,7 +51,7 @@ class HypernetworkHead[NN: eqx.Module](eqx.Module):
             `default` uses the default initialization for the linear layer.
             `bias-hyperinit` uses the Bias-HyperInit algorithm from [1].
         - `key`: A `jax.random.PRNGKey` used to provide randomness for parameter
-            initialisation. (Keyword only argument.)
+            initialization. (Keyword only argument.)
 
 
         **References**:

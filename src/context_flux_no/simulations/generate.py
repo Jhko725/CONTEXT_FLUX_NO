@@ -5,7 +5,7 @@ Sampling is unchanged from the ICLR script: `n_coeffs` parameter sets (uniform o
 `coeff_range_dict`) × `n_ics_per_coeff` initial conditions, keys derived from
 `(split, seed)`. What is new: the backend is an argument (default Classic PyClaw), per-
 trajectory solver failures are counted into the record instead of silently dropped, and the
-store is finalised with the number actually written."""
+store is finalized with the number actually written."""
 
 from __future__ import annotations
 

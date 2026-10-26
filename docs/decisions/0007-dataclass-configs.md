@@ -14,7 +14,7 @@ verified_by: joon (discussed 2026-09-26/27)
 
 Models were built from `encoder_type: str` + `encoder_kwargs: dict` string dispatch; sub-model
 signatures were invisible until `__init__`; a yaml typo (`bias_hyperinit`) silently selected the
-wrong initialisation (assessment §3). Checkpoints re-instantiate via the stored Hydra dict, so a
+wrong initialization (assessment §3). Checkpoints re-instantiate via the stored Hydra dict, so a
 renamed class makes them unloadable. Two data-config schemas coexisted.
 
 ## Decision

@@ -6,7 +6,7 @@ data, then commit the .npz files (small: ~10 kB for 1D, ~5 MB for 2D Euler):
     JAX_PLATFORMS=cpu uv run python -m tests.regression.make_inputs --data-root ./data/datasets
 
 Takes trajectory 0, time steps 0:CONTEXT_LENGTH of the named split, through the same
-ZarrWellDatasetSource the training script uses (so normalisation and channel packing match), and
+ZarrWellDatasetSource the training script uses (so normalization and channel packing match), and
 records loss_args = (dt, *dx) from the source metadata exactly as train_multiphysics.get_loss_args.
 """
 

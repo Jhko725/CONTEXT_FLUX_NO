@@ -15,7 +15,7 @@ verified_by: joon (discussed 2026-09-26/27)
 Conditioning was baked into four top-level classes, each re-implementing the FV update; target
 networks conflated flux prediction with time integration (P7). Plain neural-operator targets
 (UNet, FNO) and finite-volume targets need to share encoder and conditioner but differ in what is
-conditioned. RevIN-style scale normalisation was a sibling field; applied around the stepper it
+conditioned. RevIN-style scale normalization was a sibling field; applied around the stepper it
 would hand the integrator scaled states and break conservation of the physical `u`.
 
 ## Decision
@@ -24,7 +24,7 @@ would hand the integrator scaled states and break conservation of the physical `
 subclasses it with `target = FluxStepper(flux: NumericalFlux, integrator, source)` and exposes
 `.flux()` for analysis. The conditioner always conditions exactly one module (`target`, or
 `target.flux` in the subclass). The scale normaliser wraps that conditioned module: `Scaled(target)`
-in the base class, `Scaled(target.flux)` in the subclass (normalise input, denormalise output); the
+in the base class, `Scaled(target.flux)` in the subclass (normalize input, denormalize output); the
 integrator always sees physical `u`.
 
 ## Rejected alternatives

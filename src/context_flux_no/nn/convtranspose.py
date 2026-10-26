@@ -79,7 +79,7 @@ class ConvTranspose(Module):
             Defaults to either `jax.numpy.float32` or `jax.numpy.float64` depending
             on whether JAX is in 64-bit mode.
         - `key`: A `jax.random.PRNGKey` used to provide randomness for parameter
-            initialisation. (Keyword only argument.)
+            initialization. (Keyword only argument.)
 
         !!! info
 

@@ -96,3 +96,14 @@ markers = [
     "slow: verification suite (x64, oracle-based); excluded from the fast tiers",
 ]
 addopts = "-m 'not regression and not slow'"
+
+[tool.codespell]
+# The irregular British spellings and typos; scripts/check_spelling.py covers the
+# productive -ise/-isation/-yse families. Each skipped tree is listed twice: "./x" for
+# the root walk CI does, "x/*" for the paths a git hook passes; no single pattern
+# covers both. docs/coding-standards.md says why docs/changes is out of scope; the Julia
+# Manifest.toml holds Julia package names that are not words.
+builtin = "clear,en-GB_to_en-US"
+skip = "*.lock,*.ipynb,.git,*.npz,*.h5,Manifest.toml,./icon,icon/*,./third_party,third_party/*,./notebooks,notebooks/*,./docs/changes,docs/changes/*"
+ignore-words-list = "Numer,DATAS,IST,nd"
+

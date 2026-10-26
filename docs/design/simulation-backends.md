@@ -15,7 +15,7 @@ Everything is **[code]** on `phase2a-pyclaw-backend` unless marked.
 
 ```
 simulations/
-  grid.py       Grid(x_spans, Nxs): centres (PyClaw arithmetic), dxs, axis_names, to_dict()
+  grid.py       Grid(x_spans, Nxs): centers (PyClaw arithmetic), dxs, axis_names, to_dict()
   backends/
     base.py     SolverBackend.solve(pde, ic, grid, t_out, bcs); BCName = periodic|extrap|wall; normalize_bcs; SolverFailure
     pyclaw.py   PyClawSpec (per PDE class) · PyClawBackend(scheme="classic"|"sharpclaw", **solver_overrides)

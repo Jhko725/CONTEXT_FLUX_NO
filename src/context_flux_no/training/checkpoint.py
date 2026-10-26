@@ -86,7 +86,7 @@ class OrbaxCheckpointer(Checkpointer):
             policies.append(
                 ocp.training.preservation_policies.BestN(
                     # BestN keeps the *last* n of the sorted metrics, so ascending order
-                    # (reverse=False) keeps the largest; invert for minimisation.
+                    # (reverse=False) keeps the largest; invert for minimization.
                     get_metric_fn=lambda m: m[metric],
                     reverse=not maximize,
                     n=keep_best,

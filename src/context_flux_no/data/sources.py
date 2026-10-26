@@ -265,7 +265,7 @@ class WellDatasetSourceBase(grain.sources.RandomAccessDataSource):
         `DatasetRecord` (stores written by `simulations.WellWriter`), the hash is over their
         record ids, so it is stable across machines and copies. Otherwise (ICLR-era stores)
         it is a provisional hash over the common metadata (field names, resolutions, grid
-        shape, trajectory count, normalisation statistics) and the window parameters, not
+        shape, trajectory count, normalization statistics) and the window parameters, not
         the file paths."""
         import hashlib
         import json
