@@ -69,6 +69,7 @@ Goldens preparation (2026-10-26, cluster back):
 - `tests/test_training_io.py` — new: the translation and its pass-through.
 - `tests/regression/{README.md, make_inputs.py, make_goldens.py}` — run as modules (`python -m tests.regression.make_inputs`): as scripts their `from tests.regression.common import …` failed with "No module named tests".
 - `docs/findings.md` — F1 action updated.
+- `scripts/diff_checkpoint_leaves.py` — new diagnostic: stored leaves vs the leaves `load_model`'s template asks for (a stored `jax.Array` the rebuilt model lacks is read through the GPU sharding file and fails on CPU; DISCO 1D hit this).
 - `pyproject.toml`, `uv.lock` — `pythonpath = ["."]` for pytest; `the-well` removed (unused; it pulled in `torch`).
 - `scripts/check_configs.py`, `src/context_flux_no/nn/hypernetwork.py`, `tests/test_nn_hypernetwork.py` — `ruff format` only (`style:` commit).
 - `README.md` — PyClaw build prerequisites.
