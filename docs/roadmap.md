@@ -95,7 +95,7 @@ merge of Phase 1 work, the bisect is one branch long.
 | 1.1 | Keep `AbstractTrainLoss`; wire into `Trainer` type hints | — | done (`9c16792`) |
 | 1.2 | Legacy xarray path removed except `SegmentLoaderBackground` (+`make_segment_axis`), kept with DEPRECATED header until Phase 4 because seven evaluation notebooks still read the ICLR-era 1D datasets | `grep xarray src` → only `training/loader.py` | done (`9c16792`) |
 | 1.2 | Legacy PDE classes return `(u, t, xs)`; `solution_to_dataset` gone | — | done (`24df75c`) |
-| 1.3 | Correctness fixes: `test_models_disco.py:286` assert; DISCO `split(key, 4)`; `HyperNeuralOperator` key reuse; both UNet `keys_bot` (F6, pulled forward); `jax.flatten_util` import (F9); key-hygiene test | regression unchanged | done (`134dfdb`, `518ee62`); `train_the_well.py` was already correct |
+| 1.3 | Correctness fixes: `test_models_disco.py:286` assert; DISCO `split(key, 4)`; `HyperNeuralOperator` key reuse; UNet `keys_bot` (F6, pulled forward; the `operatornet` copy parked 2026-10-26, F15); `jax.flatten_util` import (F9); key-hygiene test | regression unchanged | done (`134dfdb`, `518ee62`); `train_the_well.py` was already correct |
 | 1.3 | Deferred correctness items recorded in `findings.md` (rfftn axes, `stack_grid`, UNet mask channel, DISCO double standardize, four face conventions) | — | done (F3, F4, F6 remainder, F2) |
 
 Exit: `import_all.py` and `ruff check` clean ✔; fast tier green (33 tests) ✔; regression tier — pending goldens; `evaluate_cubic.ipynb` reaches its first metric cell — to be checked by Joon on the cluster.
@@ -186,6 +186,7 @@ IMEX) — see `design/fv-conventions.md` §Extensibility.
 - `CFLAdaptive` implementation (`scan` with bounded substeps vs diffrax controller) — when first needed.
 - `orbax-checkpoint==0.11.25` pin — choose a version deliberately in Phase 5 and re-save the ICLR checkpoints once under the shim.
 - Whether `TrixiBackend` remains a permanent generator after WENO5 is verified.
+- DISCO `operatornet_scale` as checkpointed array leaves (F15), with the `operatornet.py` `keys_bot` fix and the hygiene xfail flip — Phase 3 (baselines), when legacy checkpoints get the leaf filled at load.
 
 ---
 
@@ -204,3 +205,4 @@ IMEX) — see `design/fv-conventions.md` §Extensibility.
 | 2026-10-24 | `phase1-prune` | 1.1: 14 dead symbols removed (incl. `DPOTEncoder`, `LSKFluxNOTargetNetwork`, D1); `AbstractTrainLoss` wired into `Trainer` | `changes/2026-10-04-phase1-prune.md` |
 | 2026-10-24 | `phase1-prune` | 1.2: legacy xarray training path removed (loaders, script, 3 data configs, 5 notebooks); `SegmentLoaderBackground` DEPRECATED until Phase 4; PDE classes return `(u, t, xs)`; `solution_to_dataset` gone | `changes/2026-10-04-phase1-prune.md` |
 | 2026-10-24 | `phase1-prune` | 1.3: key-reuse fixes (F5, F6) + `tests/unit/test_key_hygiene.py`; missing assert; `src/` 10,765 → 9,297 lines | `changes/2026-10-04-phase1-prune.md` |
+| 2026-10-26 | `main`, `phase1-prune` | 0.8: regression goldens from the ICLR checkpoints (7 cases; `translate_legacy_config` F1, `checkpoint_template` for DISCO's `DropPath.p` leaves); V22 green twice on `main`; on `phase1-prune` after parking the `operatornet` key fix (F15: DISCO's forward pass depends on un-checkpointed `operatornet_scale`) | `changes/2026-10-04-phase0-freeze.md`, `changes/2026-10-04-phase1-prune.md` |
