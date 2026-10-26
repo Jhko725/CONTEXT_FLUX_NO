@@ -223,9 +223,9 @@ Fast tier 2026-10-26 (`JAX_PLATFORMS=cpu uv run pytest -q`, Julia set up): 103 p
 | `simulations/initial_conditions/step.py` — `PeriodicStep1D` / `PeriodicVoronoi2D` with positions in the domain | Looks good. | None |
 | `simulations/initial_conditions/fourier.py` — `TruncatedFourier1D` is an `InitialCondition` | Agreed. But its `with_uniform_rand_coeffs` correspond to the functionality of its sampler. | Deferred changes to Claude. |
 | `simulations/initial_conditions/__init__.py` — exports | Trivial changes. | None |
-| **Round 2** `initial_conditions/base.py`, `grf.py`, `step.py` — dims set once in the base `__init__`s (item 1) | | |
-| **Round 2** `simulations/backends/` — `backend.py` → `backends/base.py`, `pyclaw.py`, `trixi.py` moved; call sites, configs, docs (item 3) | | |
-| **Round 2** `generate.py` — `primitive_ic`, docstring; config key, script, test, docs (item 4) | | |
+| **Round 2** `initial_conditions/base.py`, `grf.py`, `step.py` — dims set once in the base `__init__`s (item 1) | Looks good. | None |
+| **Round 2** `simulations/backends/` — `backend.py` → `backends/base.py`, `pyclaw.py`, `trixi.py` moved; call sites, configs, docs (item 3) | Looks good. | None |
+| **Round 2** `generate.py` — `primitive_ic`, docstring; config key, script, test, docs (item 4) | Looks good for now. Will do a revision across all docs in the codebase later. | None for now. |
 | **Round 2** `initial_conditions/fourier.py` — `RandomTruncatedFourier1D` sampler (item 2); `test_initial_conditions.py`, `test_generate_dataset.py` | | |
 | `simulations/backends/base.py` — `solve(pde, ic, grid, t_out, bcs)`; `check_inputs(ic)`; `solve_batch` deleted | Looks good. | None |
 | `simulations/backends/pyclaw.py` — evaluates `ic` at the centers | Looks good. | None |
@@ -236,8 +236,7 @@ Fast tier 2026-10-26 (`JAX_PLATFORMS=cpu uv run pytest -q`, Julia set up): 103 p
 | `simulations/__init__.py` — exports | Trivial changes. | None |
 | `juliapkg.json`, `scripts/setup_julia.py`, `pyproject.toml`/`uv.lock`, `.gitignore` — Julia set-up | Looks good. | None |
 | `scripts/data/generate_dataset.py` + configs — `sampler:`, `ic_in_primitive`, cubic-2D keys | Looks good. | None |
-| `tests/unit/make_goldens_simulations.py`, `test_generate_dataset.py`, `test_pyclaw_backend.py` — through the callable path | 
-Confirmed. | None |
+| `tests/unit/make_goldens_simulations.py`, `test_generate_dataset.py` `test_pyclaw_backend.py` — through the callable path | Confirmed. | None |
 | `tests/unit/test_initial_conditions.py`, `tests/unit/test_trixi_backend.py` — new | Looks good. | None |
 | `tests/verification/test_crosscode.py` — V18 tests (skip) | Looks good. | None |
 | `reference/trixi/{Project,Manifest}.toml` — the committed Julia lock (juliapkg shared mode; Trixi 0.17.16) | Looks good. | None |
