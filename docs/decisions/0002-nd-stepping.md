@@ -13,7 +13,7 @@ verified_by: joon (discussed 2026-09-26/27)
 ## Context
 
 The code had separate 1D and 2D paths (`FluxNO` vs `NDFluxNO`, `GaussianRandomField1D/2D`, …).
-On Cartesian grids the method-of-lines semi-discretisation is a sum over axes of 1D operators
+On Cartesian grids the method-of-lines semi-discretization is a sum over axes of 1D operators
 applied with the other axes as batch dimensions. [cited] Finite-*difference* WENO keeps full order
 in multi-D with plain dimension-by-dimension application on uniform grids, whereas finite-*volume*
 WENO needs face quadrature to exceed second order (Shu, SIAM Review 51, 2009; Titarev & Toro, JCP
@@ -29,7 +29,7 @@ conditions are per (axis, side). No `Solver1D/2D/3D`; tests run at N = 1, 2 and 
 
 ## Rejected alternatives
 
-- *Sequential Strang/Godunov splitting*: second order at best and the scheme Roe (1991) criticised
+- *Sequential Strang/Godunov splitting*: second order at best and the scheme Roe (1991) criticized
   for oblique discontinuities; the project already moved away from it on the model side.
 - *Genuinely multidimensional schemes* (CTU): dimension-specific; unnecessary at WENO5 + SSPRK3
   accuracy on periodic/uniform boxes.

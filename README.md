@@ -2,7 +2,7 @@
 
 In-context learning of finite-volume solvers for *families* of hyperbolic conservation laws.
 A context encoder reads a short observed trajectory, a conditioning mechanism (hypernetwork)
-specialises a flux network to the unknown coefficients, and a finite-volume update rolls the
+specializes a flux network to the unknown coefficients, and a finite-volume update rolls the
 solution forward. Families: cubic, sine and Burgers scalar laws, shallow water, 2D Euler.
 Baselines: DISCO, DPOT, FNO variants. Paper: submitted to ICLR 2027 (tag `iclr2027-submission`).
 

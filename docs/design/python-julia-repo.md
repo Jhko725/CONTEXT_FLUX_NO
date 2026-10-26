@@ -77,7 +77,7 @@ What the JuliaCall page actually says [cited: JuliaCall docs, "Multi-threading"]
 - `PYTHON_JULIACALL_HANDLE_SIGNALS=yes` is required with multiple threads (GC safepoints are
   implemented with deliberate segfaults); the documented cost is that Ctrl-C no longer raises
   `KeyboardInterrupt`;
-- the feature is labelled "experimental and can change without notice".
+- the feature is labeled "experimental and can change without notice".
 
 **PySR as precedent** [cited: `pysr/julia_import.py`, `pysr/sr.py`, `pysr/__init__.py`;
 `SymbolicRegression.jl/src/SymbolicRegression.jl`]: SymbolicRegression.jl's default is
@@ -92,7 +92,7 @@ multithreaded Julia from Python is a production pattern, not a corner case.
 
 *What remains true against C, for this repository.*
 - The import-order constraint (`juliacall` before `jax`/`numpy`) and the signal setting are
-  process-wide invariants that every entry point must honour; PySR solves it by owning the
+  process-wide invariants that every entry point must honor; PySR solves it by owning the
   package `__init__`. Here they can be confined to one module (`simulations/backends/trixi.py`, which
   sets the environment and imports `juliacall` on first use) **provided** that module is
   imported before `jax` in the process that uses it — true for `scripts/data/generate_dataset.py`
@@ -215,4 +215,4 @@ as the production precedent for threaded Julia under juliacall · Julia `Pkg` do
 documentation (<https://trixi-framework.github.io/Trixi.jl/stable/>) for the equation/elixir
 structure · ADR-0004 for the subprocess decision.
 [deduced] no-lock-file argument against listing Trixi in `juliapkg.json`; in-process risk
-assessment; per-dataset process amortisation.
+assessment; per-dataset process amortization.

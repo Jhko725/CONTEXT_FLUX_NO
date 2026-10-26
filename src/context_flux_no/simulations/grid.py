@@ -1,4 +1,4 @@
-"""`Grid`: a uniform Cartesian cell-centred grid, the one geometry every backend and the
+"""`Grid`: a uniform Cartesian cell-centered grid, the one geometry every backend and the
 dataset writer agree on (`docs/design/fv-conventions.md` §1)."""
 
 from __future__ import annotations

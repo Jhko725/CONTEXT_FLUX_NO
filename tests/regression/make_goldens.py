@@ -4,7 +4,7 @@
 
 Writes tests/regression/goldens/<case>.npz with u_next, rollout and provenance (git SHA, jax
 version, backend). Refuses to run on a non-CPU backend. Re-running overwrites: do that only with a
-change-document entry saying which commit changed behaviour and why (CLAUDE.md).
+change-document entry saying which commit changed behavior and why (CLAUDE.md).
 """
 
 from __future__ import annotations

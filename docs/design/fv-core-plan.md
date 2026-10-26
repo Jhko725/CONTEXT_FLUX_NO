@@ -193,7 +193,7 @@ Fill rules (LeVeque Ch. 7 **[cited]**; `x`, `t` only used by `Dirichlet`/`Inflow
 - `Reflective`: `mode="symmetric"` then `pde.reflect(·, axis)` on the ghost block (identity for
   scalars; sign flip of the normal momentum/velocity for systems — `reflect` is Phase 4.1's
   `PDEFamily` method; until then pass a callable or `None` = identity).
-- `Dirichlet(value)`: broadcast the constant, or evaluate `value(x_ghost, t)` at ghost centres
+- `Dirichlet(value)`: broadcast the constant, or evaluate `value(x_ghost, t)` at ghost centers
   `x_ghost = x_0 − (k + ½) dx` **[deduced]**.
 - Periodic on one side requires periodic on the other: validate in `pad_ghost_cells`.
 
@@ -309,7 +309,7 @@ The Newton solve for Burgers is a fixed small number of iterations under `lax.fo
    is the moment the FD-WENO picture clicks.
 6. `analytic.py`: advected sine first (needed by the temporal EOC test), Burgers when 2e starts.
 7. Flip `verification.md` rows V1, V2, V5, V8 to green with the commit; add V23's `N = 1, 2, 3`
-   parametrisation to every property test from the start rather than retrofitting.
+   parametrization to every property test from the start rather than retrofitting.
 8. Change document `docs/changes/<date>-phase2b-fv-core.md` from day one (`status: planned` →
    `in-progress`), Review-notes rows for Claude to fill *Thoughts* on this time (role reversal:
    Claude reviews Joon's numerics against this plan and the conventions).
@@ -344,4 +344,4 @@ Eng. 124, 4–10 (2002) · Clawpack BC docs <https://www.clawpack.org/bc.html> �
 <https://docs.jax.dev> · Hypothesis docs <https://hypothesis.readthedocs.io>.
 [code] the `InterfaceReconstructor` roll-based padding at `iclr2027-submission`.
 [deduced] window-axis-last layout; union-stencil slicing; `symmetric` vs `reflect` for cell
-averages; ghost-centre formula; the dataclass-vs-tuple and per-axis-padding leanings.
+averages; ghost-center formula; the dataclass-vs-tuple and per-axis-padding leanings.

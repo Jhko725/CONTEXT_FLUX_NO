@@ -124,7 +124,7 @@ class ViscousBurgers1D(AbstractPDEFamily):
         t0, t1 = t_span
 
         dx = (x1 - x0) / Nx
-        x_grid = x0 + (np.arange(Nx) + 0.5) * dx  # cell centres (F8: was left edges)
+        x_grid = x0 + (np.arange(Nx) + 0.5) * dx  # cell centers (F8: was left edges)
 
         t_save = np.linspace(t0, t1, Nt + 1)
 

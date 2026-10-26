@@ -1,7 +1,7 @@
 # Regression tier — goldens from the ICLR checkpoints
 
 Pins the forward pass and a short autoregressive rollout of every model class that has an ICLR
-checkpoint, so that the Phase 2–3 refactors can be checked against the submitted behaviour
+checkpoint, so that the Phase 2–3 refactors can be checked against the submitted behavior
 (ADR-0008; `docs/verification.md` row V22). Everything runs **on CPU** (`JAX_PLATFORMS=cpu`):
 GPU XLA reductions are not bitwise reproducible across versions, CPU fp32 is stable to ~1e-6, so
 `rtol=1e-5, atol=1e-6` is a real test rather than a flaky one.
@@ -29,4 +29,4 @@ Without `--checkpoints-root` (or `CFNO_CHECKPOINTS`), or without a case's golden
 Files: `cases.yaml` (one entry per case), `inputs/<name>.npz` (context window + `loss_args`),
 `goldens/<name>.npz` (`u_next`, `rollout`, provenance), `make_inputs.py`, `make_goldens.py`,
 `conftest.py`, `test_regression.py`. Goldens are **never regenerated** without a change-document
-entry saying which commit changed behaviour and why (CLAUDE.md).
+entry saying which commit changed behavior and why (CLAUDE.md).

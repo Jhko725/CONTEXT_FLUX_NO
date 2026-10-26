@@ -29,7 +29,7 @@ def maybe_split(
     key: Key[Array, ""] | None, num: int = 2
 ) -> Key[Array, " {num}"] | list[None]:
     """Given a key value that can either be a JAX PRNGKeyArray or None, split it to
-    return either the splitted subkeys, or a list of Nones with length equal to the
+    return either the split subkeys, or a list of Nones with length equal to the
     number of subkeys requested.
 
     This is useful in __call__ methods of neural network layers involving sublayers that

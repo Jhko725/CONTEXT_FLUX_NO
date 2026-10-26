@@ -6,7 +6,7 @@ updated: 2026-09-27
 verified_by: joon (discussed 2026-09-26/27)
 ---
 
-# ADR-0009 — Work organised as Common → MVP → Rest
+# ADR-0009 — Work organized as Common → MVP → Rest
 
 **Status**: accepted (2026-09-27).
 

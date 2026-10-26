@@ -1,6 +1,6 @@
 """`DatasetRecord`: the provenance of one generated store (roadmap 4.3, ADR-0011).
 
-The dataset analogue of `runs.RunRecord`: written as `<store>.dataset.json` beside the zarr
+The dataset analog of `runs.RunRecord`: written as `<store>.dataset.json` beside the zarr
 store and into the store's root attributes, so a dataset can be identified from either. The
 `id` is generated locally at creation; `WellDatasetSourceBase.dataset_id` derives the id it
 stamps into `RunRecord.index` from the records of the files it reads."""

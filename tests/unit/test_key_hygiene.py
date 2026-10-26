@@ -1,7 +1,7 @@
 """Key hygiene: no PRNG key is consumed twice while constructing a model (findings F5).
 
 `jax.random.split(key, n)` followed by `keys[n]` silently clamps to `keys[n-1]` in JAX, and a
-key handed to two submodules initialises them with correlated weights. Both happened in the ICLR
+key handed to two submodules initializes them with correlated weights. Both happened in the ICLR
 code (DISCO, HyperNeuralOperator). This test records every key passed to `jax.random.split`,
 `fold_in` and the common samplers during `__init__` and fails on any repeat. Models are built
 from their Hydra configs on tiny grids so that the test exercises the real constructors.

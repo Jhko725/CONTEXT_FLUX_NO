@@ -17,7 +17,7 @@ when a phase lands, its section here changes in the same commit. Decisions are i
 
 HFluxNO: in-context learning of conservation-law solvers. Given a short observed trajectory
 of a PDE solution, a context encoder infers the unknown coefficients implicitly, a
-conditioning mechanism (hypernetwork) specialises a target network, and the target network
+conditioning mechanism (hypernetwork) specializes a target network, and the target network
 — a finite-volume *flux* network — predicts the next state. Families: cubic, sine and
 Burgers scalar laws, shallow water, 2D Euler. Baselines: DISCO, DPOT, FNO variants.
 

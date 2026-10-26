@@ -80,7 +80,7 @@ def start_run(cfg: DictConfig, *, dataset_id: str | None) -> Run:
 
 def training_key(cfg: DictConfig) -> jax.Array:
     """The loop's PRNG key (loss noise, dropout): derived from the model seed but distinct
-    from the model-initialisation key."""
+    from the model-initialization key."""
     return jax.random.fold_in(jax.random.key(int(cfg.model.key.seed)), 1)
 
 

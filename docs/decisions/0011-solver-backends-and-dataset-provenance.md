@@ -29,8 +29,8 @@ version (pain point P9 on the data side; findings F7/F8).
 1. **One `SolverBackend` interface** [code]: `solve(pde, ic, grid, t_out, bcs) →
    u[time, n_eqn, *N]` (`ic` an `InitialCondition`, §Initial conditions; originally an array
    `u0[n_eqn, *N]`). The backend knows nothing about files or sampling. `Grid` is the
-   shared geometry (uniform Cartesian, cell centres computed with PyClaw's arithmetic).
-   Boundary conditions are the three names every backend can honour — `periodic`, `extrap`,
+   shared geometry (uniform Cartesian, cell centers computed with PyClaw's arithmetic).
+   Boundary conditions are the three names every backend can honor — `periodic`, `extrap`,
    `wall` — per axis and side, until `fv/boundary.py` (Phase 2b) provides objects; the names
    are what gets recorded.
 
@@ -70,7 +70,7 @@ version (pain point P9 on the data side; findings F7/F8).
 
 - **Backend chosen inside each PDE class** (as before). Hides the solver from the record and
   duplicates the controller setup seven times; a backend argument with a per-class default
-  keeps the old behaviour as the default and makes the scheme a one-key config change.
+  keeps the old behavior as the default and makes the scheme a one-key config change.
 - **A throw-away interim base, replaced wholesale in 4.1** (the first draft of this ADR). Joon's
   review preferred growing one class: the base already carried half of tier 0, so a 4.1 rewrite
   would have done it twice. Hence `AbstractPDEFamily` now, numerics methods added as `fv/` needs

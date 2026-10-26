@@ -79,16 +79,16 @@ Change document: `changes/2026-10-04-phase1-prune.md` (landed). Dependency-order
 deletion; `ruff check` (F401) and the fast tiers after each group; regression tier at the
 end of each sub-phase.
 
-**Why Phase 1 can proceed without goldens (2026-10-24).** Principle 2 guards *behaviour* of the
+**Why Phase 1 can proceed without goldens (2026-10-24).** Principle 2 guards *behavior* of the
 checkpointed models. Phase 1 deletes only symbols with zero references and legacy data paths; no
 config, notebook or ablation (`ablate_encoders.ipynb` compares TRecViT vs ViT only) selects
 `DPOTEncoder` or `LSKFluxNOTargetNetwork`, so no ICLR checkpoint's stored config names anything
 Phase 1 removes, and `load_model` is unaffected. The one item that changes a forward path —
-none; the 1.3 key-reuse fixes change *initialisation* only. Hence: the work can be done and
+none; the 1.3 key-reuse fixes change *initialization* only. Hence: the work can be done and
 self-reviewed now; **merging `phase1-prune` waits for the regression tier to be green** on the
 goldens, which is the mechanical confirmation of the argument above. If a golden fails after the
 merge of Phase 1 work, the bisect is one branch long. *Outcome (2026-10-26):* the tier found one
-exception to "initialisation only" — DISCO's `operatornet_scale` (F15) — and the branch merged
+exception to "initialization only" — DISCO's `operatornet_scale` (F15) — and the branch merged
 with that fix parked.
 
 | # | Item | Done when | Status |

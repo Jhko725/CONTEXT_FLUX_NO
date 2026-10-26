@@ -33,7 +33,7 @@ One line per term; `architecture.md` and the design documents use only these.
 - **Classic / SharpClaw** — PyClaw's two schemes: wave propagation (2nd order, the ICLR data) · WENO5 + SSP-RK method of lines (the higher-order reference).
 - **PyClawSpec** — how a PDE class describes itself to PyClaw (Riemann solver, waves, kernel language, per-scheme options).
 - **TrixiSpec** — how a PDE class describes itself to `ContextFluxTrixi` (equations constructor name, parameter kwargs).
-- **Grid** — `Grid(x_spans, Nxs)`, uniform Cartesian cell centres shared by backends and the writer.
+- **Grid** — `Grid(x_spans, Nxs)`, uniform Cartesian cell centers shared by backends and the writer.
 - **mutual convergence** — the backend-agreement criterion: the distance between two schemes' solutions shrinks under refinement (V18a/V18/V19).
 - **reference backend** — PyClaw/SharpClaw or Trixi.jl, used as an oracle and as a fallback data generator (ADR-0004).
 - **AnalyticSolution** — `(x, t, params) → u`, used as IC, boundary data and error reference.

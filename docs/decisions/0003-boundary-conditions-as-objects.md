@@ -30,7 +30,7 @@ pair per axis before *every* flux evaluation, classical or learned. BCs travel w
 
 - *Boundary flux imposed weakly* (DG-style, Trixi): natural for DG; for wide FV stencils ghost
   cells are needed anyway, and one mechanism for both classical and learned fluxes is simpler.
-- *Learning boundary behaviour*: the in-context task is to infer coefficients, not boundary types;
+- *Learning boundary behavior*: the in-context task is to infer coefficients, not boundary types;
   mixing them would confound the method's claim.
 
 ## Consequences

@@ -38,7 +38,7 @@ row is unverified. Tiers: `property` (fast, every commit) or `verification` (`-m
 | V21 | `vmap` == Python loop; `jit` == eager, for every `FluxPredictor` | `tests/property/test_transforms.py` | each other | `rtol 1e-6` | property | planned |
 | V25 | `PyClawBackend("classic")` is bit-identical to the pre-2a per-class `solve()` on every PyClaw family | `tests/unit/test_pyclaw_backend.py::test_classic_is_bit_identical_to_pre_2a_solve` | goldens at `1ff31bb` | exact | unit | **green** |
 | V22 | ICLR checkpoints reproduce their recorded forward pass and 5-step rollout | `tests/regression/test_regression.py` | goldens | `rtol 1e-5, atol 1e-6` (CPU) | regression | **green** 2026-10-26: goldens from `main` @ `4658f65`, 7 cases, run twice bit-identical; on `phase1-prune` after parking the `operatornet` key fix (F15) |
-| V23 | Mandatory statement: all of V1–V21 hold at N = 1, 2 and (tiny) 3 | parametrised | — | — | both | planned |
+| V23 | Mandatory statement: all of V1–V21 hold at N = 1, 2 and (tiny) 3 | parametrized | — | — | both | planned |
 
 ## Tolerance notes
 
