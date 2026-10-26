@@ -1,4 +1,3 @@
-from collections.abc import Callable
 from math import ceil
 from typing import ClassVar
 
@@ -8,8 +7,10 @@ import jax.numpy as jnp
 import numpy as np
 from jaxtyping import Array, Float
 
+from context_flux_no.simulations.backends.pyclaw import PyClawSpec
+from context_flux_no.simulations.backends.trixi import TrixiSpec
+from context_flux_no.simulations.grid import Grid
 from context_flux_no.simulations.pde.base import AbstractPDEFamily
-from context_flux_no.simulations.pyclaw import PyClawSpec
 
 
 def riemann_cubic_1D(
@@ -81,6 +82,10 @@ class CubicFlux1D(AbstractPDEFamily):
             classic_options={"limiters": "MC", "cfl_desired": 0.5, "cfl_max": 0.9},
         )
 
+    @property
+    def trixi_spec(self) -> TrixiSpec:
+        return TrixiSpec("CubicFluxEquation1D", self.parameters)
+
 
 class CubicFlux2D(AbstractPDEFamily):
     """2-D cubic flux with the same `f` along both axes; **own first-order Rusanov stepper**
@@ -101,6 +106,10 @@ class CubicFlux2D(AbstractPDEFamily):
     @property
     def parameters(self) -> dict[str, float]:
         return {"a": self.a, "b": self.b, "c": self.c}
+
+    @property
+    def trixi_spec(self) -> TrixiSpec:
+        return TrixiSpec("CubicFluxEquation2D", self.parameters)
 
     def flux(self, u: Float[Array, "x y"]) -> Float[Array, "x y"]:
         return ((self.a * u + self.b) * u + self.c) * u
@@ -148,9 +157,7 @@ class CubicFlux2D(AbstractPDEFamily):
 
     def solve(
         self,
-        ic_factory: Callable[
-            [Float[np.ndarray, " *spatial_dims"]], Float[np.ndarray, " *spatial_dims"]
-        ],  # Need to fix function signature here
+        ic,
         x_spans: tuple[tuple[float, float], tuple[float, float]],
         Nxs: tuple[int, int],
         t_span: tuple[float, float],
@@ -166,39 +173,33 @@ class CubicFlux2D(AbstractPDEFamily):
             )
         if bc != "periodic":
             raise NotImplementedError("CubicFlux2D's own stepper is periodic only")
-        Nx, Ny = Nxs
-        x_span, y_span = x_spans
-        dx = (x_span[1] - x_span[0]) / Nx
-        dy = (y_span[1] - y_span[0]) / Ny
-        x = jnp.linspace(x_span[0] + 0.5 * dx, x_span[1] - 0.5 * dx, Nx)
-        y = jnp.linspace(y_span[0] + 0.5 * dy, y_span[1] - 0.5 * dy, Ny)
+        grid = Grid(x_spans, Nxs)
+        dx, dy = grid.dxs
+        x, y = grid.centers  # float64, the same arithmetic as every other backend
 
         t0, t1 = t_span
-        dt = (t1 - t0) / Nt
-        t = jnp.linspace(t0, t0 + dt * Nt, Nt + 1)
+        dt_out = (t1 - t0) / Nt
+        t = np.linspace(t0, t1, Nt + 1, endpoint=True)
 
-        u0: Float[Array, "Nx Ny"] = ic_factory((x, y))
+        u0: Float[Array, "Nx Ny"] = jnp.asarray(ic.at_points(grid.meshgrid())[0])
 
-        # Reduce dt using the CFL number (optional)
-        # max_speed ~ max |f'(u)|
+        # Equal substeps that land exactly on every output time, dt from the CFL number and
+        # the initial max |f'(u)| (the monotone scheme does not create new extrema; F14).
         max_speed = float(jnp.max(jnp.abs(self.flux_speed(u0))))
+        n_sub = 1
         if max_speed > 1e-12:
-            dt_cfl = cfl * min(dx, dy) / max_speed
-            dt_solve = min(dt, dt_cfl)
-            t_solve = jnp.linspace(*t_span, ceil(1 / dt_solve))
-        else:
-            t_solve = t
+            n_sub = max(1, ceil(dt_out / (cfl * min(dx, dy) / max_speed)))
+        dt = dt_out / n_sub
 
-        def _body_fn(u, _):
-            u_next = self._step_rusanov_2d(u, (dx, dy), t_solve[1] - t_solve[0])
+        def _frame(u, _):
+            u_next = jax.lax.fori_loop(
+                0, n_sub, lambda _, v: self._step_rusanov_2d(v, (dx, dy), dt), u
+            )
             return u_next, u_next
 
-        u0 = jnp.asarray(u0)
-        _, traj = jax.lax.scan(_body_fn, u0, jnp.arange(len(t_solve - 1)))
-        # include initial state
+        _, traj = jax.lax.scan(_frame, u0, None, length=Nt)
         U: Float[Array, "Nt+1 Nx Ny"] = jnp.concatenate(
             [jnp.expand_dims(u0, axis=0), traj], axis=0
         )
-        U = jax.image.resize(U, (len(t), *U.shape[1:]), method="cubic")
         U = jnp.expand_dims(U, axis=1)  # Add scalar channel dimension
         return U, t, (x, y)

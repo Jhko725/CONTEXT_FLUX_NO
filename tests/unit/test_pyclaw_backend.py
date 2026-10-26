@@ -11,9 +11,10 @@ import pytest
 
 pytest.importorskip("clawpack")
 
-from context_flux_no.simulations.backend import normalize_bcs  # noqa: E402
+from context_flux_no.simulations.backends.base import normalize_bcs  # noqa: E402
+from context_flux_no.simulations.backends.pyclaw import PyClawBackend  # noqa: E402
 from context_flux_no.simulations.grid import Grid  # noqa: E402
-from context_flux_no.simulations.pyclaw import PyClawBackend  # noqa: E402
+from context_flux_no.simulations.initial_conditions import FromFunction  # noqa: E402
 
 from tests.unit.make_goldens_simulations import CASES, GOLDENS  # noqa: E402
 
@@ -69,22 +70,15 @@ def test_backend_input_checks_and_describe():
     pde, ic, x_spans, Nxs, t_span, Nt, _ = CASES["cubic_1d"]
     backend = PyClawBackend("classic", cfl_desired=0.3)
     grid = Grid(x_spans, Nxs)
+    two_channels = FromFunction(
+        lambda c: np.stack([c[0], c[0]]), n_eqn=2, n_spatial_dims=1
+    )
     with pytest.raises(ValueError):
         backend.solve(
-            pde,
-            np.zeros((2, *grid.shape)),
-            grid,
-            np.linspace(0, 1, 3),
-            normalize_bcs("periodic", 1),
+            pde, two_channels, grid, np.linspace(0, 1, 3), normalize_bcs("periodic", 1)
         )
     with pytest.raises(ValueError):
-        backend.solve(
-            pde,
-            np.zeros((1, *grid.shape)),
-            grid,
-            np.array([0.0]),
-            normalize_bcs("periodic", 1),
-        )
+        backend.solve(pde, ic, grid, np.array([0.0]), normalize_bcs("periodic", 1))
     d = backend.describe()
     assert (
         d["name"] == "pyclaw"

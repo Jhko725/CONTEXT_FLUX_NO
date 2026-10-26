@@ -1,272 +1,119 @@
-from typing import Sequence
+"""Piecewise-constant random initial conditions on periodic domains.
 
-import equinox as eqx
+1-D: `num_jumps` jump positions drawn uniformly in `[x0, x1)`, a value per interval, the
+interval wrapping around the periodic boundary. 2-D: a Voronoi tessellation of the torus from
+`num_regions` seeds drawn uniformly in the domain, one `channels`-vector per region, so
+discontinuities have arbitrary orientation and every channel shares the geometry. Both are
+functions of position (positions are drawn in physical coordinates), not of a grid.
+
+Before 2026-10-25 the 1-D jumps were drawn as *grid indices* and the 2-D domain was inferred
+from the grid; the drawn distribution now depends only on the domain (change document
+`2026-10-25-phase2a-trixi-backend.md`, Design)."""
+
+from __future__ import annotations
+
+from collections.abc import Sequence
+
 import jax
 import jax.numpy as jnp
-from jaxtyping import Array, Float, PRNGKeyArray
+import numpy as np
+from jaxtyping import Float, PRNGKeyArray
+
+from context_flux_no.simulations.initial_conditions.base import (
+    Coords,
+    InitialCondition,
+    InitialConditionSampler,
+)
 
 
-def generate_periodic_random_step_function_1d(
-    x: Float[Array, " Nx"],
-    key: PRNGKeyArray,
-    *,
-    num_jumps_min: int = 1,
-    num_jumps_max: int = 5,
-    value_min: float = -1.0,
-    value_max: float = 1.0,
-) -> Float[Array, " Nx"]:
-    """
-    Generate a periodic random step function on a 1D grid.
+class PeriodicStep1D(InitialCondition):
+    """`u0(x) = values[region(x)]`, `region` = number of jumps at or before `x` (periodic
+    wrap: points before the first jump belong to the last interval)."""
 
-    The function is piecewise constant on the periodic domain, so the left and right
-    boundaries are connected.
+    def __init__(
+        self, jumps: Float[np.ndarray, " J"], values: Float[np.ndarray, " J"], x_span
+    ):
+        super().__init__(n_eqn=1, n_spatial_dims=1)
+        self.jumps = np.sort(np.asarray(jumps, dtype=float))
+        self.values = np.asarray(values, dtype=float)
+        self.x_span = (float(x_span[0]), float(x_span[1]))
+        if self.jumps.shape != self.values.shape or self.jumps.ndim != 1:
+            raise ValueError("jumps and values must be 1-D of equal length")
 
-    Args:
-        x: 1D equispaced grid, shape (Nx,)
-        key: JAX random key
-        num_jumps_min: minimum number of jump points
-        num_jumps_max: maximum number of jump points
-        value_min, value_max: range of step heights
-
-    Returns:
-        u0: shape (Nx,)
-    """
-    Nx = x.shape[0]
-    idx = jnp.arange(Nx)
-
-    key_n, key_bp, key_val, key_shift = jax.random.split(key, 4)
-
-    # number of jumps on the periodic domain
-    num_jumps = jax.random.randint(
-        key_n, shape=(), minval=num_jumps_min, maxval=num_jumps_max + 1
-    )
-
-    # choose jump locations among grid indices
-    perm = jax.random.permutation(key_bp, idx)
-    jump_idx = jnp.sort(perm[:num_jumps])
-
-    # step values for each interval
-    values = jax.random.uniform(
-        key_val, shape=(num_jumps,), minval=value_min, maxval=value_max
-    )
-
-    # periodic random shift so that boundary x[0] is not special
-    shift = jax.random.randint(key_shift, shape=(), minval=0, maxval=Nx)
-    idx_shifted = (idx + shift) % Nx
-
-    # count how many jump points are <= each shifted index
-    # region label in {0,1,...,num_jumps-1}
-    counts = jnp.sum(idx_shifted[:, None] >= jump_idx[None, :], axis=1)
-    region = counts % num_jumps
-
-    u0 = values[region]
-    return u0
+    def at_points(self, coords: Coords) -> Float[np.ndarray, "1 *shape"]:
+        (x,) = self.check_coords(coords)
+        lo, hi = self.x_span
+        xp = lo + np.mod(x - lo, hi - lo)  # into the periodic domain
+        region = (
+            np.searchsorted(self.jumps, xp, side="right") - 1
+        )  # -1 before the first jump
+        region = np.mod(region, len(self.jumps))
+        return self.values[region][None]
 
 
-class PeriodicRandomStepFunction1D(eqx.Module):
-    num_jumps_min: int = eqx.field(static=True, default=1)
-    num_jumps_max: int = eqx.field(static=True, default=5)
-    value_min: float = eqx.field(static=True, default=-1.0)
-    value_max: float = eqx.field(static=True, default=1.0)
+class PeriodicRandomStepFunction1D(InitialConditionSampler):
+    def __init__(
+        self,
+        num_jumps_min: int = 1,
+        num_jumps_max: int = 5,
+        value_min: float = -1.0,
+        value_max: float = 1.0,
+    ) -> None:
+        super().__init__(n_eqn=1, n_spatial_dims=1)
+        if num_jumps_min < 1 or num_jumps_max < num_jumps_min:
+            raise ValueError("need 1 <= num_jumps_min <= num_jumps_max")
+        self.num_jumps_min = int(num_jumps_min)
+        self.num_jumps_max = int(num_jumps_max)
+        self.value_min = float(value_min)
+        self.value_max = float(value_max)
 
-    def sample(self, x: Float[Array, " Nx"], key: PRNGKeyArray) -> Float[Array, " Nx"]:
-        return jnp.expand_dims(
-            generate_periodic_random_step_function_1d(
-                x,
-                key,
-                num_jumps_min=self.num_jumps_min,
-                num_jumps_max=self.num_jumps_max,
-                value_min=self.value_min,
-                value_max=self.value_max,
-            ),
-            axis=0,
+    def sample(
+        self, key: PRNGKeyArray, x_spans: Sequence[Sequence[float]]
+    ) -> PeriodicStep1D:
+        ((lo, hi),) = (tuple(s) for s in x_spans)
+        key_n, key_pos, key_val = jax.random.split(key, 3)
+        num_jumps = int(
+            jax.random.randint(key_n, (), self.num_jumps_min, self.num_jumps_max + 1)
         )
-
-
-class MultichannelWaveform(eqx.Module):
-    waveforms: tuple
-
-    def __init__(self, waveforms):
-        self.waveforms = tuple(waveforms)
-
-    @property
-    def channels(self) -> int:
-        return len(self.waveforms)
-
-    def sample(self, x: Float[Array, " Nx"], key: PRNGKeyArray) -> Float[Array, "C Nx"]:
-        keys = jax.random.split(key, self.channels)
-        return jnp.concatenate(
-            [wave.sample(x, k) for wave, k in zip(self.waveforms, keys)], axis=0
+        jumps = jax.random.uniform(key_pos, (num_jumps,), minval=lo, maxval=hi)
+        values = jax.random.uniform(
+            key_val, (num_jumps,), minval=self.value_min, maxval=self.value_max
         )
+        return PeriodicStep1D(np.asarray(jumps), np.asarray(values), (lo, hi))
 
 
-# ============================================================
-# 1. Periodic Voronoi random step function
-# ============================================================
+class PeriodicVoronoi2D(InitialCondition):
+    """`u0(x) = values[:, nearest seed]` with the periodic (torus) distance."""
+
+    def __init__(
+        self,
+        seeds: Float[np.ndarray, "R 2"],
+        values: Float[np.ndarray, "C R"],
+        x_spans: Sequence[Sequence[float]],
+    ) -> None:
+        self.seeds = np.asarray(seeds, dtype=float)
+        self.values = np.asarray(values, dtype=float)
+        self.x_spans = tuple((float(lo), float(hi)) for lo, hi in x_spans)
+        if self.seeds.ndim != 2 or self.seeds.shape[1] != 2 or len(self.x_spans) != 2:
+            raise ValueError("seeds must be [R, 2] on a 2-D domain")
+        if self.values.ndim != 2 or self.values.shape[1] != self.seeds.shape[0]:
+            raise ValueError("values must be [channels, R]")
+        super().__init__(n_eqn=self.values.shape[0], n_spatial_dims=2)
+
+    def at_points(self, coords: Coords) -> Float[np.ndarray, "n_eqn *shape"]:
+        x, y = self.check_coords(coords)
+        dist_sq = np.zeros(x.shape + (self.seeds.shape[0],))
+        for axis, c in enumerate((x, y)):
+            lo, hi = self.x_spans[axis]
+            cp = lo + np.mod(c - lo, hi - lo)  # into the periodic domain
+            d = np.abs(cp[..., None] - self.seeds[:, axis])  # [*shape, R]
+            d = np.minimum(d, (hi - lo) - d)  # torus distance along this axis
+            dist_sq += d**2
+        region = np.argmin(dist_sq, axis=-1)
+        return self.values[:, region]
 
 
-def generate_periodic_random_step_function_2d(
-    x: Float[Array, " Nx"],
-    y: Float[Array, " Ny"],
-    key: PRNGKeyArray,
-    *,
-    channels: int = 1,
-    num_regions_min: int = 2,
-    num_regions_max: int = 8,
-    value_min: float = -1.0,
-    value_max: float = 1.0,
-) -> Float[Array, "C Nx Ny"]:
-    """
-    Generate a periodic piecewise-constant random field on a 2D domain.
-
-    The domain is partitioned using a Voronoi tessellation on a torus.
-    Therefore:
-
-        - discontinuities can have arbitrary orientations,
-        - left/right boundaries are periodic,
-        - top/bottom boundaries are periodic,
-        - all channels share the same discontinuity geometry.
-
-    Each Voronoi region is assigned an independent C-dimensional
-    constant state.
-
-    Args:
-        x:
-            Cell-center x coordinates, shape (Nx,).
-        y:
-            Cell-center y coordinates, shape (Ny,).
-        key:
-            JAX random key.
-        channels:
-            Number of physical/state channels.
-        num_regions_min:
-            Minimum number of Voronoi regions.
-        num_regions_max:
-            Maximum number of Voronoi regions.
-        value_min:
-            Minimum state value.
-        value_max:
-            Maximum state value.
-
-    Returns:
-        u0:
-            Initial condition, shape (C, Nx, Ny).
-    """
-    nx = x.shape[0]
-    ny = y.shape[0]
-
-    if nx < 2 or ny < 2:
-        raise ValueError("2D grid requires Nx >= 2 and Ny >= 2.")
-
-    if channels < 1:
-        raise ValueError("channels must be >= 1.")
-
-    if num_regions_min < 1:
-        raise ValueError("num_regions_min must be >= 1.")
-
-    if num_regions_max < num_regions_min:
-        raise ValueError("num_regions_max must be >= num_regions_min.")
-
-    key_n, key_seed, key_value = jax.random.split(key, 3)
-
-    # --------------------------------------------------------
-    # Recover periodic physical domain from cell centers
-    # --------------------------------------------------------
-
-    dx = x[1] - x[0]
-    dy = y[1] - y[0]
-
-    lx = dx * nx
-    ly = dy * ny
-
-    x_left = x[0] - 0.5 * dx
-    y_left = y[0] - 0.5 * dy
-
-    # Grid:
-    # X, Y -> (Nx, Ny)
-    X, Y = jnp.meshgrid(x, y, indexing="ij")
-
-    # --------------------------------------------------------
-    # Number of active Voronoi regions
-    #
-    # num_regions is dynamic, but all arrays have static size
-    # num_regions_max so that this remains JIT-friendly.
-    # --------------------------------------------------------
-
-    num_regions = jax.random.randint(
-        key_n,
-        shape=(),
-        minval=num_regions_min,
-        maxval=num_regions_max + 1,
-    )
-
-    active = jnp.arange(num_regions_max) < num_regions
-
-    # --------------------------------------------------------
-    # Uniformly sample Voronoi centers on the periodic domain
-    # --------------------------------------------------------
-
-    seeds_unit = jax.random.uniform(
-        key_seed,
-        shape=(num_regions_max, 2),
-        minval=0.0,
-        maxval=1.0,
-    )
-
-    seed_x = x_left + lx * seeds_unit[:, 0]
-    seed_y = y_left + ly * seeds_unit[:, 1]
-
-    # --------------------------------------------------------
-    # Periodic Euclidean distance
-    # --------------------------------------------------------
-
-    dist_x = jnp.abs(X[..., None] - seed_x[None, None, :])
-    dist_y = jnp.abs(Y[..., None] - seed_y[None, None, :])
-
-    dist_x = jnp.minimum(dist_x, lx - dist_x)
-    dist_y = jnp.minimum(dist_y, ly - dist_y)
-
-    dist_sq = dist_x**2 + dist_y**2
-
-    # Ignore inactive seeds.
-    dist_sq = jnp.where(active[None, None, :], dist_sq, jnp.inf)
-
-    # (Nx, Ny)
-    region = jnp.argmin(dist_sq, axis=-1)
-
-    # --------------------------------------------------------
-    # Random state vector assigned to every region
-    #
-    # region_values:
-    #   (num_regions_max, C)
-    #
-    # This means all channels share the same region geometry.
-    # --------------------------------------------------------
-
-    region_values = jax.random.uniform(
-        key_value, shape=(num_regions_max, channels), minval=value_min, maxval=value_max
-    )
-
-    # (Nx, Ny, C)
-    u0 = region_values[region]
-    # -> (C, Nx, Ny)
-    u0 = jnp.moveaxis(u0, -1, 0)
-
-    return u0
-
-
-# ============================================================
-# 2. Equinox initial-condition module
-# ============================================================
-
-
-class PeriodicRandomStepFunction2D(eqx.Module):
-    channels: int = eqx.field(static=True)
-    num_regions_min: int = eqx.field(static=True)
-    num_regions_max: int = eqx.field(static=True)
-    value_min: tuple[float, ...] = eqx.field(static=True)
-    value_max: tuple[float, ...] = eqx.field(static=True)
-
+class PeriodicRandomStepFunction2D(InitialConditionSampler):
     def __init__(
         self,
         channels: int,
@@ -274,36 +121,36 @@ class PeriodicRandomStepFunction2D(eqx.Module):
         num_regions_max: int = 8,
         value_min: float | Sequence[float] = -1.0,
         value_max: float | Sequence[float] = 1.0,
-    ):
-        self.channels = channels
-        self.num_regions_min = num_regions_min
-        self.num_regions_max = num_regions_max
-        self.value_min = (
-            (value_min,) if isinstance(value_min, float) else tuple(value_min)
-        )
-        self.value_max = (
-            (value_max,) if isinstance(value_max, float) else tuple(value_max)
-        )
+    ) -> None:
+        super().__init__(n_eqn=channels, n_spatial_dims=2)
+        self.channels = int(channels)
+        if num_regions_min < 1 or num_regions_max < num_regions_min:
+            raise ValueError("need 1 <= num_regions_min <= num_regions_max")
+        self.num_regions_min = int(num_regions_min)
+        self.num_regions_max = int(num_regions_max)
+        self.value_min = np.broadcast_to(np.asarray(value_min, float), (self.channels,))
+        self.value_max = np.broadcast_to(np.asarray(value_max, float), (self.channels,))
 
     def sample(
-        self,
-        xs: tuple[Float[Array, " #Nx"], ...],
-        key: PRNGKeyArray,
-    ) -> Float[Array, "C Nx Ny"]:
-        return generate_periodic_random_step_function_2d(
-            *xs,
-            key,
-            channels=self.channels,
-            num_regions_min=self.num_regions_min,
-            num_regions_max=self.num_regions_max,
-            value_min=jnp.asarray(self.value_min),
-            value_max=jnp.asarray(self.value_max),
+        self, key: PRNGKeyArray, x_spans: Sequence[Sequence[float]]
+    ) -> PeriodicVoronoi2D:
+        spans = tuple((float(lo), float(hi)) for lo, hi in x_spans)
+        if len(spans) != 2:
+            raise ValueError("PeriodicRandomStepFunction2D needs a 2-D domain")
+        key_n, key_seed, key_val = jax.random.split(key, 3)
+        num_regions = int(
+            jax.random.randint(
+                key_n, (), self.num_regions_min, self.num_regions_max + 1
+            )
         )
-
-    def __call__(
-        self,
-        grid,
-        key: PRNGKeyArray,
-    ) -> Float[Array, "C Nx Ny"]:
-        x, y = grid
-        return self.sample(x, y, key)
+        unit = jax.random.uniform(key_seed, (num_regions, 2))
+        lo = jnp.array([s[0] for s in spans])
+        hi = jnp.array([s[1] for s in spans])
+        seeds = lo + (hi - lo) * unit
+        values = jax.random.uniform(
+            key_val,
+            (self.channels, num_regions),
+            minval=jnp.asarray(self.value_min)[:, None],
+            maxval=jnp.asarray(self.value_max)[:, None],
+        )
+        return PeriodicVoronoi2D(np.asarray(seeds), np.asarray(values), spans)

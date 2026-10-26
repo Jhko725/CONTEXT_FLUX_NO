@@ -1,16 +1,17 @@
 ---
 type: decision
 id: ADR-0011
-status: accepted
+status: amended
 updated: 2026-10-25
-verified_by: joon (ledger confirmed 2026-10-25, "Go ahead with 2a")
+verified_by: joon (ledger confirmed 2026-10-25, "Go ahead with 2a"; initial-condition contract by interview 2026-10-25, "Looks good. Go ahead")
 sources: ADR-0004; Clawpack/PyClaw docs and source (5.14.0); The Well data format (the_well/docs/data_format.md); ADR-0010 for the record pattern
 ---
 
 # ADR-0011 — Reference solvers behind one `SolverBackend`; every store carries a `DatasetRecord`
 
-**Status**: accepted (2026-10-25). Implemented on `phase2a-pyclaw-backend` (PyClaw half);
-the Trixi backend follows the same interface when it lands.
+**Status**: accepted (2026-10-25); amended 2026-10-25 (§Initial conditions). Implemented on
+`phase2a-pyclaw-backend` (PyClaw half) and `phase2a-trixi-backend` (the contract amendment,
+the Trixi backend's Python side).
 
 ## Context
 
@@ -25,8 +26,9 @@ version (pain point P9 on the data side; findings F7/F8).
 
 ## Decision
 
-1. **One `SolverBackend` interface** [code]: `solve(pde, u0[n_eqn, *N], grid, t_out, bcs) →
-   u[time, n_eqn, *N]`. The backend knows nothing about files or sampling. `Grid` is the
+1. **One `SolverBackend` interface** [code]: `solve(pde, ic, grid, t_out, bcs) →
+   u[time, n_eqn, *N]` (`ic` an `InitialCondition`, §Initial conditions; originally an array
+   `u0[n_eqn, *N]`). The backend knows nothing about files or sampling. `Grid` is the
    shared geometry (uniform Cartesian, cell centres computed with PyClaw's arithmetic).
    Boundary conditions are the three names every backend can honour — `periodic`, `extrap`,
    `wall` — per axis and side, until `fv/boundary.py` (Phase 2b) provides objects; the names
@@ -82,6 +84,33 @@ version (pain point P9 on the data side; findings F7/F8).
   description is enough to tell datasets apart and does not require reading terabytes;
   a content digest can be added to `extra` later if needed.
 
+## Initial conditions (amendment, 2026-10-25)
+
+An initial condition is a **function of space**, not an array: `InitialCondition.at_points(
+coords) -> [n_eqn, *shape]` with one coordinate array per axis (all of one shape), plus
+`n_eqn` and `n_spatial_dims` [code: `simulations/initial_conditions/base.py`]. Samplers return
+one (`InitialConditionSampler.sample(key, x_spans)`), drawing positions in physical
+coordinates so a draw does not depend on a grid; `FromFunction`, `Stacked`, `Conserved(ic,
+pde)` and `Multichannel` compose them. **Each backend discretizes the function where its
+scheme needs it**: PyClaw at the cell centers (bit-identical to the old arrays), Trixi on the
+DG nodes, the own schemes at centers — `SolverBackend.solve` receives the function.
+
+*Why.* A high-order oracle fed cell-center values would interpolate them to its nodes, an
+O(h⁴) transfer error of the order of the schemes V18/V19 compare; and a sampler that draws
+grid indices ties the distribution of initial data to the resolution.
+
+*Rejected.* `Array | Callable` (two routes to one result); an array-backed adapter (no
+adopter: goldens are formulas, samplers evaluate anywhere, regression inputs never run a
+solver); keeping array-valued samplers and interpolating in the Trixi backend (the error
+above).
+
+*Consequences.* The 1-D step and 2-D Voronoi distributions changed (positions in the domain
+instead of grid indices); the ICLR datasets are frozen, 4.4 regenerates. `Euler2D` lost its
+`solve` override: a primitive-variable IC is wrapped in `Conserved` by `generate_dataset`
+(`primitive_ic` in the pde config). The circulant-embedding GRF samplers were deleted (the
+gstools Fourier sampler evaluates anywhere and agrees with its structured evaluation on grid
+points).
+
 ## Consequences
 
 - `scripts/data/generate_dataset.py` works for every family again (two bug fixes on the way:
@@ -91,7 +120,7 @@ version (pain point P9 on the data side; findings F7/F8).
   `grid`, `backend`, `pyclaw`, `record`, `writer`, `generate`, `pde/`. The Well layout split
   (`solution_to_well_schema`) moved from the family to the writer, which is created with the
   layout: the family states its layout once, the store owns how it is laid out on disk.
-- Julia/Trixi enters through the same interface (`simulations/trixi.py`) as
+- Julia/Trixi enters through the same interface (`simulations/backends/trixi.py`) as
   `docs/design/python-julia-repo.md` describes; nothing in this decision depends on it.
 - Phase 4.4 regeneration picks a backend per family in its config and the choice is in every
   `dataset.json`.

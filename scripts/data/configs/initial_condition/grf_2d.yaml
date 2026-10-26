@@ -1,8 +1,8 @@
 name: grf
-waveform:
-  _target_: context_flux_no.simulations.initial_conditions.grf.GaussianRandomField2D
-  covariance_fn: 
-    _target_: gstools.Gaussian
-    dim: 2.0
-    var: 1.0
-    len_scale: 0.3
+sampler:
+  _target_: context_flux_no.simulations.initial_conditions.grf.GaussianRandomField
+  covariance_fns:
+    - _target_: gstools.Gaussian
+      dim: 2
+      var: 1.0
+      len_scale: 0.3

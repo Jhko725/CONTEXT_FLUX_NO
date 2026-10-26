@@ -31,9 +31,7 @@ def main(cfg: DictConfig) -> None:
         n_coeffs=cfg.n_coeffs,
         n_ics_per_coeff=cfg.n_ics_per_coeff,
         pde_factory=hydra.utils.get_method(cfg.pde.pde_factory),
-        initial_condition_fn=hydra.utils.instantiate(
-            cfg.initial_condition.waveform
-        ).sample,
+        initial_condition=hydra.utils.instantiate(cfg.initial_condition.sampler),
         coeff_range_dict=cfg.pde.coeff_range_dict,
         x_spans=cfg.pde.x_spans,
         Nxs=cfg.pde.Nxs,
@@ -46,10 +44,11 @@ def main(cfg: DictConfig) -> None:
         savedir=cfg.savedir,
         filename=cfg.savename,
         backend=backend,
+        primitive_ic=bool(cfg.pde.get("primitive_ic", False)),
         ic_description={
             "name": cfg.initial_condition.name,
             "config": OmegaConf.to_container(
-                cfg.initial_condition.waveform, resolve=True
+                cfg.initial_condition.sampler, resolve=True
             ),
         },
         **solve_kwargs,

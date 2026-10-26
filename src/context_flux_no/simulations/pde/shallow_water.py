@@ -4,8 +4,9 @@ import equinox as eqx
 import numpy as np
 from jaxtyping import Float
 
+from context_flux_no.simulations.backends.pyclaw import PyClawSpec
+from context_flux_no.simulations.backends.trixi import TrixiSpec
 from context_flux_no.simulations.pde.base import AbstractPDEFamily
-from context_flux_no.simulations.pyclaw import PyClawSpec
 
 
 def riemann_param_shallow_water_1D(
@@ -157,4 +158,11 @@ class ParametrizedShallowWater1D(AbstractPDEFamily):
             kernel_language="Python",
             problem_data={**self.parameters, "h_floor": self.h_floor},
             classic_options={"limiters": "MC", "cfl_desired": 0.5, "cfl_max": 0.9},
+        )
+
+    @property
+    def trixi_spec(self) -> TrixiSpec:
+        return TrixiSpec(
+            "ParametrizedShallowWaterEquations1D",
+            {**self.parameters, "h_floor": self.h_floor},
         )

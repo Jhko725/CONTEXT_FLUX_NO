@@ -24,7 +24,7 @@ from typing import Any, Literal
 import numpy as np
 import zarr
 
-from context_flux_no.simulations.backend import BCs
+from context_flux_no.simulations.backends.base import BCs
 from context_flux_no.simulations.grid import Grid
 from context_flux_no.simulations.record import DatasetRecord
 

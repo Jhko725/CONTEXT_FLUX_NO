@@ -1,0 +1,24 @@
+name = "ContextFluxTrixi"
+uuid = "3bf3af66-f032-4e02-a37a-2ba6a792afcf"
+version = "0.1.0"
+authors = ["Joon-Hyuk Ko"]
+
+[deps]
+OrdinaryDiffEqSSPRK = "669c94d9-1f4b-4b64-b377-1aa079aa2388"
+SciMLBase = "0bca4576-84f4-4d90-8ffe-ffa030f20462"
+StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
+Trixi = "a7f1ee26-1774-49b1-8366-f1abc58fbfcb"
+
+[compat]
+OrdinaryDiffEqSSPRK = "2"
+SciMLBase = "2.154, 3"
+StaticArrays = "1"
+Trixi = "0.17"
+julia = "1.10"
+
+[extras]
+Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[targets]
+test = ["Random", "Test"]

@@ -15,7 +15,7 @@ import pytest
 
 pytest.importorskip("clawpack")
 
-from context_flux_no.simulations.pyclaw import PyClawBackend  # noqa: E402
+from context_flux_no.simulations.backends.pyclaw import PyClawBackend  # noqa: E402
 
 from tests.unit.make_goldens_simulations import CASES  # noqa: E402
 

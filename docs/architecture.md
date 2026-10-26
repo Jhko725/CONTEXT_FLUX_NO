@@ -49,17 +49,21 @@ src/context_flux_no/
 ├── utils/                       arrays.py (is_floating_array, num_parameters; was utils.py), provenance.py (git_state, package_version),
 │                                serialization.py (dumps: the one JSON encoder for records and store attrs)
 ├── data/                        sources.py: WellDatasetSourceBase · ZarrWellDatasetSource (current) · TheWellDataSource (re-implements base)  (~~transforms.py~~)
-├── simulations/                 reference solvers + data generation (ADR-0011): grid.py (Grid), backend.py (SolverBackend, BC names),
-│                                pyclaw.py (PyClawSpec, PyClawBackend classic|sharpclaw), record.py (DatasetRecord), writer.py (WellWriter,
+├── simulations/                 reference solvers + data generation (ADR-0011): grid.py (Grid), record.py (DatasetRecord), writer.py (WellWriter,
 │                                Well boundary_conditions), generate.py (generate_dataset); pde/{base (minimal interface until 4.1), burgers,
 │                                cubic, euler, shallow_water, sine_1d} — 5 PyClaw families + CubicFlux2D/ViscousBurgers1D own steppers
 │                                (~~dataset.py~~, ~~utils.py~~, ~~pdesolve.py~~, ~~pyclaw_utils.py~~)
-│   └── initial_conditions/      (was waveforms/) GaussianRandomField{,1D,2D}, PeriodicRandomStepFunction{1D,2D}, MultichannelWaveform, TruncatedFourier1D
+│   ├── backends/                base.py (SolverBackend, BC names, SolverFailure), pyclaw.py (PyClawSpec, PyClawBackend classic|sharpclaw),
+│                                trixi.py (TrixiSpec, TrixiBackend via juliacall; Julia side in reference/trixi/ContextFluxTrixi/); jax.py at 4.7
+│   └── initial_conditions/      base.py (InitialCondition.at_points, FromFunction, Stacked, Conserved; InitialConditionSampler.sample(key, x_spans),
+│                                Multichannel), grf.py (GaussianRandomField via gstools, evaluable anywhere), step.py (PeriodicStep1D/PeriodicVoronoi2D
+│                                + their samplers), fourier.py (TruncatedFourier1D)
 ├── plotting/, metrics.py, custom_types.py
 scripts/
 ├── training/  train_multiphysics.py (zarr) · train_the_well.py — data + loaders only, on experiment.train; configs/ (22 model, 3 data, 2 training, 3 wandb yamls; config.yaml + config_the_well.yaml)
 ├── backfill_run_records.py   legacy ICLR checkpoints → metadata.json
-└── data/      generate_dataset.py (backend=default|classic|sharpclaw, bc=); configs/ (pde, initial_condition, backend)
+├── setup_julia.py            Julia ~1.12 + reference/trixi/ project via juliapkg, once per machine
+└── data/      generate_dataset.py (backend=default|classic|sharpclaw, bc=); configs/ (pde, initial_condition (sampler:), backend)
 notebooks/    data_generation/ evaluation/ misc/ nn/ training/ — evaluation logic (compute_metrics ×7, metrics_long_rollout ×4) lives here; 5 legacy notebooks removed
 tests/        5 example files + test_nn_hypernetwork.py; tests/unit/ (key hygiene; training/runs; pyclaw backend + goldens_simulations/, backend agreement, generate — 59 tests); tests/verification/ (x64, -m slow: cross-code); tests/regression/ machinery (goldens pending)
 third_party/icon   submodule → Jhko725/icon-baseline (upstream ICON + Joon's HDF5 data path); not imported by src   [0.5 done]
@@ -87,8 +91,8 @@ src/context_flux_no/
   fv/            Phase 2  pure numerics, N-D via `axis`: stencil · boundary · divergence · split · integrate ·
                           analytic · riemann · flux/{base (FluxPredictor, NumericalFlux), classical, neural}
   pde/           Phase 4  PDEFamily (tiered: flux, max_wave_speed, reflect, conversions | eigensystem… | riemann_flux | viscous_flux)
-  simulations/initial_conditions/  Phase 4.2  InitialCondition contract over the moved samplers
-  simulations/   Phase 2a ✓ PyClawBackend · DatasetRecord · WellWriter · generate;  pending: TrixiBackend (2a-trixi) · JaxBackend (4.7) · PDEFamily (4.1)
+  simulations/initial_conditions/  2a-trixi ✓ InitialCondition contract (functions of position; backends discretize)
+  simulations/   Phase 2a ✓ PyClawBackend · DatasetRecord · WellWriter · generate · TrixiBackend + ContextFluxTrixi (V18 green);  pending: JaxBackend (4.7) · PDEFamily (4.1)
   models/incontext/  Phase 3  InContextOperator ⊃ InContextFluxOperator; conditioners; encoders
   models/baselines/  DISCO · DPOT · NaiveFNO …
   training/      Phase 5 ✓ Trainer · losses · loggers · checkpoint   (building blocks)
@@ -96,7 +100,7 @@ src/context_flux_no/
   experiment.py  Phase 5 ✓ config → objects incl. the wandb mirror; Phase 3/7 build() lands here
   evaluation/    Phase 6  rollout · metrics · tables · figures
   configs/       Phase 3/7  dataclass configs + ConfigStore
-reference/trixi/  Julia project, one elixir per family (reference oracle, fallback generator)
+reference/trixi/  Julia project (committed Project/Manifest lock; Trixi 0.17.16, Julia 1.12.7) + ContextFluxTrixi 0.1.0: equations.jl (cubic 1D/2D, sine, parametrized SW; exact LF bound), solve.jl (node_coordinates, solve, versions), test/runtests.jl (72 checks) — reference oracle, fallback generator
 scripts/        generate.py · train.py · evaluate.py · bench_loader.py · check_configs.py · check_docs.py
 tests/          unit/ · property/ · regression/ · verification/
 third_party/icon

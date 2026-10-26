@@ -5,9 +5,9 @@ knows nothing about datasets, files or sampling: `simulations.generate` owns tho
 conditions are *names* per (axis, side) until `fv/boundary.py` (Phase 2b) provides objects;
 the names are the ones every backend can honour and they are recorded in `DatasetRecord`.
 
-Concrete backends: `simulations.pyclaw.PyClawBackend` (Classic and SharpClaw; this branch),
-`simulations.trixi.TrixiBackend` (Julia subprocess; pending), `simulations.jax.JaxBackend`
-(own `fv/` stepper; Phase 4.7)."""
+Concrete backends: `backends.pyclaw.PyClawBackend` (Classic and SharpClaw),
+`backends.trixi.TrixiBackend` (DGSEM through juliacall), `backends.jax.JaxBackend` (own `fv/`
+stepper; Phase 4.7)."""
 
 from __future__ import annotations
 
@@ -18,6 +18,7 @@ from typing import Any, ClassVar, get_args, Literal
 import numpy as np
 
 from context_flux_no.simulations.grid import Grid
+from context_flux_no.simulations.initial_conditions.base import InitialCondition
 
 
 BCName = Literal["periodic", "extrap", "wall"]
@@ -64,10 +65,11 @@ class SolverFailure(RuntimeError):
 
 
 class SolverBackend(abc.ABC):
-    """`solve(pde, u0, grid, t_out, bcs)`; subclasses set `name` and implement `solve`.
-    `u0` is `[n_eqn, *grid.shape]` in conserved variables, `t_out` the strictly increasing
-    output times whose first entry is the time of `u0`; the result is `[len(t_out), n_eqn,
-    *grid.shape]` with `result[0] == u0` up to the backend's own representation."""
+    """`solve(pde, ic, grid, t_out, bcs)`; subclasses set `name` and implement `solve`.
+    `ic` is an `InitialCondition` in conserved variables that the backend evaluates where
+    its scheme needs it (cell centers, DG nodes, …); `t_out` the strictly increasing output
+    times whose first entry is the time of `ic`; the result is `[len(t_out), n_eqn,
+    *grid.shape]` of cell values at the centers (FV: averages, see F12)."""
 
     name: ClassVar[str] = "abstract"
 
@@ -75,22 +77,11 @@ class SolverBackend(abc.ABC):
     def solve(
         self,
         pde: Any,
-        u0: np.ndarray,
+        ic: InitialCondition,
         grid: Grid,
         t_out: np.ndarray,
         bcs: BCs,
     ) -> np.ndarray: ...
-
-    def solve_batch(
-        self,
-        pde: Any,
-        u0s: np.ndarray,
-        grid: Grid,
-        t_out: np.ndarray,
-        bcs: BCs,
-    ) -> np.ndarray:
-        """`[batch, n_eqn, *N]` → `[batch, time, n_eqn, *N]`; a Python loop by default."""
-        return np.stack([self.solve(pde, u0, grid, t_out, bcs) for u0 in u0s], axis=0)
 
     def describe(self) -> dict[str, Any]:
         """What `DatasetRecord.backend` stores: enough to rebuild this backend."""
@@ -98,13 +89,13 @@ class SolverBackend(abc.ABC):
 
     @staticmethod
     def check_inputs(
-        pde: Any, u0: np.ndarray, grid: Grid, t_out: np.ndarray
+        pde: Any, ic: InitialCondition, grid: Grid, t_out: np.ndarray
     ) -> np.ndarray:
-        u0 = np.asarray(u0)
-        if u0.shape != (pde.n_eqns, *grid.shape):
+        if ic.n_eqn != pde.n_eqns or ic.n_spatial_dims != grid.n_spatial_dims:
             raise ValueError(
-                f"u0 has shape {u0.shape}, expected {(pde.n_eqns, *grid.shape)} for "
-                f"{type(pde).__name__} on {grid}"
+                f"initial condition is {ic.n_eqn} × {ic.n_spatial_dims}-D; "
+                f"{type(pde).__name__} on {grid} needs {pde.n_eqns} × "
+                f"{grid.n_spatial_dims}-D"
             )
         t_out = np.asarray(t_out, dtype=float)
         if t_out.ndim != 1 or len(t_out) < 2 or np.any(np.diff(t_out) <= 0):

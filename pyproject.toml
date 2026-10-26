@@ -84,6 +84,8 @@ dev = [
     "ty",
     "nbstripout>=0.8",
     "ruff==0.15.11",
+    "juliacall>=0.9.37",
+    "juliapkg>=0.1.28",
 ]
 
 [tool.pytest.ini_options]

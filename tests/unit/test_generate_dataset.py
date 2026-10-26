@@ -16,6 +16,10 @@ from context_flux_no.simulations import (
     normalize_bcs,
     WellWriter,
 )
+from context_flux_no.simulations.initial_conditions import (
+    FromFunction,
+    InitialConditionSampler,
+)
 from context_flux_no.simulations.pde import CubicFlux1D
 from context_flux_no.simulations.writer import sidecar_path
 from context_flux_no.utils.serialization import dumps
@@ -116,18 +120,26 @@ def test_generate_dataset_end_to_end(tmp_path):
     pytest.importorskip("clawpack")
     from context_flux_no.data import ZarrWellDatasetSource
 
-    def ic(centers, key):
-        import jax
+    class SinePhase(InitialConditionSampler):
+        def __init__(self):
+            super().__init__(n_eqn=1, n_spatial_dims=1)
 
-        phase = jax.random.uniform(key, ())
-        return np.sin(2 * np.pi * centers[0] + float(phase))[None]
+        def sample(self, key, x_spans):
+            import jax
+
+            phase = float(jax.random.uniform(key, ()))
+            return FromFunction(
+                lambda c: np.sin(2 * np.pi * c[0] + phase)[None],
+                n_eqn=1,
+                n_spatial_dims=1,
+            )
 
     writer = generate_dataset(
         dataset_name="cubic_1d",
         n_coeffs=2,
         n_ics_per_coeff=2,
         pde_factory=CubicFlux1D,
-        initial_condition_fn=ic,
+        initial_condition=SinePhase(),
         coeff_range_dict={"a": (-1.0, 1.0), "b": (-1.0, 1.0), "c": (-1.0, 1.0)},
         x_spans=[(0, 1)],
         Nxs=[32],
@@ -141,7 +153,8 @@ def test_generate_dataset_end_to_end(tmp_path):
     rec = writer.record
     assert rec.status == "complete" and rec.n_trajectories == 4 and rec.n_failed == 0
     assert rec.backend["scheme"] == "classic" and rec.family == "CubicFlux1D"
-    assert rec.params["ranges"]["a"] == [-1.0, 1.0] and rec.ic == {"name": "sine-phase"}
+    assert rec.params["ranges"]["a"] == [-1.0, 1.0]
+    assert rec.ic == {"name": "sine-phase", "primitive": False}
     assert (
         tmp_path / "cubic_1d" / "data" / "train" / "cubic_1d_seed=3.dataset.json"
     ).exists()

@@ -1,0 +1,3 @@
+# Trixi.jl DGSEM (polydeg 3, Lax–Friedrichs, Hennemann–Gassner shock capturing, SSPRK33 at
+# CFL 0.5): the high-order reference (V18). Needs `scripts/setup_julia.py` once per machine.
+_target_: context_flux_no.simulations.TrixiBackend

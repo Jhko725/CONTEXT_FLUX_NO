@@ -1,7 +1,7 @@
 name: step
-waveform:
-  _target_: context_flux_no.simulations.initial_conditions.step.MultichannelWaveform
-  waveforms:
+sampler:
+  _target_: context_flux_no.simulations.initial_conditions.Multichannel
+  samplers:
     - _target_: context_flux_no.simulations.initial_conditions.step.PeriodicRandomStepFunction1D
       value_min: 0.5
       value_max: 2.5
