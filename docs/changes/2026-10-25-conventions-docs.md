@@ -75,8 +75,9 @@ None that bear on a reported result.
 
 No test added; `uvx codespell@2.4.3` and `uv run python scripts/check_spelling.py` both
 report 0 findings, and the renamed test runs green with the rest of
-`tests/unit/test_pyclaw_backend.py`. Fast tier after the sweep: see the commit message of
-the wiring commit.
+`tests/unit/test_pyclaw_backend.py`. Fast tier after the sweep: 107 passed, 1 skipped, 1 xfailed
+(the baseline from the Phase 2a-trixi merge); `check_docs --files --base main` and
+`import_all` clean.
 
 ## Open issues
 
