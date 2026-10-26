@@ -37,7 +37,7 @@ row is unverified. Tiers: `property` (fast, every commit) or `verification` (`-m
 | V20 | 2D Euler vs JAX-Fluids on one Lax–Liu configuration | `…::test_jaxfluids_euler` | JAX-Fluids | as V18 | verification | planned [R] |
 | V21 | `vmap` == Python loop; `jit` == eager, for every `FluxPredictor` | `tests/property/test_transforms.py` | each other | `rtol 1e-6` | property | planned |
 | V25 | `PyClawBackend("classic")` is bit-identical to the pre-2a per-class `solve()` on every PyClaw family | `tests/unit/test_pyclaw_backend.py::test_classic_is_bit_identical_to_pre_2a_solve` | goldens at `1ff31bb` | exact | unit | **green** |
-| V22 | ICLR checkpoints reproduce their recorded forward pass and 5-step rollout | `tests/regression/test_regression.py` | goldens | `rtol 1e-5, atol 1e-6` (CPU) | regression | machinery landed 2026-10-24; goldens pending (cluster) |
+| V22 | ICLR checkpoints reproduce their recorded forward pass and 5-step rollout | `tests/regression/test_regression.py` | goldens | `rtol 1e-5, atol 1e-6` (CPU) | regression | **green** 2026-10-26: goldens from `main` @ `4658f65`, 7 cases, run twice bit-identical; on `phase1-prune` after parking the `operatornet` key fix (F15) |
 | V23 | Mandatory statement: all of V1–V21 hold at N = 1, 2 and (tiny) 3 | parametrised | — | — | both | planned |
 
 ## Tolerance notes
@@ -45,4 +45,4 @@ row is unverified. Tiers: `property` (fast, every commit) or `verification` (`-m
 - fp32 cannot demonstrate fifth order beyond ~2 refinements (error floor ~1e-7); verification uses `jax_enable_x64`.
 - Cross-code tolerances are set from a mutual convergence study (DG and FV dissipate differently near shocks), recorded here when measured.
 - Regression goldens are generated and compared on CPU (`JAX_PLATFORMS=cpu`) for determinism.
-| V24 | No PRNG key is consumed twice while constructing any model from its config (F5/F6 guard) | `tests/unit/test_key_hygiene.py` | identity of recorded keys | exact | property-style (unit) | green since `134dfdb` |
+| V24 | No PRNG key is consumed twice while constructing any model from its config (F5/F6 guard) | `tests/unit/test_key_hygiene.py` | identity of recorded keys | exact | property-style (unit) | green since `134dfdb`; DISCO case strict `xfail` until F15's fix (checkpointed `operatornet_scale`) |

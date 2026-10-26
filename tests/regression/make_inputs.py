@@ -3,7 +3,7 @@
 Self-contained inputs mean the tests never need the datasets. Run once, on the machine with the
 data, then commit the .npz files (small: ~10 kB for 1D, ~5 MB for 2D Euler):
 
-    JAX_PLATFORMS=cpu uv run python tests/regression/make_inputs.py --data-root ./data/datasets
+    JAX_PLATFORMS=cpu uv run python -m tests.regression.make_inputs --data-root ./data/datasets
 
 Takes trajectory 0, time steps 0:CONTEXT_LENGTH of the named split, through the same
 ZarrWellDatasetSource the training script uses (so normalisation and channel packing match), and

@@ -1,12 +1,44 @@
+import logging
 from pathlib import Path
+from typing import Any
 
 import equinox as eqx
 import jax
 import more_itertools
+import numpy as np
 from hydra.utils import instantiate
 from jaxtyping import PyTree
 from omegaconf import OmegaConf
 from orbax.checkpoint import v1 as ocp
+
+
+log = logging.getLogger(__name__)
+
+# Values the ICLR checkpoints stored in their model config that the current code no longer
+# accepts, and what they meant when those models were trained: `bias_hyperinit` (misspelled in
+# 10 of 12 configs, F1) fell through `HypernetworkHead` to the default initialization. The
+# loaded weights make the choice irrelevant to the forward pass; the stored value is left in
+# the checkpoint as evidence for the 0.7 audit.
+# orbax <= 0.11 `save_pytree` wrote the tree under this checkpointable name; 0.12 writes
+# `state` (`STATE_CHECKPOINTABLE_KEY`) and `load_pytree` became an alias of `load`, which
+# looks for `state` unless told otherwise.
+LEGACY_CHECKPOINTABLE = "pytree"
+
+_LEGACY_CONFIG_FIXES: dict[tuple[str, Any], Any] = {
+    ("hypernet_init", "bias_hyperinit"): "default",
+}
+
+
+def translate_legacy_config(model_config: dict[str, Any]) -> dict[str, Any]:
+    """The stored model config with `_LEGACY_CONFIG_FIXES` applied (top level); a copy."""
+    fixed = dict(model_config)
+    for (key, legacy), current in _LEGACY_CONFIG_FIXES.items():
+        if fixed.get(key) == legacy:
+            log.warning(
+                "legacy checkpoint config %s=%r read as %r (F1)", key, legacy, current
+            )
+            fixed[key] = current
+    return fixed
 
 
 def _infer_step(ckpt_dir: Path) -> int:
@@ -40,12 +72,28 @@ def load_model(
         step_number = _infer_step(loaddir)
 
     with ocp.training.Checkpointer(loaddir) as mngr_load:
-        model_config = mngr_load.root_metadata().custom_metadata
+        model_config = translate_legacy_config(
+            dict(mngr_load.root_metadata().custom_metadata)
+        )
         model_backbone = instantiate(OmegaConf.create(model_config))
 
-        weights_backbone, rest = eqx.partition(
-            model_backbone, lambda x: isinstance(x, jax.Array)
+        template, rest = checkpoint_template(model_backbone)
+        weights_load = mngr_load.load(
+            step_number, template, checkpointable_name=LEGACY_CHECKPOINTABLE
         )
-        weights_load = mngr_load.load_pytree(step_number, weights_backbone)
 
     return eqx.combine(weights_load, rest)
+
+
+def checkpoint_template(model: PyTree) -> tuple[PyTree, PyTree]:
+    """`(template, rest)`: the leaves the trainer saved (`eqx.is_array`, `trainer.py`) as the
+    pytree orbax restores into, and everything else. The template must ask for *every* stored
+    leaf: a stored array with no template leaf is read anyway, through the checkpoint's
+    sharding file — which names the training GPU and fails on CPU — and then dropped.
+    DISCO's `DropPath.p` (a `np.float64` from `np.linspace`) is such a leaf; orbax takes
+    numpy scalars only as 0-d arrays, so those become `np.asarray`."""
+    arrays, rest = eqx.partition(model, eqx.is_array)
+    arrays = jax.tree.map(
+        lambda x: np.asarray(x) if isinstance(x, np.generic) else x, arrays
+    )
+    return arrays, rest

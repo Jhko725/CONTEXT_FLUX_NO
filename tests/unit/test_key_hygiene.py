@@ -25,7 +25,15 @@ MODELS = [
     ("hyperno_fno", "cubic_1d"),
     ("hyperno_unet", "cubic_1d"),
     ("hyperfluxno_2d_euler_v2", "euler_2d"),
-    ("disco", "cubic_1d"),
+    pytest.param(
+        "disco",
+        "cubic_1d",
+        marks=pytest.mark.xfail(
+            strict=True,
+            reason="F15: the ICLR DISCO checkpoints need the operatornet's original "
+            "(key-reusing) initialization; fixed with checkpointed operatornet_scale",
+        ),
+    ),
     ("dpot", "cubic_1d"),
 ]
 
@@ -78,7 +86,9 @@ def _build(model_name: str, data_name: str, seed: int = 0):
 
 
 @pytest.mark.parametrize(
-    ("model_name", "data_name"), MODELS, ids=[m for m, _ in MODELS]
+    ("model_name", "data_name"),
+    MODELS,
+    ids=[getattr(m, "values", m)[0] for m in MODELS],
 )
 def test_no_key_is_consumed_twice(model_name, data_name, key_log):
     _build(model_name, data_name)

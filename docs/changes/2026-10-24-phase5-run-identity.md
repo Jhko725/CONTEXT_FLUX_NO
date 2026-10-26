@@ -1,7 +1,7 @@
 ---
 type: change
 status: landed
-updated: 2026-10-25
+updated: 2026-10-26
 branch: phase5-run-identity
 roadmap: Phase 5
 base: phase1-prune
@@ -106,6 +106,10 @@ Each with the alternative rejected; ADR-0010 has the full argument.
 - **`experiment.py` lives in the package**, not `scripts/training/common.py`: Hydra's submitit launcher pickles `main` by module reference, and a sibling module of the script is not importable in the Slurm job.
 - **wandb config group named `disabled`**, not `off`: `- wandb: off` in a defaults list is YAML `false`.
 
+Goldens gate, 2026-10-26 (after merging `main`):
+- `src/context_flux_no/training/io.py` — `load_model` loads the legacy checkpointable by name (`LEGACY_CHECKPOINTABLE = "pytree"`): orbax 0.12 renamed the default from `pytree` to `state` and made `load_pytree` an alias of `load`, so every ICLR checkpoint failed with `Requested checkpointables: ['state'] … Available: ['metrics', 'pytree']`.
+- `tests/test_training_io.py`, `tests/unit/test_backfill_run_records.py` — the fake legacy checkpoints are written with `save_checkpointables({"pytree": …})`, the 0.11 layout, so the tests exercise the legacy name.
+
 ## Bugs fixed
 
 - `train_the_well.py` built its optimizer with a clipping chain the saved config did not mention, so the recorded config could not have rebuilt the run. Moved into `configs/training/the_well.yaml`.
@@ -135,7 +139,7 @@ Not tested here: a real `wandb.init` (network); `scripts/check_configs.py` still
 - **`save_every` vs best-checkpoint fidelity** — default 100; Joon to decide whether the new scripts should save every step (`save_every=1`) to match the ICLR protocol.
 - **`conditioning` index column is implied by the model class** until Phase 3 makes it a config field.
 - **`dataset_id` is provisional** until Phase 4's `DatasetRecord` (content hash).
-- **orbax 0.12 reading 0.11.25 checkpoints** — unverified until the regression tier runs; the parked "re-save the ICLR checkpoints under the shim" item is the fallback.
+- **orbax 0.12 reading 0.11.25 checkpoints** — the layout difference is the checkpointable's name (`pytree` → `state`), handled in `load_model`; the arrays themselves read unchanged (regression tier on this branch, 2026-10-26). The parked "re-save under the shim" item is not needed for loading; it would only matter if a future orbax drops the v0 layout.
 - **`training/io.py::load_model` stays** as the legacy loader for the regression tier and backfilled runs; retire with the ICLR shim (D2).
 - **wandb `resume="allow"` on an in-place resume** reuses the recorded wandb id; untested against the service.
 - **`check_docs.py --files`** defaults to `--base origin/main`; for this branch use `--base phase1-prune` (documented above) — a `base:` frontmatter key that the script reads would remove the footgun; left for a docs-tooling pass.
@@ -159,6 +163,7 @@ Joon's Review notes below; Claude's response per row:
 
 | Change | Thoughts | Modifications |
 |---|---|---|
+| **Goldens gate** `training/io.py` legacy checkpointable name `pytree` (orbax 0.12); two tests on the 0.11 layout | | |
 | `src/context_flux_no/provenance.py` — `git_state`, `package_version` | Looks good. | None |
 | `src/context_flux_no/training/loggers.py` — Logger protocol and six implementations | Looks good. `block` could easily be generalized into `tree_block_until_ready` via `jax.tree.map`. Would be need such generalization in the codebase? | To be discussed with Claude |
 | `src/context_flux_no/training/checkpoint.py` — Checkpointer protocol, `OrbaxCheckpointer` (whole state, typed keys, `best`) | Currently random key array is being handled via additional logic involving `_unwrap_key` and `_rewrap_key`. Modern version of `orbax.checkpoint` should natively be able to handle this. How about upgrading the checkpoint version dependency? Alternatively, can one register custom PyTree nodes to getaround this? A third option is not to have `PRNGKeyArray` in the pytrees we are saving. Where are the `keys` currently? Could change to a integer seed value instead and wrap with `jax.random.key(seed)`, no? | To be discussed with Claude. |
@@ -181,4 +186,4 @@ Joon's Review notes below; Claude's response per row:
 | `docs/roadmap.md`, `docs/architecture.md`, `docs/glossary.md`, `docs/index.md`, `docs/findings.md`, `scripts/training/README.md` | Confirmed | None |
 | Round 1: `orbax-checkpoint>=0.12.8`, typed-key wrapper removed, `save`/`load` | Looks good. | None |
 | Round 1: `runs/` package (`record`, `run` + `RunLayout`, `index`, `wandb_mirror`), `experiment.py` at package top with the config builders; `training/` building blocks only | Confirmed. `wandb_mirror` is also mostly `cfg` based instantiation. Reason to keep separate from `experiments.py`? | To be discussed with Claude. |
-| Round 2: `wandb_mirror.py` folded into `experiment.py`; `runs/` = `record`, `run`, `index` | | |
+| Round 2: `wandb_mirror.py` folded into `experiment.py`; `runs/` = `record`, `run`, `index` | Looks good. | None |
