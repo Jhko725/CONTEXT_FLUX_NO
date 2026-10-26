@@ -258,6 +258,35 @@ class WellDatasetSourceBase(grain.sources.RandomAccessDataSource):
                 cache.append(item)
         return cache
 
+    @cached_property
+    def dataset_id(self) -> str:
+        """`<dataset>:<split>:<8 hex>` — a provisional identifier of the data this source
+        reads, stable across machines: the hash covers the common metadata (field names,
+        resolutions, grid shape, trajectory count, normalisation statistics) and the window
+        parameters, not the file paths. Recorded in `RunRecord.index` so runs on different
+        data versions are distinguishable; replaced by `DatasetRecord.id` in Phase 4."""
+        import hashlib
+        import json
+
+        def default(o: Any) -> Any:
+            if isinstance(o, np.ndarray):
+                return o.tolist()
+            if isinstance(o, (set, frozenset, tuple)):
+                return sorted(o) if isinstance(o, (set, frozenset)) else list(o)
+            return str(o)
+
+        payload = {
+            "metadata_common": self.metadata_common,
+            "n_trajectories": self.metadata_varying.get("n_trajectories"),
+            "window_size": self.window_size,
+            "restrict_trajectory_lengths_to": self.restrict_trajectory_lengths_to,
+            "exclude_field_names": list(self.exclude_field_names),
+        }
+        digest = hashlib.sha256(
+            json.dumps(payload, sort_keys=True, default=default).encode()
+        ).hexdigest()[:8]
+        return f"{self.well_dataset_name}:{self.well_split_name}:{digest}"
+
     def __len__(self) -> int:
         return self.file_index_offsets[-1]
 

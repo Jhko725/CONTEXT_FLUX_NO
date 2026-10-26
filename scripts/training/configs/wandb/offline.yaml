@@ -1,0 +1,7 @@
+# wandb files written under the run directory, synced later with `wandb sync <run_dir>/wandb/...`.
+mode: offline
+entity: jhko725
+project: hyperfluxfno_revised
+name: null      # defaults to the run_id in metadata.json
+group: null     # defaults to cfg.experiment, else the Hydra sweep dir, else data.name
+tags: []

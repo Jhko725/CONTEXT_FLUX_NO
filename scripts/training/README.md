@@ -23,7 +23,26 @@ Supported values for `model` are the file names under `scripts/training/configs/
 
 Additional parameters can be passed to alter the model configuration. Alternatively, one can change the yaml files in scripts/training/configs to change default configuration values.
 
-Once training starts, progress will be logged in wandb, corresponding to the wandb entity and project specified in /configs/config.yaml. 
-Make sure the wandb entity value is appropriately set to the user's value.
+## Where a run goes
 
-The resulting checkpoint (corresponding to the best training loss) will be saved at /checkpoints directory.
+Every run lives in Hydra's output directory — `runs/<date>/<time>/` (a `--multirun` sweep:
+`runs/multirun/<date>/<time>/<job>/`) — holding `config.yaml` (the resolved config),
+`metadata.json` (the run's identity, provenance and outcome), `checkpoints/` (whole training
+state; the best by validation loss and the final step are kept) and Hydra's `.hydra/`. See
+`docs/design/run-identity.md`.
+
+wandb is **off by default**. `wandb=online` (or `offline`) creates a wandb run that mirrors the
+run directory: its config is only the dozen index columns (model, data, seed, loss, …), the
+full config is attached as a file, and the wandb id/url are written back into `metadata.json`.
+Set the entity/project in `configs/wandb/online.yaml`; `experiment=<name>` groups runs.
+
+```bash
+uv run python ./scripts/training/train_multiphysics.py model=hyperfluxno wandb=online experiment=ablation-A
+uv run python ./scripts/training/train_multiphysics.py resume=runs/2026-10-24/14-03-12       # continue in place
+uv run python ./scripts/training/train_multiphysics.py warm_start=runs/2026-10-24/14-03-12 model.key.seed=1
+```
+
+To list and load trained runs from Python: `from context_flux_no import runs` —
+`runs.index("runs")`, `runs.select(...)`, `runs.load_run(run_dir)`. Checkpoints from before
+this layout (`checkpoints/<data>/<Model>/...`) are indexed after
+`uv run python scripts/backfill_run_records.py --root ./checkpoints`.

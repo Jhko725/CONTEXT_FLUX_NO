@@ -23,7 +23,14 @@ multirun/
 outputs/
 
 # Wandb logs
-wandb/
+# wandb run files (under run directories), not scripts/training/configs/wandb/
+**/wandb/run-*/
+**/wandb/offline-run-*/
+**/wandb/latest-run
+**/wandb/debug*.log
+/wandb/
+# training run directories (ADR-0010)
+/runs/
 
 # Checkpoints
 checkpoints/

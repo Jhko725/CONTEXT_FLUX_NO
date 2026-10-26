@@ -1,7 +1,7 @@
 ---
 type: glossary
 status: current
-updated: 2026-10-04
+updated: 2026-10-24
 sources: [claude, joon]
 ---
 
@@ -32,7 +32,12 @@ One line per term; `architecture.md` and the design documents use only these.
 - **SolverBackend** — `solve(pde, u0_batch, grid, t_out, bcs)`: `JaxBackend`, `PyClawBackend`, `TrixiBackend`.
 - **reference backend** — PyClaw/SharpClaw or Trixi.jl, used as an oracle and as a fallback data generator (ADR-0004).
 - **AnalyticSolution** — `(x, t, params) → u`, used as IC, boundary data and error reference.
-- **RunRecord / DatasetRecord** — provenance objects written by the trainer / dataset writer (Phase 5 / 4).
+- **run directory** — Hydra's output dir holding `config.yaml`, `metadata.json`, `checkpoints/` (and `.hydra/`, `wandb/`); the identity of a training run (ADR-0010).
+- **RunRecord** — the typed `metadata.json`: locally generated `run_id`, provenance, index columns, outcome, resume notes; mirrored to orbax `custom_metadata` and wandb.
+- **index columns** — the dozen `RunRecord.index` keys that distinguish runs (`runs.index()` columns; all that goes to `wandb.config`).
+- **dataset_id** — `<dataset>:<split>:<8 hex>` from `WellDatasetSourceBase`; provisional until **DatasetRecord** (Phase 4, dataset writer provenance).
+- **Logger / Checkpointer** — the trainer's injected side effects (`training/loggers.py`, `training/checkpoint.py`); `DelayedLogger` is the one-step delay that keeps the host from waiting on the step just enqueued.
+- **resume / warm start** — continue a run in place (`cfg.resume`, same `run_id`) vs start a new run from another run's state (`cfg.warm_start`, `resumed_from`).
 - **golden** — a stored reference output of an ICLR checkpoint for the regression tier.
 - **tier (tests)** — unit · property · regression · verification (ADR-0008).
 - **track** — [C] Common · [M] MVP · [R] Rest (ADR-0009).
