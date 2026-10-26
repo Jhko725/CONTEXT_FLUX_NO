@@ -8,43 +8,43 @@
 # migration must NOT change.
 
 - name: hyperfluxno_local_cubic1d
-  checkpoint: cubicflux_1d/HyperFluxFNOLocal/PushforwardOneStepLoss/seed=0/<TIMESTAMP>
+  checkpoint: cubicflux_1d/HyperFluxFNOLocal/OneStepLoss/seed=0/26-04-16-00_31_47
   input: cubic1d
   dataset: {well_base_path: ./data/datasets, well_dataset_name: cubic_1d, split: test}
   rollout_steps: 5
 
 - name: hno_euler2d
-  checkpoint: euler_2d/HyperNeuralOperator/PushforwardOneStepLoss/seed=0/<TIMESTAMP>
+  checkpoint: euler_2d/HyperNeuralOperator/OneStepLoss/seed=0/26-09-22-13_04_48
   input: euler2d
   dataset: {well_base_path: ./data/datasets, well_dataset_name: euler_2d, split: test}
   rollout_steps: 5
 
 - name: hno_v2_euler2d
-  checkpoint: euler_2d/HyperNeuralOperatorv2/PushforwardOneStepLoss/seed=0/<TIMESTAMP>
+  checkpoint: euler_2d/HyperNeuralOperatorv2/OneStepLoss/seed=0/26-09-21-16_12_31
   input: euler2d
   dataset: {well_base_path: ./data/datasets, well_dataset_name: euler_2d, split: test}
   rollout_steps: 5
 
 - name: disco_cubic1d
-  checkpoint: cubicflux_1d/DISCO/PushforwardOneStepLoss/seed=0/<TIMESTAMP>
+  checkpoint: cubicflux_1d/DISCO/OneStepLoss/seed=0/26-04-10-21_26_22
   input: cubic1d
   dataset: {well_base_path: ./data/datasets, well_dataset_name: cubic_1d, split: test}
   rollout_steps: 5
 
 - name: dpot_cubic1d
-  checkpoint: cubicflux_1d/DPOT/PushforwardOneStepLoss/seed=0/<TIMESTAMP>
+  checkpoint: cubicflux_1d/DPOT/OneStepLoss/seed=0/26-04-10-14_49_05
   input: cubic1d
   dataset: {well_base_path: ./data/datasets, well_dataset_name: cubic_1d, split: test}
   rollout_steps: 5
 
 - name: disco_euler2d
-  checkpoint: euler_2d/DISCO/PushforwardOneStepLoss/seed=0/<TIMESTAMP>
+  checkpoint: euler_2d/DISCO/OneStepLoss/seed=0/26-09-22-02_32_26
   input: euler2d
   dataset: {well_base_path: ./data/datasets, well_dataset_name: euler_2d, split: test}
   rollout_steps: 5
 
 - name: dpot_euler2d
-  checkpoint: euler_2d/DPOT/PushforwardOneStepLoss/seed=0/<TIMESTAMP>
+  checkpoint: euler_2d/DPOT/OneStepLoss/seed=0/26-09-22-02_45_52
   input: euler2d
   dataset: {well_base_path: ./data/datasets, well_dataset_name: euler_2d, split: test}
   rollout_steps: 5
