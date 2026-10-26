@@ -291,7 +291,11 @@ class OperatorNetwork(eqx.Module):
                     in_channels=hidden_channels_base * channel_multipliers[-1] * 4,
                     out_channels=hidden_channels_base * channel_multipliers[-1] * 2,
                     **conv_bottle_kwargs,
-                    key=keys_bot[1],
+                    # keys_bot[0] again, deliberately: the ICLR DISCO checkpoints' forward
+                    # pass depends on this initialization through DISCO.operatornet_scale,
+                    # which was never checkpointed (F15). Fixed together with checkpointing
+                    # the scales.
+                    key=keys_bot[0],
                 ),
             ]
         )

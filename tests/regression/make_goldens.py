@@ -1,6 +1,6 @@
 """Generate regression goldens from the ICLR checkpoints. CPU only.
 
-    JAX_PLATFORMS=cpu uv run python tests/regression/make_goldens.py --checkpoints-root ./checkpoints
+    JAX_PLATFORMS=cpu uv run python -m tests.regression.make_goldens --checkpoints-root ./checkpoints
 
 Writes tests/regression/goldens/<case>.npz with u_next, rollout and provenance (git SHA, jax
 version, backend). Refuses to run on a non-CPU backend. Re-running overwrites: do that only with a
