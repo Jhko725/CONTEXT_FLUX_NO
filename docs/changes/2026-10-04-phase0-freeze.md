@@ -1,7 +1,7 @@
 ---
 type: change
-status: in-progress
-updated: 2026-10-24
+status: merged
+updated: 2026-10-26
 branch: phase0-freeze
 roadmap: Phase 0
 ---

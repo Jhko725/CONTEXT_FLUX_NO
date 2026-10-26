@@ -67,11 +67,11 @@ recorded in the roadmap tables and the change documents that implement them.
 
 | Branch | Status | Document |
 |---|---|---|
-| `phase0-freeze` | landed on `main` (0.7 run and 0.8 goldens pending) | [`2026-10-04-phase0-freeze.md`](changes/2026-10-04-phase0-freeze.md) |
-| `phase1-prune` | landed (merge gated on the regression tier) | [`2026-10-04-phase1-prune.md`](changes/2026-10-04-phase1-prune.md) |
-| `phase5-run-identity` | landed (based on `phase1-prune`; merge after it) | [`2026-10-24-phase5-run-identity.md`](changes/2026-10-24-phase5-run-identity.md) |
-| `phase2a-pyclaw-backend` | landed (based on `phase5-run-identity`; review round 1 closed) | [`2026-10-25-phase2a-pyclaw-backend.md`](changes/2026-10-25-phase2a-pyclaw-backend.md) |
-| `phase2a-trixi-backend` | landed (Python side 2026-10-25; Julia package `ContextFluxTrixi`, committed lock and V18 green 2026-10-26; opt-in CI Julia job unverified) | [`2026-10-25-phase2a-trixi-backend.md`](changes/2026-10-25-phase2a-trixi-backend.md) |
+| `phase0-freeze` | merged (0.8 goldens 2026-10-26; the 0.7 audit run is a roadmap item) | [`2026-10-04-phase0-freeze.md`](changes/2026-10-04-phase0-freeze.md) |
+| `phase1-prune` | merged 2026-10-26 (regression tier green; F15) | [`2026-10-04-phase1-prune.md`](changes/2026-10-04-phase1-prune.md) |
+| `phase5-run-identity` | merged 2026-10-26 (orbax 0.12 reads the ICLR checkpoints by the legacy name) | [`2026-10-24-phase5-run-identity.md`](changes/2026-10-24-phase5-run-identity.md) |
+| `phase2a-pyclaw-backend` | merged 2026-10-26 | [`2026-10-25-phase2a-pyclaw-backend.md`](changes/2026-10-25-phase2a-pyclaw-backend.md) |
+| `phase2a-trixi-backend` | merged 2026-10-26 (Python side 2026-10-25; Julia package `ContextFluxTrixi`, committed lock and V18 green 2026-10-26; opt-in CI Julia job unverified) | [`2026-10-25-phase2a-trixi-backend.md`](changes/2026-10-25-phase2a-trixi-backend.md) |
 | `conventions-docs` | in-progress (based on `phase2a-pyclaw-backend`; rebases onto `main` cleanly) | [`2026-10-25-conventions-docs.md`](changes/2026-10-25-conventions-docs.md) |
 
 ## Historical

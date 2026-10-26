@@ -1,7 +1,7 @@
 ---
 type: change
-status: landed
-updated: 2026-10-25
+status: merged
+updated: 2026-10-26
 branch: phase2a-pyclaw-backend
 roadmap: Phase 2a (PyClaw half), Phase 4.3
 base: phase5-run-identity

@@ -1,6 +1,6 @@
 ---
 type: change
-status: landed
+status: merged
 updated: 2026-10-26
 branch: phase1-prune
 roadmap: Phase 1

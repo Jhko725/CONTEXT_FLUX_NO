@@ -1,6 +1,6 @@
 ---
 type: change
-status: landed
+status: merged
 updated: 2026-10-26
 branch: phase2a-trixi-backend
 roadmap: Phase 2a (Trixi half); the InitialCondition contract

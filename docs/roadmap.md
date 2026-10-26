@@ -64,7 +64,7 @@ substantive ones (0.2, 0.5–0.8) by Joon.
 | 0.6d | Delete/rename the misnamed `lskflux` config | a ConvNeXt config still exists | done (`25c7494`) |
 | 0.6e | `scripts/check_configs.py`; census → `docs/config_census_phase0.txt` | no Import/Attribute/init-string failures | done (`25c7494`) |
 | 0.7 | Bias-HyperInit audit of wandb runs → `findings.md` | conclusion recorded | script ready (`scripts/audit_bias_hyperinit.py`); run deferred — cluster down |
-| 0.8 | Regression harness: cases, inputs, goldens (CPU), tests green twice | `pytest tests/regression` green ×2 | |
+| 0.8 | Regression harness: cases, inputs, goldens (CPU), tests green twice | `pytest tests/regression` green ×2 | **done 2026-10-26** (7 cases; green twice on `main`, then on each branch before its merge) |
 | 0.9 | Tooling: dev deps, ruff format, pre-commit, CUDA as optional extra, CPU CI, pytest markers | CI green | done (`fbeb7a8`, `2a65dfc`); `the-well`/`torch` dropped 2026-10-24 |
 | 0.10 | README, `pyproject` metadata, hello-world removed, training README fixed | — | done (`7325817`) |
 | 0.11 | `docs/` tree, `CLAUDE.md`, `scripts/check_docs.py` | `check_docs.py` passes | done (`0b0fd68`) |
@@ -87,7 +87,9 @@ Phase 1 removes, and `load_model` is unaffected. The one item that changes a for
 none; the 1.3 key-reuse fixes change *initialisation* only. Hence: the work can be done and
 self-reviewed now; **merging `phase1-prune` waits for the regression tier to be green** on the
 goldens, which is the mechanical confirmation of the argument above. If a golden fails after the
-merge of Phase 1 work, the bisect is one branch long.
+merge of Phase 1 work, the bisect is one branch long. *Outcome (2026-10-26):* the tier found one
+exception to "initialisation only" — DISCO's `operatornet_scale` (F15) — and the branch merged
+with that fix parked.
 
 | # | Item | Done when | Status |
 |---|---|---|---|
@@ -98,7 +100,7 @@ merge of Phase 1 work, the bisect is one branch long.
 | 1.3 | Correctness fixes: `test_models_disco.py:286` assert; DISCO `split(key, 4)`; `HyperNeuralOperator` key reuse; UNet `keys_bot` (F6, pulled forward; the `operatornet` copy parked 2026-10-26, F15); `jax.flatten_util` import (F9); key-hygiene test | regression unchanged | done (`134dfdb`, `518ee62`); `train_the_well.py` was already correct |
 | 1.3 | Deferred correctness items recorded in `findings.md` (rfftn axes, `stack_grid`, UNet mask channel, DISCO double standardize, four face conventions) | — | done (F3, F4, F6 remainder, F2) |
 
-Exit: `import_all.py` and `ruff check` clean ✔; fast tier green (33 tests) ✔; regression tier — pending goldens; `evaluate_cubic.ipynb` reaches its first metric cell — to be checked by Joon on the cluster.
+Exit: `import_all.py` and `ruff check` clean ✔; fast tier green (33 tests) ✔; regression tier green 2026-10-26 ✔; `evaluate_cubic.ipynb` reaches its first metric cell — to be checked by Joon on the cluster.
 
 | # | Item | Done when | Status |
 |---|---|---|---|
@@ -219,3 +221,4 @@ IMEX) — see `design/fv-conventions.md` §Extensibility.
 | 2026-10-25 | `phase2a-trixi-backend` | `InitialCondition`/`InitialConditionSampler` contract (ADR-0011 §Initial conditions): backends receive the function (`solve(pde, ic, …)`), samplers draw positions in the domain, `FromFunction`/`Stacked`/`Conserved`/`Multichannel`; Python side of 2a-trixi: `TrixiSpec` on six families, `simulations/backends/trixi.py` (juliacall, shared juliapkg project at `reference/trixi/`), `scripts/setup_julia.py`, V18 tests (skip without Julia), ADR-0004 amended (in-process transport), F12 | `changes/2026-10-25-phase2a-trixi-backend.md` |
 | 2026-10-26 | `phase2a-trixi-backend` | Julia side of 2a-trixi: `reference/trixi/ContextFluxTrixi` 0.1.0 (cubic 1D/2D, sine, parametrized SW equations with the exact LF bound; `node_coordinates`/`solve`/`versions`; 72 Julia checks) + the committed `reference/trixi/{Project,Manifest}.toml` lock (Trixi 0.17.16, Julia 1.12.7); V18 green on six families (ratios in `verification.md`); `julia_package_version` in `describe()`; `CubicFlux2D.solve` time stepping fixed (F14); `SHARPCLAW_SSP33` in `tests/helpers.py`; F13 | `changes/2026-10-25-phase2a-trixi-backend.md` |
 | 2026-10-26 | `main`, `phase1-prune` | 0.8: regression goldens from the ICLR checkpoints (7 cases; `translate_legacy_config` F1, `checkpoint_template` for DISCO's `DropPath.p` leaves); V22 green twice on `main`; on `phase1-prune` after parking the `operatornet` key fix (F15: DISCO's forward pass depends on un-checkpointed `operatornet_scale`) | `changes/2026-10-04-phase0-freeze.md`, `changes/2026-10-04-phase1-prune.md` |
+| 2026-10-26 | `main` | Merge chain closed: `phase1-prune` → `phase5-run-identity` → `phase2a-pyclaw-backend` → `phase2a-trixi-backend`, each after a green regression tier; orbax 0.12 reads the ICLR checkpoints under the legacy `pytree` name | `changes/2026-10-24-phase5-run-identity.md` |
