@@ -69,6 +69,7 @@ Goldens preparation (2026-10-26, cluster back):
 - `tests/test_training_io.py` — new: the translation and its pass-through.
 - `tests/regression/{README.md, make_inputs.py, make_goldens.py}` — run as modules (`python -m tests.regression.make_inputs`): as scripts their `from tests.regression.common import …` failed with "No module named tests".
 - `docs/findings.md` — F1 action updated.
+- `src/context_flux_no/training/io.py` — `checkpoint_template`: the load template is the trainer's save filter (`eqx.is_array`, numpy scalars as 0-d arrays), so every stored leaf has a restore target; the narrower `isinstance(x, jax.Array)` left DISCO's six `DropPath.p` leaves unasked, and orbax read them through the GPU sharding file (`cuda:0` → `sharding … Got None` on CPU). `tests/test_training_io.py` — the round trip with such a leaf, no sharding warning.
 - `scripts/diff_checkpoint_leaves.py` — new diagnostic: stored leaves vs the leaves `load_model`'s template asks for (a stored `jax.Array` the rebuilt model lacks is read through the GPU sharding file and fails on CPU; DISCO 1D hit this).
 - `pyproject.toml`, `uv.lock` — `pythonpath = ["."]` for pytest; `the-well` removed (unused; it pulled in `torch`).
 - `scripts/check_configs.py`, `src/context_flux_no/nn/hypernetwork.py`, `tests/test_nn_hypernetwork.py` — `ruff format` only (`style:` commit).
@@ -77,6 +78,7 @@ Goldens preparation (2026-10-26, cluster back):
 
 ## Design
 
+- **The load template equals the save filter** (`checkpoint_template`). The trainer saved `eqx.filter(model, eqx.is_array)` — `jax.Array`, `np.ndarray` *and* numpy scalars — while `load_model` asked only for `jax.Array` leaves; for a stored leaf with no template leaf orbax 0.11.25 reads it anyway (sharding from the checkpoint's `_sharding` file, i.e. the training GPU) and drops it, so on CPU the read fails, and had it succeeded the fresh value would have replaced the stored one. DISCO's `DropPath.p` (`np.float64` from `np.linspace`, `disco/hypernet.py:116`) is the case; the rate is unused in inference mode, so no golden depends on it. Rejected: `partial_load=True` (asserts on `None` leaves in 0.11.25; and it only silences the drop); narrowing per leaf by name.
 - **Legacy config translation lives in the legacy loader** (`training/io.py::load_model`, the loader the regression tier and the 5.4 backfill use, to be retired with the ICLR shim). The misspelled value is mapped to `"default"` — what it meant when those models were trained (F1) — not to `"bias-hyperinit"`, so the rebuilt model describes the trained one truthfully; the loaded weights make the choice irrelevant to the forward pass either way. Rejected: accepting the typo in `HypernetworkHead`'s guard (a second spelling for one value, keeping alive what 0.6a removed); editing the checkpoints' `custom_metadata` (the ICLR tree is the archive); generating the goldens at the `iclr2027-submission` tag (no harness there).
 
 - **Documentation system** — adopted from `Jhko725/deep_isochron` with these refinements:
