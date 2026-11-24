@@ -9,6 +9,7 @@ from context_flux_no.runs import Run
 from hydra.core.hydra_config import HydraConfig
 from omegaconf import OmegaConf, open_dict
 
+from tests.helpers import point_hydra_output_dir_at
 from tests.unit.test_run import _cfg, _loader, _Loss
 
 
@@ -16,8 +17,7 @@ from tests.unit.test_run import _cfg, _loader, _Loss
 def hydra_output_dir(tmp_path, monkeypatch):
     """Make `HydraConfig.get().runtime.output_dir` point at a temp dir."""
     out = tmp_path / "runs" / "2026-10-24" / "12-00-00"
-    hc = OmegaConf.create({"runtime": {"output_dir": str(out)}, "mode": None})
-    monkeypatch.setattr(HydraConfig, "get", staticmethod(lambda: hc))
+    point_hydra_output_dir_at(monkeypatch, out)
     return out
 
 

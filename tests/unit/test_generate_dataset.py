@@ -28,6 +28,8 @@ from context_flux_no.utils.serialization import dumps
 from hypothesis import given, settings, strategies as st
 from jaxtyping import Float
 
+from tests.helpers import make_dataset_record
+
 
 _scalar = st.one_of(
     st.none(),
@@ -39,34 +41,12 @@ _scalar = st.one_of(
 _flat = st.dictionaries(st.text(min_size=1, max_size=8), _scalar, max_size=5)
 
 
-def _record(**over):
-    base = dict(
-        family="CubicFlux1D",
-        dataset_name="cubic_1d",
-        split="train",
-        n_trajectories=4,
-        grid=Grid(((0.0, 1.0),), (8,)).to_dict(),
-        time={"t_span": [0.0, 0.1], "Nt": 2, "dt": 0.05},
-        bcs=normalize_bcs("periodic", 1),
-        field_rank_names=((0, "u"),),
-        params={
-            "names": ["a"],
-            "ranges": {"a": [0.0, 1.0]},
-            "sampling": "uniform",
-            "n_coeffs": 2,
-        },
-        ic={"name": "grf"},
-        backend={"name": "pyclaw", "scheme": "classic"},
-        seed=0,
-    )
-    base.update(over)
-    return DatasetRecord.create(**base)
-
-
 @settings(max_examples=30, deadline=None)
 @given(extra=_flat, n_failed=st.integers(0, 100))
 def test_record_round_trip(extra, n_failed):
-    rec = copy.replace(_record(extra=extra), n_failed=n_failed, status="complete")
+    rec = copy.replace(
+        make_dataset_record(extra=extra), n_failed=n_failed, status="complete"
+    )
     assert DatasetRecord.from_dict(json.loads(dumps(dataclasses.asdict(rec)))) == rec
     assert rec.id.startswith("cubic_1d-train-")
 
@@ -93,7 +73,12 @@ def test_writer_layout_and_boundary_conditions(tmp_path):
         bcs = normalize_bcs(bc, 1)
         path = tmp_path / f"{'p' if bc == 'periodic' else 'ew'}.zarr"
         w = WellWriter.create(
-            path, pde=pde, grid=grid, t_out=t_out, bcs=bcs, record=_record(bcs=bcs)
+            path,
+            pde=pde,
+            grid=grid,
+            t_out=t_out,
+            bcs=bcs,
+            record=make_dataset_record(bcs=bcs),
         )
         root = zarr.open_group(path, mode="r")
         assert set(root["boundary_conditions"].keys()) == set(groups)
@@ -133,7 +118,7 @@ def _write_and_read_back(
     """
     t_out = np.linspace(0.0, 0.1, 2)
     bcs = normalize_bcs("periodic", grid.n_spatial_dims)
-    record = _record(
+    record = make_dataset_record(
         family=type(pde).__name__,
         dataset_name="order",
         n_trajectories=1,

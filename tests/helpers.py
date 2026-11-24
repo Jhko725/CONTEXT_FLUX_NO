@@ -1,13 +1,18 @@
-"""Named solver configurations and tolerances shared by the test tiers, and the stub models
-of the evaluation tests. Every call site uses a configuration or tolerance by its name, and
-each entry carries its one-line reason."""
+"""Named solver configurations and tolerances shared by the test tiers, the stub models
+of the evaluation tests, and the helpers that more than one test file uses. Every call site
+uses a configuration or tolerance by its name, and each entry carries its one-line reason."""
 
+from pathlib import Path
 from typing import Any
 
 import equinox as eqx
 import jax
 import jax.numpy as jnp
+import pytest
+from context_flux_no.simulations import DatasetRecord, Grid, normalize_bcs
+from hydra.core.hydra_config import HydraConfig
 from jaxtyping import Array, Float, PRNGKeyArray
+from omegaconf import OmegaConf
 
 
 SHARPCLAW_SSP33 = {"time_integrator": "SSP33", "cfl_desired": 0.4, "cfl_max": 0.45}
@@ -82,3 +87,40 @@ class ShiftByOneCell(eqx.Module):
         """
         shifts = jnp.arange(1, num_steps + 1)
         return jax.vmap(lambda shift: jnp.roll(u[-1], shift, axis=-1))(shifts), None
+
+
+def point_hydra_output_dir_at(
+    monkeypatch: pytest.MonkeyPatch, output_dir: Path
+) -> None:
+    """Make `HydraConfig.get().runtime.output_dir` return `output_dir`, so that
+    `experiment.train` writes its run there outside `@hydra.main`."""
+    hydra_config = OmegaConf.create(
+        {"runtime": {"output_dir": str(output_dir)}, "mode": None}
+    )
+    monkeypatch.setattr(HydraConfig, "get", staticmethod(lambda: hydra_config))
+
+
+def make_dataset_record(**overrides: Any) -> DatasetRecord:
+    """Create the `DatasetRecord` of a small cubic-1D training store, with the fields of
+    `overrides` in place of the defaults."""
+    fields = dict(
+        family="CubicFlux1D",
+        dataset_name="cubic_1d",
+        split="train",
+        n_trajectories=4,
+        grid=Grid(((0.0, 1.0),), (8,)).to_dict(),
+        time={"t_span": [0.0, 0.1], "Nt": 2, "dt": 0.05},
+        bcs=normalize_bcs("periodic", 1),
+        field_rank_names=((0, "u"),),
+        params={
+            "names": ["a"],
+            "ranges": {"a": [0.0, 1.0]},
+            "sampling": "uniform",
+            "n_coeffs": 2,
+        },
+        ic={"name": "grf"},
+        backend={"name": "pyclaw", "scheme": "classic"},
+        seed=0,
+    )
+    fields.update(overrides)
+    return DatasetRecord.create(**fields)

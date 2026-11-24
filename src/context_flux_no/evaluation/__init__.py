@@ -1,7 +1,13 @@
 """Evaluation of trained models: the error metrics and rollout diagnostics of
-`metrics`, the rollouts of `rollout` on the accelerator, and their host-side reductions in
-`summary`."""
+`metrics`, the rollouts of `rollout` on the accelerator, their host-side reductions in
+`summary`, the compute cost of `cost`, and the `EvaluationRecord` of `record` that
+`scripts/evaluate.py` writes beside a result."""
 
+from .cost import (
+    count_flops as count_flops,
+    measure as measure,
+    Measurement as Measurement,
+)
 from .metrics import (
     conservation_drift as conservation_drift,
     count_jumps as count_jumps,
@@ -26,6 +32,7 @@ from .metrics import (
     total_variation as total_variation,
     valid_horizon as valid_horizon,
 )
+from .record import EvaluationRecord as EvaluationRecord
 from .rollout import (
     evaluate_references as evaluate_references,
     evaluate_rollouts as evaluate_rollouts,

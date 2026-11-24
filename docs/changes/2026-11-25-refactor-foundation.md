@@ -176,3 +176,12 @@ end of the branch.
 | `tests/helpers.py` — new stub operators `HoldLastFrame` and `ShiftByOneCell`, and the tolerance `ROLLOUT_ATOL` | | |
 | `tests/unit/test_rollout.py` — new: the rebuttal branch's segment tests on the stubs, and closed-form checks of `evaluate_rollouts` and `evaluate_references` | | |
 | `tests/unit/test_summary.py` — new: the rebuttal branch's matching, binning and summary tests, and a check of `fraction_nonpositive` | | |
+| `src/context_flux_no/evaluation/cost.py` — new: `Measurement`, `count_flops` and `measure` from the rebuttal branch's `cost.py`, without the model-specific breakdowns | | |
+| `src/context_flux_no/evaluation/record.py` — new: `EvaluationRecord`, the JSON record of an evaluation with its runs, dataset, split, arguments and provenance | | |
+| `src/context_flux_no/evaluation/__init__.py` — exports the public names of `cost` and `record` | | |
+| `scripts/evaluate.py` — new: evaluates named runs on a split of a named data config and writes one HDF5 file and its `EvaluationRecord` | | |
+| `tests/helpers.py` — new helpers `point_hydra_output_dir_at` and `make_dataset_record`, moved from the two test files below | | |
+| `tests/unit/test_experiment.py` — its fixture uses `point_hydra_output_dir_at` from `tests/helpers.py` | | |
+| `tests/unit/test_generate_dataset.py` — uses `make_dataset_record` from `tests/helpers.py` in place of its local `_record` | | |
+| `tests/unit/test_cost.py` — new: the rebuttal branch's FLOP-count and measurement tests on a matrix product | | |
+| `tests/unit/test_evaluate.py` — new: trains a tiny FNO on a synthetic store and checks the result file and record of `scripts/evaluate.py` | | |
