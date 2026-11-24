@@ -47,6 +47,11 @@ end of the branch.
 - **`tests/conftest.py` arrives in unit 1 with the Hypothesis profiles only.** The handoff creates it in unit 16, but `just test dev` needs the `dev` profile from unit 1 on. Unit 16 adds the import hook. [unconfirmed]
 - The item-3 grep of unit 1 filters `^./docs/changes/`, which GNU grep's output never matches; with `^docs/changes/` it prints nothing.
 
+- **ADR conversion (unit 2, W5).** No ADR had *Forces* text, so each `### Forces` holds `*[not recorded]*`, and the template allows that marker. *History* opens with an "accepted" line dated from the ADR's status line. The extra sections of ADR-0001, 0004, 0010 and 0011 follow *Decision* in their original order. Compared as multisets of lines, no sentence of an ADR changed. [unconfirmed]
+- **The document types `guide`, `format` and `dataset` and the status `historical` are not in the vocabulary** (unit 2): no document here uses them. [unconfirmed]
+- **`check_docs.py` has no architecture rule.** The handoff asked to keep the old check's rule, and the old check had none; the rule of `UniversalForceReconstruction` reports 19 problems on the fenced module map of `docs/architecture.md`. [unconfirmed]
+- **The glossary stays a bullet list.** `docs/document-conventions.md` describes the table form, which the glossary takes when it is next rewritten. [unconfirmed]
+
 ## Review notes
 
 ### Round 1: from `450f31d`
@@ -61,12 +66,13 @@ end of the branch.
 | `.claude/settings.json` — registers the history hook | | |
 | `CLAUDE.md` — points at `.claude/rules/`, states the history rule and names the agent; check paths follow the move to `scripts/checks/` | | |
 | `docs/index.md` — the row of `workflow-bootstrap` replaced by the row of this branch; check paths follow the move | | |
-| `docs/changes/2026-11-25-workflow-bootstrap.md` — deleted: its content moved into this document | | |
 | `docs/changes/2026-11-25-refactor-foundation.md` — this document | | |
 | `justfile` — new: recipes `default`, `setup`, `check`, `test`, `test-slow` and `pending`, adapted from `UniversalForceReconstruction` |  |  |
 | `prek.toml` — new: the hooks (builtin, ruff, codespell, `check-spelling`, `check-docs`) run through `prek` |  |  |
 | `.pre-commit-config.yaml` — deleted: replaced by `prek.toml` |  |  |
 | `.github/workflows/test.yml` — the `fast` job runs `just check` and `just test ci`; pushes trigger on `main` only |  |  |
+| `scripts/check_docs.py` — moved to `scripts/checks/` |  |  |
+| `scripts/check_spelling.py` — moved to `scripts/checks/` |  |  |
 | `scripts/checks/check_docs.py` — moved from `scripts/`; the `--files` mode and its *Files* rule removed; root path follows the move |  |  |
 | `scripts/checks/check_spelling.py` — moved from `scripts/`; usage line follows the move |  |  |
 | `pyproject.toml` — dev group: `prek` and `rust-just` added, `pre-commit` and `nbstripout` removed; codespell comment path |  |  |
