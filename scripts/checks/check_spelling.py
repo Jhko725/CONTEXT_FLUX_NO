@@ -64,9 +64,6 @@ SKIP_PARTS = frozenset(
         ".venv",
         "node_modules",
         "__pycache__",
-        "third_party",
-        "icon",
-        "notebooks",
         "changes",
     }
 )

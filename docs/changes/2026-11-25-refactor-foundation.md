@@ -113,3 +113,13 @@ end of the branch.
 | `src/context_flux_no/runs/record.py` — `Status` loses `"legacy"`; `RunRecord.from_dict` (so `read`) raises `ValueError` on an unknown status; legacy docstring lines reworded |  |  |
 | `tests/unit/test_run_record.py` — the round trip no longer draws `legacy`; new test that `read` raises on an unknown status |  |  |
 | `pyproject.toml` — `regression` marker removed; `addopts = "-m 'not slow'"` |  |  |
+| `src/context_flux_no/training/loader.py` — deleted: the deprecated xarray segment loader (`SegmentLoaderBackground`, `make_segment_axis`), which nothing imported |  |  |
+| `src/context_flux_no/training/__init__.py` — the export of `SegmentLoaderBackground` removed |  |  |
+| `src/context_flux_no/data/sources.py` — the comment in `IO_PARAMS` no longer names xarray and h5netcdf; `TheWellDataSource` opens files with `h5py.File` |  |  |
+| `pyproject.toml` — `dask[distributed]`, `h5netcdf`, `netcdf4` and `xarray` removed from the dependencies; the notebook and submodule entries removed from ruff's `extend-include` and `extend-exclude` and from codespell's `skip` |  |  |
+| `uv.lock` — relocked without the four libraries and their dependencies |  |  |
+| `notebooks/` — deleted: five legacy notebook directories |  |  |
+| `third_party/icon` — the ICON baseline submodule removed |  |  |
+| `.gitmodules` — deleted: it held only the ICON submodule |  |  |
+| `prek.toml` — `exclude` loses `notebooks/` and `third_party/` |  |  |
+| `scripts/checks/check_spelling.py` — `SKIP_PARTS` loses `third_party`, `icon` and `notebooks` |  |  |

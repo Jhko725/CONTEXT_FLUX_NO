@@ -3,9 +3,6 @@ from .checkpoint import (
     NullCheckpointer as NullCheckpointer,
     OrbaxCheckpointer as OrbaxCheckpointer,
 )
-from .loader import (
-    SegmentLoaderBackground as SegmentLoaderBackground,  # DEPRECATED, see loader.py
-)
 from .loggers import (
     DelayedLogger as DelayedLogger,
     ListLogger as ListLogger,

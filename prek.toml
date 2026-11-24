@@ -3,9 +3,8 @@
 # See https://prek.j178.dev for more information.
 #:schema https://www.schemastore.org/prek.json
 
-# No hook reads or rewrites the legacy notebooks, the vendored third-party code, or the
-# Julia lock file, whose package names are not words.
-exclude = "^(notebooks/|third_party/|reference/trixi/Manifest\\.toml)"
+# No hook reads or rewrites the Julia lock file, whose package names are not words.
+exclude = "^reference/trixi/Manifest\\.toml"
 
 [[repos]]
 repo = "builtin"

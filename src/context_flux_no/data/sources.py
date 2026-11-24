@@ -26,7 +26,7 @@ IO_PARAMS = {
         "block_size": 8 * 1024 * 1024,  # could be bigger
     },
     "h5py_params": {
-        "driver_kwds": {  # only recent versions of xarray and h5netcdf allow this correctly
+        "driver_kwds": {
             "page_buf_size": 8 * 1024 * 1024,  # this one only works in repacked files
             "rdcc_nbytes": 8 * 1024 * 1024,  # this one is to read the chunks
         }
