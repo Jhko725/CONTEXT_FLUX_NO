@@ -72,9 +72,8 @@ end of the branch.
 | `.pre-commit-config.yaml` — deleted: replaced by `prek.toml` |  |  |
 | `.github/workflows/test.yml` — the `fast` job runs `just check` and `just test ci`; pushes trigger on `main` only |  |  |
 | `scripts/check_docs.py` — moved to `scripts/checks/` |  |  |
-| `scripts/check_spelling.py` — moved to `scripts/checks/` |  |  |
 | `scripts/checks/check_docs.py` — moved from `scripts/`; the `--files` mode and its *Files* rule removed; root path follows the move |  |  |
-| `scripts/checks/check_spelling.py` — moved from `scripts/`; usage line follows the move |  |  |
+| `scripts/checks/check_spelling.py` — moved from `scripts/check_spelling.py`; usage line follows the move |  |  |
 | `pyproject.toml` — dev group: `prek` and `rust-just` added, `pre-commit` and `nbstripout` removed; codespell comment path |  |  |
 | `uv.lock` — relocked for the dev group change |  |  |
 | `README.md` — path of `check_docs.py` updated; the hook install command is `just setup` |  |  |
@@ -99,3 +98,6 @@ end of the branch.
 | `docs/roadmap.md` — frontmatter only: `sources` as a quoted block list |  |  |
 | `docs/verification.md` — frontmatter only: `sources` as a quoted block list |  |  |
 | `docs/index.md` — links `document-conventions.md`; ADRs under *In force* and *Superseded*; ADR-0004 and ADR-0011 shown as amended; the status list replaced by a pointer to the conventions |  |  |
+| `scripts/checks/check_changes.py` — new, adapted from `UniversalForceReconstruction`: each round's rows cover exactly the files changed in it (rule T1); base `origin/main`; skips `PRE_FORMAT_CHANGES` |  |  |
+| `prek.toml` — registers `check-changes`, which runs on every commit |  |  |
+| `CLAUDE.md` — rewritten after `UniversalForceReconstruction`'s: reading list for planning sessions, rules T1 and T2, repository facts; the *Files* rule, notebook filter, submodule and regression tier removed |  |  |
