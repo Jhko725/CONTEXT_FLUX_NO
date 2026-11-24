@@ -52,6 +52,8 @@ end of the branch.
 - **`check_docs.py` has no architecture rule.** The handoff asked to keep the old check's rule, and the old check had none; the rule of `UniversalForceReconstruction` reports 19 problems on the fenced module map of `docs/architecture.md`. [unconfirmed]
 - **The glossary stays a bullet list.** `docs/document-conventions.md` describes the table form, which the glossary takes when it is next rewritten. [unconfirmed]
 
+- **`TheWellDataSource` scales its metadata by `downsample_spatial` and delivers the native grid** (found in unit 8). `data/sources.py:500-504` multiplies `spatial_resolution` by the factor, and no `__getitem__` slices the data; commit `41ac847` dropped the slice that `534503f` had added. `well_euler_2d` sets the factor to 8, so a Well run sees the native grid with spacings of the grid 8 times coarser, which is also what the constant `(0.015, 1 / 64, 1 / 64)` of the old script described. The branch does not fix this: restoring the slice or the spacings changes what every Well run trains on, and that is Joon's decision. `scripts/train.py` takes the loss arguments from the source's metadata for both classes, as the handoff says; the first attempt at unit 8 stopped on this and the retry proceeds on that reading. The orchestrator records it as a finding in the documents unit. [unconfirmed]
+
 ## Review notes
 
 ### Round 1: from `450f31d`
