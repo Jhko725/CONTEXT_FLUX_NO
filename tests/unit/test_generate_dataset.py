@@ -1,6 +1,7 @@
 """`DatasetRecord` round trip, `WellWriter` layout (incl. The Well's `boundary_conditions`
-group), and `generate_dataset` end to end: a tiny cubic-1D store through Classic PyClaw,
-read back with `ZarrWellDatasetSource`, whose `dataset_id` then comes from the record."""
+group), `store_channel_order` against a store written and read back, and `generate_dataset`
+end to end: a tiny cubic-1D store through Classic PyClaw, read back with
+`ZarrWellDatasetSource`, whose `dataset_id` then comes from the record."""
 
 import copy
 import dataclasses
@@ -9,6 +10,7 @@ import json
 import numpy as np
 import pytest
 import zarr
+from context_flux_no.data import ZarrWellDatasetSource
 from context_flux_no.simulations import (
     DatasetRecord,
     generate_dataset,
@@ -20,10 +22,11 @@ from context_flux_no.simulations.initial_conditions import (
     FromFunction,
     InitialConditionSampler,
 )
-from context_flux_no.simulations.pde import CubicFlux1D
-from context_flux_no.simulations.writer import sidecar_path
+from context_flux_no.simulations.pde import AbstractPDEFamily, CubicFlux1D, Euler2D
+from context_flux_no.simulations.writer import sidecar_path, store_channel_order
 from context_flux_no.utils.serialization import dumps
 from hypothesis import given, settings, strategies as st
+from jaxtyping import Float
 
 
 _scalar = st.one_of(
@@ -116,9 +119,64 @@ def test_writer_layout_and_boundary_conditions(tmp_path):
         assert DatasetRecord.from_dict(dict(root.attrs["dataset_record"])) == rec
 
 
+def _write_and_read_back(
+    tmp_path, pde: AbstractPDEFamily, grid: Grid
+) -> tuple[
+    Float[np.ndarray, "2 channels *shape"], Float[np.ndarray, "2 channels *shape"]
+]:
+    """Write one two-step trajectory whose channel `c` is the constant `c + 1` with
+    `WellWriter`, and read it back through `ZarrWellDatasetSource`.
+
+    **Returns:**
+
+    The trajectory as written, in the family's order, and as read, in the store's order.
+    """
+    t_out = np.linspace(0.0, 0.1, 2)
+    bcs = normalize_bcs("periodic", grid.n_spatial_dims)
+    record = _record(
+        family=type(pde).__name__,
+        dataset_name="order",
+        n_trajectories=1,
+        grid=grid.to_dict(),
+        bcs=bcs,
+        field_rank_names=pde.field_rank_names,
+    )
+    path = tmp_path / "order" / "data" / "train" / "order.zarr"
+    writer = WellWriter.create(
+        path, pde=pde, grid=grid, t_out=t_out, bcs=bcs, record=record
+    )
+    channels = np.arange(1.0, pde.n_eqns + 1.0).reshape(1, -1, *[1] * len(grid.shape))
+    u_family = np.broadcast_to(channels, (2, pde.n_eqns, *grid.shape))
+    writer.write_trajectory(0, u_family, pde.parameters)
+    writer.finalize(1)
+    source = ZarrWellDatasetSource(
+        well_base_path=tmp_path, well_dataset_name="order", window_size=2
+    )
+    return u_family, np.asarray(source[0])
+
+
+def test_store_channel_order_of_euler_2d_matches_the_store(tmp_path):
+    pde = Euler2D()
+    u_family, u_store = _write_and_read_back(
+        tmp_path, pde, Grid(((0, 1), (0, 1)), (4, 3))
+    )
+    # Measured: the store holds (rho, E, m_x, m_y) against the family's (rho, m_x, m_y, E).
+    assert list(u_store[0, :, 0, 0]) == [1.0, 4.0, 2.0, 3.0]
+    order = store_channel_order(pde.field_rank_names, pde.n_spatial_dims)
+    assert order == (0, 3, 1, 2)
+    np.testing.assert_array_equal(u_store, u_family[:, list(order)])
+    np.testing.assert_array_equal(u_store[:, np.argsort(order)], u_family)
+
+
+def test_store_channel_order_of_a_scalar_family_is_the_identity(tmp_path):
+    pde = CubicFlux1D(1.0, 0.0, 0.0)
+    u_family, u_store = _write_and_read_back(tmp_path, pde, Grid(((0, 1),), (8,)))
+    assert store_channel_order(pde.field_rank_names, pde.n_spatial_dims) == (0,)
+    np.testing.assert_array_equal(u_store, u_family)
+
+
 def test_generate_dataset_end_to_end(tmp_path):
     pytest.importorskip("clawpack")
-    from context_flux_no.data import ZarrWellDatasetSource
 
     class SinePhase(InitialConditionSampler):
         def __init__(self):

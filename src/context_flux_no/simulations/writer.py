@@ -18,6 +18,7 @@ from __future__ import annotations
 import copy
 import dataclasses
 from collections.abc import Mapping
+from itertools import accumulate
 from pathlib import Path
 from typing import Any, Literal
 
@@ -38,6 +39,43 @@ def sidecar_path(store_path: str | Path) -> Path:
             name = name[: -len(suffix)]
             break
     return p.with_name(name + ".dataset.json")
+
+
+def store_channel_order(
+    field_rank_names: tuple[tuple[int, str], ...], n_spatial_dims: int
+) -> tuple[int, ...]:
+    """Give the family channel that each channel of a store holds.
+
+    `WellWriter.write_trajectory` writes the rank-`r` field of each `(rank, name)` pair to
+    `t{r}_fields/<name>`, and `data.WellDatasetSourceBase` packs the groups back rank 0
+    first, keeping the order of the names within each group. A family whose fields are not
+    sorted by rank therefore reads back in another order: `Euler2D`'s `(rho, m_x, m_y, E)`
+    becomes `(rho, E, m_x, m_y)`.
+
+    **Arguments:**
+
+    - `field_rank_names`: The `(rank, name)` pairs in the family's state order, as
+        `AbstractPDEFamily.field_rank_names` gives them.
+    - `n_spatial_dims`: The number of spatial dimensions; a rank-`r` field has
+        `n_spatial_dims**r` components.
+
+    **Returns:**
+
+    The permutation `p` with `u_store[i] == u_family[p[i]]`, so `u_family[p]` is the
+    state in the store's order and `u_store[argsort(p)]` the state in the family's order.
+    """
+    starts = list(
+        accumulate((n_spatial_dims**rank for rank, _ in field_rank_names), initial=0)
+    )
+    blocks = sorted(
+        zip(field_rank_names, starts),
+        key=lambda pair_and_start: pair_and_start[0][0],
+    )
+    return tuple(
+        start + component
+        for (rank, _), start in blocks
+        for component in range(n_spatial_dims**rank)
+    )
 
 
 WELL_BC_TYPE = {"periodic": "periodic", "wall": "wall", "extrap": "open"}

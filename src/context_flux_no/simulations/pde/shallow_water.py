@@ -2,7 +2,7 @@ from typing import ClassVar
 
 import equinox as eqx
 import numpy as np
-from jaxtyping import Float
+from jaxtyping import Array, Float
 
 from context_flux_no.simulations.backends.pyclaw import PyClawSpec
 from context_flux_no.simulations.backends.trixi import TrixiSpec
@@ -149,6 +149,21 @@ class ParametrizedShallowWater1D(AbstractPDEFamily):
     @property
     def parameters(self) -> dict[str, float]:
         return {"gamma": self.gamma, "alpha": self.alpha, "beta": self.beta}
+
+    def positive_quantities(
+        self, u: Float[Array, "2 *shape"]
+    ) -> Float[Array, "1 *shape"]:
+        """Return the depth `h`, the one quantity that must stay positive.
+
+        **Arguments:**
+
+        - `u`: The state `(h, m)`.
+
+        **Returns:**
+
+        The depth, with a leading axis of length one.
+        """
+        return u[:1]
 
     @property
     def pyclaw_spec(self) -> PyClawSpec:

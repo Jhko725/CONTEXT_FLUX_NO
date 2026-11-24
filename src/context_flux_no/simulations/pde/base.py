@@ -14,7 +14,9 @@ from collections.abc import Sequence
 from typing import Any
 
 import equinox as eqx
+import jax.numpy as jnp
 import numpy as np
+from jaxtyping import Array, Bool, Float
 
 from context_flux_no.simulations.backends.base import normalize_bcs, SolverBackend
 from context_flux_no.simulations.grid import Grid
@@ -44,6 +46,38 @@ class AbstractPDEFamily(eqx.Module):
     @property
     def n_eqns(self) -> int:
         return sum(self.n_spatial_dims**r for r, _ in self.field_rank_names)
+
+    def positive_quantities(
+        self, u: Float[Array, "n_eqn *shape"]
+    ) -> Float[Array, "n_quantities *shape"]:
+        """Compute the quantities of a state that must stay positive for it to be physical.
+
+        A family with such quantities overrides this method; the default has none.
+
+        **Arguments:**
+
+        - `u`: The state in the family's conserved order.
+
+        **Returns:**
+
+        The quantities stacked along the first axis, cell by cell. The default returns an
+        array with zero quantities.
+        """
+        return jnp.zeros((0, *u.shape[1:]), dtype=u.dtype)
+
+    def admissible(self, u: Float[Array, "n_eqn *shape"]) -> Bool[Array, ""]:
+        """Say whether a state is physically admissible.
+
+        **Arguments:**
+
+        - `u`: The state in the family's conserved order.
+
+        **Returns:**
+
+        `True` when every quantity of `positive_quantities(u)` is positive in every cell,
+        so a family without such quantities admits every state.
+        """
+        return jnp.all(self.positive_quantities(u) > 0)
 
     @property
     def pyclaw_spec(self) -> Any:

@@ -163,3 +163,10 @@ end of the branch.
 | `src/context_flux_no/evaluation/metrics.py` — new: the metric functions and containers of the rebuttal branch's `metrics.py` with lower-case names and equinox-style docstrings, without `ideal_gas_pressure` | | |
 | `src/context_flux_no/evaluation/__init__.py` — new: exports the public names of `metrics` | | |
 | `tests/unit/test_metrics.py` — new: the rebuttal branch's `tests/test_metrics.py` with the new names, without the `ideal_gas_pressure` test | | |
+| `src/context_flux_no/simulations/pde/base.py` — new methods `AbstractPDEFamily.positive_quantities`, none by default, and `admissible`, true when every positive quantity is positive | | |
+| `src/context_flux_no/simulations/pde/shallow_water.py` — `ParametrizedShallowWater1D.positive_quantities` returns the depth | | |
+| `src/context_flux_no/simulations/pde/euler.py` — new method `Euler2D.pressure` with the rebuttal branch's ideal-gas formula; `positive_quantities` returns the density and the pressure | | |
+| `src/context_flux_no/simulations/writer.py` — new `store_channel_order`, the permutation from the family's channel order to a store's | | |
+| `tests/helpers.py` — new tolerance `PRESSURE_ROUND_TRIP_RTOL` | | |
+| `tests/unit/test_admissible.py` — new: the laws of `admissible` and `Euler2D.pressure` | | |
+| `tests/unit/test_generate_dataset.py` — `store_channel_order` checked against an `Euler2D` and a `CubicFlux1D` store written with `WellWriter` and read through `ZarrWellDatasetSource` | | |

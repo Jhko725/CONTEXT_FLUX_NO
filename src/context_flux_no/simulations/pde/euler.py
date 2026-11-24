@@ -18,8 +18,10 @@ transverse propagation through PyClaw (the Clawpack quadrants gallery setting).
 from typing import ClassVar
 
 import equinox as eqx
+import jax.numpy as jnp
 import numpy as np
 from clawpack import riemann
+from jaxtyping import Array, Float
 
 from context_flux_no.simulations.backends.pyclaw import PyClawSpec
 from context_flux_no.simulations.backends.trixi import TrixiSpec
@@ -68,3 +70,36 @@ class Euler2D(AbstractPDEFamily):
         primitive initial condition in `initial_conditions.Conserved(ic, pde)`."""
         E = 0.5 * rho * (u**2 + v**2) + p / (self.gamma - 1)
         return np.stack([rho, rho * u, rho * v, E], axis=0)
+
+    def pressure(self, u: Float[Array, "4 *shape"]) -> Float[Array, " *shape"]:
+        """Compute the pressure of the ideal gas from its conserved state.
+
+        The pressure is `(gamma - 1) * (E - |m|^2 / (2 rho))`, the equation of state of
+        this module's docstring; the rebuttal branch's `metrics.ideal_gas_pressure` is the
+        same formula.
+
+        **Arguments:**
+
+        - `u`: The state `(rho, m_x, m_y, E)`.
+
+        **Returns:**
+
+        The pressure in every cell.
+        """
+        kinetic_energy = 0.5 * jnp.sum(u[1:3] ** 2, axis=0) / u[0]
+        return (self.gamma - 1.0) * (u[3] - kinetic_energy)
+
+    def positive_quantities(
+        self, u: Float[Array, "4 *shape"]
+    ) -> Float[Array, "2 *shape"]:
+        """Return the density and the pressure, which must stay positive.
+
+        **Arguments:**
+
+        - `u`: The state `(rho, m_x, m_y, E)`.
+
+        **Returns:**
+
+        `(rho, pressure(u))` stacked along the first axis.
+        """
+        return jnp.stack([u[0], self.pressure(u)], axis=0)
