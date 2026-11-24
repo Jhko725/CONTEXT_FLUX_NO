@@ -19,7 +19,7 @@ present first (Debian/Ubuntu: `sudo apt update && sudo apt install build-essenti
 uv sync --group dev                 # CPU JAX; add --extra cuda on a GPU machine
 uv run nbstripout --install         # once per clone: notebook outputs never reach git
 git submodule update --init         # third_party/icon (baseline; not imported by src)
-uv run pre-commit install
+uv run just setup                   # syncs the environment and installs the git hooks
 ```
 
 ## The three commands

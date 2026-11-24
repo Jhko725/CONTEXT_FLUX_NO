@@ -43,6 +43,10 @@ end of the branch.
 - **The agent type.** The session started outside the repository and offers no `implementer` type. Each unit runs as a general-purpose subagent on the unit's model, briefed with the *Boundary*, *Stop rule*, *Before and after* and *Report* sections of `.claude/agents/implementer.md` and told not to run `git push`, since the hook of the agent file does not run for that type (handoff section 4, step 3).
 - **Six change documents predate the format, where the handoff says eight.** `docs/changes/` at `450f31d` holds six documents dated before 2026-11-25. `PRE_FORMAT_CHANGES` lists those six. [unconfirmed]
 
+- **The new hooks rewrote whitespace in 45 tracked files** (unit 1): trailing spaces and final newlines, among them files that unit 7 moves under `legacy/`. `git diff --ignore-space-at-eol` shows no other change. The alternative was a wider `exclude` in `prek.toml`. [unconfirmed]
+- **`tests/conftest.py` arrives in unit 1 with the Hypothesis profiles only.** The handoff creates it in unit 16, but `just test dev` needs the `dev` profile from unit 1 on. Unit 16 adds the import hook. [unconfirmed]
+- The item-3 grep of unit 1 filters `^./docs/changes/`, which GNU grep's output never matches; with `^docs/changes/` it prints nothing.
+
 ## Review notes
 
 ### Round 1: from `450f31d`
@@ -55,8 +59,8 @@ end of the branch.
 | `.claude/hooks/block_history_rewrite.py` — copied: blocks a rebase, a force-push and an amend of a pushed commit | | |
 | `.claude/hooks/block_push.py` — copied: blocks `git push` while the implementer runs | | |
 | `.claude/settings.json` — registers the history hook | | |
-| `CLAUDE.md` — points at `.claude/rules/`, states the history rule and names the agent | | |
-| `docs/index.md` — the row of `workflow-bootstrap` replaced by the row of this branch | | |
+| `CLAUDE.md` — points at `.claude/rules/`, states the history rule and names the agent; check paths follow the move to `scripts/checks/` | | |
+| `docs/index.md` — the row of `workflow-bootstrap` replaced by the row of this branch; check paths follow the move | | |
 | `docs/changes/2026-11-25-workflow-bootstrap.md` — deleted: its content moved into this document | | |
 | `docs/changes/2026-11-25-refactor-foundation.md` — this document | | |
 | `justfile` — new: recipes `default`, `setup`, `check`, `test`, `test-slow` and `pending`, adapted from `UniversalForceReconstruction` |  |  |
@@ -67,5 +71,10 @@ end of the branch.
 | `scripts/checks/check_spelling.py` — moved from `scripts/`; usage line follows the move |  |  |
 | `pyproject.toml` — dev group: `prek` and `rust-just` added, `pre-commit` and `nbstripout` removed; codespell comment path |  |  |
 | `uv.lock` — relocked for the dev group change |  |  |
-| `CLAUDE.md`, `README.md`, `docs/coding-standards.md`, `docs/index.md`, `docs/roadmap.md` — path of `check_docs.py` and `check_spelling.py` updated, nothing else |  |  |
-| `scripts/data/`, `scripts/training/configs/`, `src/context_flux_no/` — trailing whitespace and final newlines fixed by the new hooks, no other change |  |  |
+| `README.md` — path of `check_docs.py` updated; the hook install command is `just setup` |  |  |
+| `docs/coding-standards.md` — paths of `check_docs.py` and `check_spelling.py` updated, nothing else |  |  |
+| `docs/roadmap.md` — paths of `check_docs.py` and `check_spelling.py` updated, nothing else |  |  |
+| `scripts/data/` — trailing whitespace and final newlines fixed by the new hooks, no other change |  |  |
+| `scripts/training/configs/` — trailing whitespace and final newlines fixed by the new hooks, no other change |  |  |
+| `src/context_flux_no/` — trailing whitespace and final newlines fixed by the new hooks, no other change |  |  |
+| `tests/conftest.py` — new: the Hypothesis profiles `dev`, `default` and `ci` that `just test` selects |  |  |
