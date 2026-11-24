@@ -2,6 +2,7 @@ name: test
 
 on:
   push:
+    branches: [main]
   pull_request:
   workflow_dispatch:
 
@@ -12,14 +13,8 @@ jobs:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5
       - run: uv sync --group dev            # CPU jax; GPU machines use --extra cuda
-      - run: uv run ruff check . && uv run ruff format --check .
-      - run: uv run python scripts/check_docs.py
-      # American English: codespell for irregulars and typos (pinned: its word list is
-      # what docs/coding-standards.md measured), check_spelling.py for the -ise families.
-      - run: uvx codespell@2.4.3
-      - run: uv run python scripts/check_spelling.py
-      - run: JAX_PLATFORMS=cpu uv run pytest -q
-        # pyproject addopts excludes the regression and slow tiers
+      - run: uv run just check
+      - run: JAX_PLATFORMS=cpu uv run just test ci
 
   # Opt-in (change document 2026-10-25-phase2a-trixi-backend, D-CI): the Julia side of
   # TrixiBackend — Julia install, the committed reference/trixi lock, Pkg.test, V18. Runs on

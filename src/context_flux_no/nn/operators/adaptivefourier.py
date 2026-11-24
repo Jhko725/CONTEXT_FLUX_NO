@@ -48,7 +48,7 @@ class AdaptiveFourier(eqx.Module):
             c % num_blocks != 0 for c in (in_channels, out_channels, hidden_channels)
         ):
             raise ValueError(
-                """in_channels, out_channels, hidden_channels nust all be divisible by 
+                """in_channels, out_channels, hidden_channels nust all be divisible by
                 num_blocks"""
             )
         if out_channels != in_channels:

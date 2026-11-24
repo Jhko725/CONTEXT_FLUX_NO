@@ -69,7 +69,7 @@ class DropPath(eqx.Module):
             return x
         elif key is None:
             raise RuntimeError(
-                """DropPath requires a key when running in non-deterministic mode. Did 
+                """DropPath requires a key when running in non-deterministic mode. Did
                 you mean to enable inference?"""
             )
         else:

@@ -12,5 +12,3 @@ encoder_kwargs:
     activation:
       _target_: hydra.utils.get_method
       path: jax.nn.gelu
-
-  

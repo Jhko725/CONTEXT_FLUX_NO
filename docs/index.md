@@ -8,7 +8,7 @@ updated: 2026-10-25
 
 Progressive disclosure: start here, read only what the task needs. Every document carries a
 frontmatter block (`type`, `status`, `updated`, plus `verified_by` / `sources` / `id` / `branch`
-where relevant) so its standing is machine-readable. `scripts/check_docs.py` enforces that every
+where relevant) so its standing is machine-readable. `scripts/checks/check_docs.py` enforces that every
 document is listed here and has frontmatter.
 
 `status` values — `current` (kept true at all times) · `planned` / `in-progress` / `landed` /

@@ -55,7 +55,7 @@ class LearnedPositionEncoding(AbstractPositionEncoding):
         if u.shape != self.encodings.shape:
             if not resize:
                 raise ValueError(
-                    """Input array shape does not match the shape of the learnable position 
+                    """Input array shape does not match the shape of the learnable position
                     encodings."""
                 )
             else:

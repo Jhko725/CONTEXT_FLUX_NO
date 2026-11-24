@@ -10,7 +10,7 @@ where `-ise` is also correct in American English, and that is the exception list
 Run both checks: `codespell` for the irregulars and for typos, this script for the
 families.
 
-Usage: `uv run python scripts/check_spelling.py [path ...]` (default: the repository
+Usage: `uv run python scripts/checks/check_spelling.py [path ...]` (default: the repository
 root). Exits 1 when anything is flagged.
 """
 

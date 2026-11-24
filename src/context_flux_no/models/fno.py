@@ -80,7 +80,7 @@ class FNO(eqx.Module, strict=True):
         elif fourier_block_type == "adaptive":
             assert (
                 num_blocks is not None
-            ), """num_blocks must be provided to use adaptive 
+            ), """num_blocks must be provided to use adaptive
             fourier layers"""
             self.fourier_layers = tuple(
                 AdaptiveFourier(

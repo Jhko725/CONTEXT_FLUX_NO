@@ -1,0 +1,42 @@
+# Adapted from Jhko725/UniversalForceReconstruction prek.toml at b80a341.
+# Configuration file for `prek`, a git hook framework written in Rust.
+# See https://prek.j178.dev for more information.
+#:schema https://www.schemastore.org/prek.json
+
+# No hook reads or rewrites the legacy notebooks, the vendored third-party code, or the
+# Julia lock file, whose package names are not words.
+exclude = "^(notebooks/|third_party/|reference/trixi/Manifest\\.toml)"
+
+[[repos]]
+repo = "builtin"
+hooks = [
+    { id = "trailing-whitespace" },
+    { id = "end-of-file-fixer" },
+    { id = "check-added-large-files" },
+    # Conflict markers in any file. --assume-in-merge scans outside a merge too, so that
+    # `just check` and CI catch markers a merge commit carried in.
+    { id = "check-merge-conflict", args = ["--assume-in-merge"] },
+]
+
+[[repos]]
+repo = "https://github.com/astral-sh/ruff-pre-commit"
+rev = "v0.15.11"
+hooks = [
+  { id = "ruff-check", args = ["--fix"] },
+  { id = "ruff-format" },
+]
+
+[[repos]]
+repo = "https://github.com/codespell-project/codespell"
+rev = "v2.4.3"
+hooks = [
+  # tomli lets the hook read [tool.codespell] from pyproject.toml on Python < 3.11.
+  { id = "codespell", additional_dependencies = ["tomli"] },
+]
+
+[[repos]]
+repo = "local"
+hooks = [
+  { id = "check-spelling", name = "check-spelling (-ise families)", entry = "uv run python scripts/checks/check_spelling.py", language = "system", types_or = ["python", "markdown", "toml", "yaml"] },
+  { id = "check-docs", name = "check-docs (frontmatter, index, Done ledger)", entry = "uv run python scripts/checks/check_docs.py", language = "system", pass_filenames = false, files = "^(docs/|CLAUDE\\.md|scripts/checks/check_docs\\.py)" },
+]

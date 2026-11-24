@@ -67,7 +67,7 @@ substantive ones (0.2, 0.5–0.8) by Joon.
 | 0.8 | Regression harness: cases, inputs, goldens (CPU), tests green twice | `pytest tests/regression` green ×2 | **done 2026-10-26** (7 cases; green twice on `main`, then on each branch before its merge) |
 | 0.9 | Tooling: dev deps, ruff format, pre-commit, CUDA as optional extra, CPU CI, pytest markers | CI green | done (`fbeb7a8`, `2a65dfc`); `the-well`/`torch` dropped 2026-10-24 |
 | 0.10 | README, `pyproject` metadata, hello-world removed, training README fixed | — | done (`7325817`) |
-| 0.11 | `docs/` tree, `CLAUDE.md`, `scripts/check_docs.py` | `check_docs.py` passes | done (`0b0fd68`) |
+| 0.11 | `docs/` tree, `CLAUDE.md`, `scripts/checks/check_docs.py` | `check_docs.py` passes | done (`0b0fd68`) |
 
 Exit: `pytest -m "not regression"` green; regression tier green on CPU; `check_configs.py`
 has no import/attribute/init-string failures; `train_multiphysics.py
@@ -199,7 +199,7 @@ IMEX) — see `design/fv-conventions.md` §Extensibility.
 
 | When | Branch | What | Record |
 |---|---|---|---|
-| 2026-10-04 | `phase0-freeze` | 0.11: `docs/` tree (roadmap, architecture, index, verification, findings, glossary, assessment, ADR-0001…0009, `design/fv-conventions.md`, change documents for Phases 0–1), `CLAUDE.md`, `scripts/check_docs.py` | `changes/2026-10-04-phase0-freeze.md` |
+| 2026-10-04 | `phase0-freeze` | 0.11: `docs/` tree (roadmap, architecture, index, verification, findings, glossary, assessment, ADR-0001…0009, `design/fv-conventions.md`, change documents for Phases 0–1), `CLAUDE.md`, `scripts/checks/check_docs.py` | `changes/2026-10-04-phase0-freeze.md` |
 | 2026-10-04 | `phase0-freeze` | 0.3: bytecode, log and `.h5` fixture untracked; `.gitignore` fixed | `changes/2026-10-04-phase0-freeze.md` |
 | 2026-10-04 | `phase0-freeze` | 0.4: notebook outputs stripped (16 MB → 440 KB); `nbstripout` filter; `pre-nbstripout` tag (local) | `changes/2026-10-04-phase0-freeze.md` |
 | 2026-10-04 | `phase0-freeze` | 0.9: dev deps (hypothesis, chex, ty, pre-commit, nbstripout); CUDA optional extra; pytest markers; ruff format + excludes; pre-commit; CPU CI; `style:` commit isolating the reformat | `changes/2026-10-04-phase0-freeze.md` |

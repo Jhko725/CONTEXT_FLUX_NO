@@ -38,7 +38,7 @@ class PatchEmbedding(eqx.Module):
         if num_patch_dims := len(patch_size) != num_spatial_dims:
             raise ValueError(
                 f"""Given num_spatial_dims is incompatible with that of patch_size.
-                Got {num_spatial_dims=} but patch_size has spatial dimensions 
+                Got {num_spatial_dims=} but patch_size has spatial dimensions
                 {num_patch_dims}"""
             )
         self.patch_size = patch_size
@@ -132,7 +132,7 @@ class PatchEmbedding(eqx.Module):
     ) -> Float[Array, " embedding_dim *grids_patch"]:
         assert all(
             s % p == 0 for (s, p) in zip(x.shape[1:], self.patch_size)
-        ), """Image shape mult be integer multiple of self.patch_size. 
+        ), """Image shape mult be integer multiple of self.patch_size.
         If not, call PatchEmbedding.maybe_pad first to pad the image to proper shape."""
 
         for layer in self.layers[:-1]:

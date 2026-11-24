@@ -46,7 +46,7 @@ Checkpoints are written under `./checkpoints/<data>/<Model>/<Loss>/seed=<n>/<tim
 | regression (ICLR goldens) | `JAX_PLATFORMS=cpu uv run pytest tests/regression -m regression --checkpoints-root ./checkpoints` | checkpoints |
 | verification (numerics) | `uv run pytest -m slow` | x64; slow |
 
-`uv run python scripts/check_docs.py` checks the documentation bookkeeping; `uv run python
+`uv run python scripts/checks/check_docs.py` checks the documentation bookkeeping; `uv run python
 scripts/check_configs.py` instantiates every model × data config pairing (Phase 0.6e).
 
 ## Layout

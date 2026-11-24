@@ -12,7 +12,7 @@ encoder_kwargs:
   num_heads: 8
   mlp_hidden_dim: 64
 target_network_type: ConvNextFluxNO
-target_network_kwargs: 
+target_network_kwargs:
   lift_dim: 64
   depth: 4
   kernel_size: 5

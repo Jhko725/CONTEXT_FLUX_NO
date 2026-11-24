@@ -77,7 +77,7 @@ def apply_along_axis(
 
     if axis >= x.ndim or axis < -x.ndim:
         raise ValueError(
-            f"""Invalid axis. Requested to map function over {axis=} for a {x.ndim} 
+            f"""Invalid axis. Requested to map function over {axis=} for a {x.ndim}
             array."""
         )
 

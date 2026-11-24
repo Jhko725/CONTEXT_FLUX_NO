@@ -1,7 +1,7 @@
 name: grf
 sampler:
   _target_: context_flux_no.simulations.initial_conditions.grf.GaussianRandomField
-  covariance_fns: 
+  covariance_fns:
     - _target_: gstools.Gaussian
       dim: 2
       len_scale: 0.2

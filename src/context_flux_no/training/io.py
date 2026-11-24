@@ -52,7 +52,7 @@ def _infer_step(ckpt_dir: Path) -> int:
         return int(more_itertools.one(ckpt_step_dirs).stem)
     except ValueError:
         raise ValueError(
-            """Given directory contains checkpoints from multiple steps, and thus step 
+            """Given directory contains checkpoints from multiple steps, and thus step
             cannot be inferred."""
         )
 

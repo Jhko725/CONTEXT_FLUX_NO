@@ -21,7 +21,7 @@ look when a task touches tiers, tolerances, goldens or checks.
 | Verification | `-m slow`, with `jax_enable_x64` |
 | Imports | `uv run python scripts/import_all.py` |
 | Configs | `uv run python scripts/check_configs.py` |
-| Documents | `uv run python scripts/check_docs.py` |
+| Documents | `uv run python scripts/checks/check_docs.py` |
 
 Hypothesis profiles: `--hypothesis-profile=dev` (10 examples), default (50), `ci` (200,
 derandomized). The four tiers are ADR-0008: `tests/unit` and `tests/property` on every
@@ -83,9 +83,9 @@ for the current values.
 | Rule | Check | Runs in |
 |---|---|---|
 | American English, irregulars and typos | `codespell` 2.4.3 | pre-commit, CI |
-| American English, the productive families | `scripts/check_spelling.py` | pre-commit, CI |
+| American English, the productive families | `scripts/checks/check_spelling.py` | pre-commit, CI |
 | `copy.replace`, never `dataclasses.replace` (Python floor 3.13) | ruff `TID251` banned-api | pre-commit, CI |
-| change-document *Files* matches the diff; frontmatter; index coverage; Done-ledger order | `scripts/check_docs.py` | pre-commit, CI |
+| change-document *Files* matches the diff; frontmatter; index coverage; Done-ledger order | `scripts/checks/check_docs.py` | pre-commit, CI |
 | every model config instantiates | `scripts/check_configs.py` | by hand |
 | every module imports | `scripts/import_all.py` | by hand |
 
@@ -95,7 +95,7 @@ for the current values.
 `quantites` and `meybe`. It is the wrong shape for this repository's vocabulary, because <!-- codespell:ignore -->
 `-ise` is productive morphology and no list ships `discretisation`, `parametrised`, <!-- codespell:ignore -->
 `denormalise` or `amortisation` [code: measured against codespell 2.4 and `breame`, <!-- codespell:ignore -->
-2026-10-25; both miss all four]. `scripts/check_spelling.py` inverts the problem: it
+2026-10-25; both miss all four]. `scripts/checks/check_spelling.py` inverts the problem: it
 applies the rule (`-ise`/`-isation`/`-isable`/`-yse` take a `z`) and keeps the exception
 list, which is the part that *is* closed — the sixty-odd words where `-ise` is also
 correct in American English. `-isation` and `-isable` have no exceptions at all; `-yses`

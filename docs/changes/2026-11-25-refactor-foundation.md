@@ -59,3 +59,13 @@ end of the branch.
 | `docs/index.md` — the row of `workflow-bootstrap` replaced by the row of this branch | | |
 | `docs/changes/2026-11-25-workflow-bootstrap.md` — deleted: its content moved into this document | | |
 | `docs/changes/2026-11-25-refactor-foundation.md` — this document | | |
+| `justfile` — new: recipes `default`, `setup`, `check`, `test`, `test-slow` and `pending`, adapted from `UniversalForceReconstruction` |  |  |
+| `prek.toml` — new: the hooks (builtin, ruff, codespell, `check-spelling`, `check-docs`) run through `prek` |  |  |
+| `.pre-commit-config.yaml` — deleted: replaced by `prek.toml` |  |  |
+| `.github/workflows/test.yml` — the `fast` job runs `just check` and `just test ci`; pushes trigger on `main` only |  |  |
+| `scripts/checks/check_docs.py` — moved from `scripts/`; the `--files` mode and its *Files* rule removed; root path follows the move |  |  |
+| `scripts/checks/check_spelling.py` — moved from `scripts/`; usage line follows the move |  |  |
+| `pyproject.toml` — dev group: `prek` and `rust-just` added, `pre-commit` and `nbstripout` removed; codespell comment path |  |  |
+| `uv.lock` — relocked for the dev group change |  |  |
+| `CLAUDE.md`, `README.md`, `docs/coding-standards.md`, `docs/index.md`, `docs/roadmap.md` — path of `check_docs.py` and `check_spelling.py` updated, nothing else |  |  |
+| `scripts/data/`, `scripts/training/configs/`, `src/context_flux_no/` — trailing whitespace and final newlines fixed by the new hooks, no other change |  |  |

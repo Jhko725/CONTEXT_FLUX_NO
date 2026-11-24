@@ -12,7 +12,7 @@ encoder_kwargs:
   num_heads: 8
   mlp_hidden_dim: 64
 target_network_type: FluxNO
-target_network_kwargs: 
+target_network_kwargs:
   stencil_widths: [8,8]
   lift_dim: 128
   hidden_dim: 128

@@ -33,11 +33,11 @@ class BlockDiagonalLinear(eqx.Module):
 
         if in_features % num_blocks != 0:
             warnings.warn(
-                """in_features is not divisible by num_blocks. Input vector will be 
+                """in_features is not divisible by num_blocks. Input vector will be
                 padded with zeros."""
             )
         if out_features % num_blocks != 0:
-            warnings.warn("""out_features is not divisible by num_blocks. Output vector 
+            warnings.warn("""out_features is not divisible by num_blocks. Output vector
             will be truncated to the requested size.""")
 
         in_dim = ceil(in_features / num_blocks)

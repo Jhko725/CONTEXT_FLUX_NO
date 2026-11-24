@@ -80,9 +80,9 @@ dev = [
     "pytest>=9.0.2",
     "hypothesis>=6.100",
     "chex>=0.1.86",
-    "pre-commit>=4.0",
+    "prek",
+    "rust-just",
     "ty",
-    "nbstripout>=0.8",
     "ruff==0.15.11",
     "juliacall>=0.9.37",
     "juliapkg>=0.1.28",
@@ -98,7 +98,7 @@ markers = [
 addopts = "-m 'not regression and not slow'"
 
 [tool.codespell]
-# The irregular British spellings and typos; scripts/check_spelling.py covers the
+# The irregular British spellings and typos; scripts/checks/check_spelling.py covers the
 # productive -ise/-isation/-yse families. Each skipped tree is listed twice: "./x" for
 # the root walk CI does, "x/*" for the paths a git hook passes; no single pattern
 # covers both. docs/coding-standards.md says why docs/changes is out of scope; the Julia
@@ -106,4 +106,3 @@ addopts = "-m 'not regression and not slow'"
 builtin = "clear,en-GB_to_en-US"
 skip = "*.lock,*.ipynb,.git,*.npz,*.h5,Manifest.toml,./icon,icon/*,./third_party,third_party/*,./notebooks,notebooks/*,./docs/changes,docs/changes/*"
 ignore-words-list = "Numer,DATAS,IST,nd"
-

@@ -30,7 +30,7 @@ work lands (`in-progress`, `landed`), and closed at merge (`merged`). Sections:
 
 - **Summary** — what the branch does and why, in a few sentences; which roadmap items.
 - **Files** — every file touched, one line each. Must match `git diff --stat main...HEAD`
-  (names); `scripts/check_docs.py` checks this. Planned files are marked *(planned)*.
+  (names); `scripts/checks/check_docs.py` checks this. Planned files are marked *(planned)*.
 - **Design** — decisions not obvious from the code, each with the rejected alternative and
   why; link to an ADR in `docs/decisions/` when the decision is structural.
 - **Bugs fixed** — pre-existing bugs found on the way, with the symptom.
@@ -55,7 +55,7 @@ Claude updates the change document in the same commit as any code change on the 
 - `docs/architecture.md` updated if a module moved, was renamed, added or removed.
 - `docs/findings.md` appended if anything concerns a reported result.
 - `docs/verification.md` updated if a numerics claim gained or lost a test.
-- `uv run python scripts/check_docs.py` passes.
+- `uv run python scripts/checks/check_docs.py` passes.
 
 ## Repository facts
 

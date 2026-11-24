@@ -5,7 +5,7 @@ defaults:
   - override hydra/launcher: submitit_slurm
 
 hydra:
-  launcher: 
+  launcher:
     timeout_min: 900
     tasks_per_node: 1
     gpus_per_node: 1

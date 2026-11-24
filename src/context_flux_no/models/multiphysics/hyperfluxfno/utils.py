@@ -59,7 +59,7 @@ def make_encoder(
         case "TRecViT":
             if in_timesteps is not None:
                 warnings.warn(
-                    """TRecViTEncoder supports variable in_timesteps. The given 
+                    """TRecViTEncoder supports variable in_timesteps. The given
                     in_timesteps value will be ignored."""
                 )
             encoder = TRecViTEncoder(

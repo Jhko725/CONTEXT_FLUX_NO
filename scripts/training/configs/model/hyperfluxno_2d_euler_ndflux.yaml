@@ -12,7 +12,7 @@ encoder_kwargs:
   num_heads: 8
   mlp_hidden_dim: 64
 target_network_type: NDFluxNO
-target_network_kwargs: 
+target_network_kwargs:
   normal_stencil_halfwidths: [8,8]
   transverse_stencil_halfwidth: 6
   lift_dim: 128
