@@ -5,6 +5,8 @@ Every expected value comes from a case that is listed by hand.
 
 from typing import Any
 
+import jax
+import jax.numpy as jnp
 import numpy as np
 import pytest
 from context_flux_no.evaluation.metrics import RolloutReferences
@@ -53,14 +55,24 @@ def test_mean_by_bin():
 
 
 def _three_references() -> RolloutReferences:
-    """The references of three rollouts of four steps, the first of them constant."""
-    identity = np.array([0.1, 0.2, 0.3, 0.4])
-    return RolloutReferences(
-        l2_identity=np.stack((np.zeros(4), identity, identity)),
-        l2_spatial_mean=np.stack((np.zeros(4), np.ones(4), np.ones(4))),
-        total_variation=np.stack((np.zeros(4), np.full(4, 2.0), np.full(4, 4.0))),
-        conservation_drift=np.zeros((3, 4, 1)),
-    )
+    """The references of three rollouts of four steps, the first of them constant.
+
+    Each rollout's references are built alone, as `rollout_references` builds them, and
+    stacked along a leading rollout axis, as a vmap over the rollouts stacks them.
+    """
+    identity = (0.1, 0.2, 0.3, 0.4)
+    rollouts = [
+        RolloutReferences(
+            l2_identity=jnp.asarray(l2_identity),
+            l2_spatial_mean=jnp.full(4, l2_spatial_mean),
+            total_variation=jnp.full(4, total_variation),
+            conservation_drift=jnp.zeros((4, 1)),
+        )
+        for l2_identity, l2_spatial_mean, total_variation in zip(
+            ((0.0,) * 4, identity, identity), (0.0, 1.0, 1.0), (0.0, 2.0, 4.0)
+        )
+    ]
+    return jax.tree.map(lambda *leaves: np.stack(leaves), *rollouts)
 
 
 def _three_l2_errors() -> Float[np.ndarray, " 3 4"]:

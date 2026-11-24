@@ -28,7 +28,7 @@ import math
 import warnings
 from collections.abc import Callable, Iterable, Iterator, Mapping
 from functools import cached_property
-from typing import Any, cast, Self, TypeVar
+from typing import Any, cast, TypeVar
 
 import equinox as eqx
 import jax
@@ -82,7 +82,7 @@ class TrainerState[M: eqx.Module](eqx.Module):
             is_trainable=is_trainable,
         )
 
-    def take_step(self, grads: M) -> Self:
+    def take_step(self, grads: M) -> "TrainerState[M]":
         """Given a pytree of model gradients, update model parameters using the
         appropriate optimizer update function."""
         grads = self.filter_trainable(grads)

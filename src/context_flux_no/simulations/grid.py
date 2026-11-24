@@ -9,6 +9,8 @@ from typing import Any
 
 import numpy as np
 
+from context_flux_no.custom_types import Real
+
 
 AXIS_NAMES = ("x", "y", "z")
 
@@ -21,7 +23,7 @@ class Grid:
     x_spans: tuple[tuple[float, float], ...]
     Nxs: tuple[int, ...]
 
-    def __init__(self, x_spans: Sequence[Sequence[float]], Nxs: Sequence[int]):
+    def __init__(self, x_spans: Sequence[Sequence[Real]], Nxs: Sequence[int]):
         x_spans = tuple((float(lo), float(hi)) for lo, hi in x_spans)
         Nxs = tuple(int(n) for n in Nxs)
         if len(x_spans) != len(Nxs):

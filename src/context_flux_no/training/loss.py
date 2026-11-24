@@ -1,7 +1,7 @@
 """Training losses: the one-step mean squared error and two variants of it, one with
 noise on the input and one that pushes the input forward through the model first."""
 
-from typing import Any, Protocol
+from typing import Any, Protocol, runtime_checkable
 
 import equinox as eqx
 import jax
@@ -11,6 +11,7 @@ from jaxtyping import Array, Float, PRNGKeyArray, PyTree
 from context_flux_no.custom_types import FloatScalar
 
 
+@runtime_checkable
 class AbstractTrainLoss[M: eqx.Module, B: PyTree[Array]](Protocol):
     """What `Trainer` calls a loss: `loss(model, batch, args, key)` returns the scalar
     loss and a dictionary of further metrics."""
@@ -23,6 +24,7 @@ class AbstractTrainLoss[M: eqx.Module, B: PyTree[Array]](Protocol):
         pass
 
 
+@runtime_checkable
 class OneStepPredictor(Protocol):
     """What the one-step losses call a model: `model(u, args, key=key)` predicts the
     frame that follows the window `u`."""

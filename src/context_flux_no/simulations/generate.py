@@ -20,6 +20,7 @@ import numpy as np
 from jaxtyping import Array, PRNGKeyArray
 from tqdm import tqdm
 
+from context_flux_no.custom_types import Real
 from context_flux_no.simulations.backends.base import (
     normalize_bcs,
     SolverBackend,
@@ -87,9 +88,9 @@ def generate_dataset(
     pde_factory: Callable[..., Any],
     initial_condition: InitialConditionSampler,
     coeff_range_dict: Mapping[str, tuple[float, float]],
-    x_spans: Sequence[Sequence[float]],
+    x_spans: Sequence[Sequence[Real]],
     Nxs: Sequence[int],
-    t_span: tuple[float, float],
+    t_span: tuple[Real, Real],
     Nt: int,
     bc: str | Sequence[Any] = "periodic",
     dataset_type: Literal["train", "valid", "test"] = "train",

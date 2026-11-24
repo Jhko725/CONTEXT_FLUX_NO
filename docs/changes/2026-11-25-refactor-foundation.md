@@ -225,3 +225,20 @@ end of the branch.
 | `scripts/checks/check_docstrings.py` — new, from UFR: header form, private docstrings, module length and plan labels on the clean paths | | |
 | `prek.toml` — registers `check-docstrings`, `check-containers` and `check-dependencies` | | |
 | `justfile` — `check` runs `ty` on the clean paths under `src` except `burgers.py`, then greps every clean path for `ty: ignore` | | |
+| `tests/conftest.py` — installs `jaxtyping.install_import_hook` with `beartype.beartype` on the clean modules under `src/`, read from `pyproject.toml`, before any package import | | |
+| `pyproject.toml` — `beartype` in the dev group | | |
+| `uv.lock` — locks `beartype` | | |
+| `justfile` — `check` runs `ty` on every clean path except `burgers.py`; the unused `clean_src` is removed | | |
+| `src/context_flux_no/custom_types.py` — new alias `Real`, a `float` or an `int`, since beartype does not let `float` admit an `int` | | |
+| `src/context_flux_no/simulations/` — `x_spans` and `t_span` take `Real` ends, as the YAML configs write them; the Riemann solvers of `cubic.py` and `shallow_water.py` take the `None` auxiliary arrays that PyClaw passes; `TruncatedFourier1D` takes NumPy or JAX coefficients | | |
+| `src/context_flux_no/data/sources.py` — `HierarchicalStorage` is runtime-checkable, and `loss_args` declares the NumPy scalars it returns | | |
+| `src/context_flux_no/evaluation/rollout.py` — `Operator` is runtime-checkable | | |
+| `src/context_flux_no/evaluation/metrics.py` — `valid_horizon` declares that its arrays broadcast against each other | | |
+| `src/context_flux_no/training/loss.py` — `AbstractTrainLoss` and `OneStepPredictor` are runtime-checkable | | |
+| `src/context_flux_no/training/trainer.py` — `TrainerState.take_step` returns `TrainerState[M]` in place of `Self`, which beartype checks only on a decorated class | | |
+| `src/context_flux_no/utils/arrays.py` — `num_parameters` takes any pytree, as DISCO calls it on a tuple of layers | | |
+| `scripts/data/generate_dataset.py` — checks that `bc` is a name or a list before passing it on | | |
+| `scripts/evaluate.py` — a run id without an index is unresolved before `runs.select` is called | | |
+| `tests/helpers.py` — `make_dataset_record` takes named arguments, and `SHARPCLAW_SSP33` is a `TypedDict` | | |
+| `tests/unit/` — passes `ty`: equinox instances through a type-level `cast`, zarr members and optional record fields narrowed by assertion; `test_summary.py` stacks per-rollout references; the two unknown-option tests accept the hook's `TypeCheckError`; `test_experiment.py` patches Hydra through `point_hydra_output_dir_at` | | |
+| `tests/verification/test_crosscode.py` — `CubicFlux2D` through a type-level `cast` | | |

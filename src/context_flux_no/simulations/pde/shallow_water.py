@@ -15,8 +15,8 @@ from context_flux_no.simulations.pde.base import AbstractPDEFamily
 def riemann_param_shallow_water_1D(
     q_l: Float[np.ndarray, "num_eqns num_riemanns"],
     q_r: Float[np.ndarray, "num_eqns num_riemanns"],
-    aux_l: Float[np.ndarray, "num_aux num_riemanns"],
-    aux_r: Float[np.ndarray, "num_aux num_riemanns"],
+    aux_l: Float[np.ndarray, "num_aux num_riemanns"] | None,
+    aux_r: Float[np.ndarray, "num_aux num_riemanns"] | None,
     problem_data: dict[str, float],
 ) -> tuple[
     Float[np.ndarray, "num_eqns num_waves num_riemanns"],
@@ -26,7 +26,8 @@ def riemann_param_shallow_water_1D(
 ]:
     """
     Roe-type approximate Riemann solver for a 3-parameter
-    shallow-water-like 1D conservation law.
+    shallow-water-like 1D conservation law. PyClaw passes `None` as `aux_l` and
+    `aux_r`, since the problem has no auxiliary arrays.
 
     State:
         q[0] = h

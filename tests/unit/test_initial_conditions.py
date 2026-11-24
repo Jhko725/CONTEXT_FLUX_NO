@@ -77,7 +77,8 @@ def test_step_1d_values_and_periodicity():
     )
     x = np.linspace(-1, 2, 301)
     u = ic.at_points([x])[0]
-    assert set(np.unique(u)) <= set(ic.values) and (0.5 <= u).all() and (u <= 2.5).all()
+    assert set(np.unique(u)) <= set(ic.values)
+    assert bool(np.all(u >= 0.5)) and bool(np.all(u <= 2.5))
     np.testing.assert_array_equal(ic.at_points([x])[0], ic.at_points([x + 1.0])[0])
     assert len(np.unique(u)) == len(
         ic.values

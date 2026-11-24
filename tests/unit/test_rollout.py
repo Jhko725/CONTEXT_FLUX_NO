@@ -4,6 +4,8 @@ The drivers run the stub models of `tests/helpers.py` on traveling waves, whose 
 are known in closed form.
 """
 
+from typing import cast
+
 import jax.numpy as jnp
 import numpy as np
 import pytest
@@ -25,6 +27,10 @@ ROLLOUT_STEPS = 4
 # The wave moves by this fraction of its period per frame.
 SHIFT_PER_FRAME = 1 / 32
 MODEL_ARGS = (0.005, 1 / NUM_CELLS)
+# Type-level only: ty 0.0.84 types an instance built through equinox's unannotated
+# `_ModuleMeta.__call__` as `eqx.Module`, not as the class that was called.
+HOLD_LAST_FRAME = cast(HoldLastFrame, HoldLastFrame())
+SHIFT_BY_ONE_CELL = cast(ShiftByOneCell, ShiftByOneCell())
 
 
 def _traveling_sines(shift_per_frame: float) -> Float[np.ndarray, " 2 frames 1 x"]:
@@ -80,7 +86,7 @@ def test_a_model_that_holds_the_last_frame_has_the_identity_errors():
     identity baseline."""
     window_starts = (0, 1, 5)
     errors = evaluate_segments(
-        HoldLastFrame(),
+        HOLD_LAST_FRAME,
         _traveling_sines(SHIFT_PER_FRAME),
         window_starts,
         MODEL_ARGS,
@@ -130,7 +136,7 @@ def test_a_model_that_moves_with_the_wave_has_zero_error():
     """The stub that shifts by one cell per step reproduces a wave that moves by one
     cell per frame, so every error and the error spectrum are zero."""
     evaluation = evaluate_rollouts(
-        ShiftByOneCell(),
+        SHIFT_BY_ONE_CELL,
         _traveling_sines(1 / NUM_CELLS),
         MODEL_ARGS,
         context_length=CONTEXT_LENGTH,
@@ -156,7 +162,7 @@ def test_a_rollout_that_holds_the_last_frame_has_the_identity_errors_in_chunks()
     num_steps = NUM_FRAMES - CONTEXT_LENGTH
     expected = _identity_step_errors(num_steps)
     evaluation = evaluate_rollouts(
-        HoldLastFrame(),
+        HOLD_LAST_FRAME,
         trajectories,
         MODEL_ARGS,
         context_length=CONTEXT_LENGTH,
@@ -188,7 +194,7 @@ def test_minima_of_the_positive_quantities_follow_their_order():
     keeps a cell at its trough, so the minima are 1.5 - A and -A at every step.
     """
     evaluation = evaluate_rollouts(
-        ShiftByOneCell(),
+        SHIFT_BY_ONE_CELL,
         _traveling_sines(1 / NUM_CELLS),
         MODEL_ARGS,
         context_length=CONTEXT_LENGTH,
@@ -209,7 +215,7 @@ def test_a_spectrum_step_outside_the_rollout_is_rejected():
     for steps in ((0,), (num_steps + 1,)):
         with pytest.raises(ValueError, match="spectrum_steps"):
             evaluate_rollouts(
-                HoldLastFrame(),
+                HOLD_LAST_FRAME,
                 _traveling_sines(SHIFT_PER_FRAME),
                 MODEL_ARGS,
                 context_length=CONTEXT_LENGTH,
@@ -222,7 +228,7 @@ def test_a_context_without_a_step_after_it_is_rejected():
     """A context that covers every frame leaves no step to predict and raises."""
     with pytest.raises(ValueError, match="leave no step"):
         evaluate_rollouts(
-            HoldLastFrame(),
+            HOLD_LAST_FRAME,
             _traveling_sines(SHIFT_PER_FRAME),
             MODEL_ARGS,
             context_length=NUM_FRAMES,

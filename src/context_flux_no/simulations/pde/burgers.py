@@ -10,6 +10,7 @@ import numpy as np
 from clawpack import riemann
 from jaxtyping import Array, Float
 
+from context_flux_no.custom_types import Real
 from context_flux_no.simulations.backends.pyclaw import PyClawSpec
 from context_flux_no.simulations.backends.trixi import TrixiSpec
 from context_flux_no.simulations.pde.base import AbstractPDEFamily
@@ -94,7 +95,7 @@ class ViscousBurgers1D(AbstractPDEFamily):
         ic,
         x_spans,
         Nxs,
-        t_span: tuple[float, float],
+        t_span: tuple[Real, Real],
         Nt: int,
         bc: str | Sequence[Any] = "periodic",
         cfl: float = 0.4,

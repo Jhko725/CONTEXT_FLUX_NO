@@ -3,19 +3,31 @@ of the evaluation tests, and the helpers that more than one test file uses. Ever
 uses a configuration or tolerance by its name, and each entry carries its one-line reason."""
 
 from pathlib import Path
-from typing import Any
+from typing import Any, TypedDict
 
 import equinox as eqx
 import jax
 import jax.numpy as jnp
 import pytest
-from context_flux_no.simulations import DatasetRecord, Grid, normalize_bcs
+from context_flux_no.simulations import DatasetRecord, Grid
+from context_flux_no.simulations.backends.base import BCs
 from hydra.core.hydra_config import HydraConfig
 from jaxtyping import Array, Float, PRNGKeyArray
 from omegaconf import OmegaConf
 
 
-SHARPCLAW_SSP33 = {"time_integrator": "SSP33", "cfl_desired": 0.4, "cfl_max": 0.45}
+class SharpClawOverrides(TypedDict):
+    """Solver overrides of `PyClawBackend("sharpclaw")` that set the time integrator and
+    its CFL numbers; typed by key, so that unpacking them fills no other parameter."""
+
+    time_integrator: str
+    cfl_desired: float
+    cfl_max: float
+
+
+SHARPCLAW_SSP33 = SharpClawOverrides(
+    time_integrator="SSP33", cfl_desired=0.4, cfl_max=0.45
+)
 """SharpClaw with the third-order SSP Runge–Kutta (SSP coefficient 1; `pyclaw/sharpclaw/
 solver.py:137`). Clawpack provides CFL defaults only for SSP104 (2.45 / 2.5 at coefficient 6,
 `solver.py:146`), so SSP33 needs them spelled out: the same numbers per unit coefficient."""
@@ -100,18 +112,31 @@ def point_hydra_output_dir_at(
     monkeypatch.setattr(HydraConfig, "get", staticmethod(lambda: hydra_config))
 
 
-def make_dataset_record(**overrides: Any) -> DatasetRecord:
-    """Create the `DatasetRecord` of a small cubic-1D training store, with the fields of
-    `overrides` in place of the defaults."""
-    fields = dict(
-        family="CubicFlux1D",
-        dataset_name="cubic_1d",
-        split="train",
-        n_trajectories=4,
-        grid=Grid(((0.0, 1.0),), (8,)).to_dict(),
-        time={"t_span": [0.0, 0.1], "Nt": 2, "dt": 0.05},
-        bcs=normalize_bcs("periodic", 1),
-        field_rank_names=((0, "u"),),
+def make_dataset_record(
+    *,
+    family: str = "CubicFlux1D",
+    dataset_name: str = "cubic_1d",
+    split: str = "train",
+    n_trajectories: int = 4,
+    grid: dict[str, Any] | None = None,
+    time: dict[str, Any] | None = None,
+    bcs: BCs = (("periodic", "periodic"),),
+    field_rank_names: tuple[tuple[int, str], ...] = ((0, "u"),),
+    seed: int = 0,
+    extra: dict[str, Any] | None = None,
+) -> DatasetRecord:
+    """Create the `DatasetRecord` of a small cubic-1D training store, with the arguments
+    given in place of the defaults. A `grid` or `time` of `None` is the eight-cell grid
+    on `[0, 1]` or the two steps to `t = 0.1`."""
+    return DatasetRecord.create(
+        family=family,
+        dataset_name=dataset_name,
+        split=split,
+        n_trajectories=n_trajectories,
+        grid=Grid(((0.0, 1.0),), (8,)).to_dict() if grid is None else grid,
+        time={"t_span": [0.0, 0.1], "Nt": 2, "dt": 0.05} if time is None else time,
+        bcs=bcs,
+        field_rank_names=field_rank_names,
         params={
             "names": ["a"],
             "ranges": {"a": [0.0, 1.0]},
@@ -120,7 +145,6 @@ def make_dataset_record(**overrides: Any) -> DatasetRecord:
         },
         ic={"name": "grf"},
         backend={"name": "pyclaw", "scheme": "classic"},
-        seed=0,
+        seed=seed,
+        extra=extra,
     )
-    fields.update(overrides)
-    return DatasetRecord.create(**fields)

@@ -4,7 +4,9 @@ methods (goldens under `goldens_simulations/`, made at commit `1ff31bb` by the s
 (`Grid`, `normalize_bcs`, `describe`) behaves."""
 
 from pathlib import Path
+from typing import cast
 
+import jaxtyping
 import numpy as np
 import pytest
 
@@ -12,7 +14,10 @@ import pytest
 pytest.importorskip("clawpack")
 
 from context_flux_no.simulations.backends.base import normalize_bcs  # noqa: E402
-from context_flux_no.simulations.backends.pyclaw import PyClawBackend  # noqa: E402
+from context_flux_no.simulations.backends.pyclaw import (  # noqa: E402
+    PyClawBackend,
+    Scheme,
+)
 from context_flux_no.simulations.grid import Grid  # noqa: E402
 from context_flux_no.simulations.initial_conditions import FromFunction  # noqa: E402
 
@@ -96,8 +101,10 @@ def test_backend_input_checks_and_describe():
         and d["scheme"] == "classic"
         and d["solver_overrides"] == {"cfl_desired": 0.3}
     )
-    with pytest.raises(ValueError):
-        PyClawBackend("weno")  # type: ignore[arg-type]
+    # Type-level only: the test passes a scheme outside `Scheme` on purpose. Under the
+    # import hook of tests/conftest.py the annotation rejects it before the guard does.
+    with pytest.raises((ValueError, jaxtyping.TypeCheckError)):
+        PyClawBackend(cast(Scheme, "weno"))
 
 
 def test_non_periodic_bcs_run(tmp_path: Path):

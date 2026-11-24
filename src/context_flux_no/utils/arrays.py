@@ -7,6 +7,7 @@ import equinox as eqx
 import jax
 import jax.numpy as jnp
 import numpy as np
+from jaxtyping import PyTree
 
 
 def is_floating_array(element: Any) -> bool:
@@ -21,8 +22,9 @@ def is_floating_array(element: Any) -> bool:
         return False
 
 
-def num_parameters(model: eqx.Module) -> int:
-    """Returns the number of trainable parameters in an equinox Module.
+def num_parameters(model: PyTree) -> int:
+    """Returns the number of trainable parameters in a pytree, such as an equinox Module
+    or a tuple of them.
 
     All inexact array elements in non-static leafs of the model PyTree is considered
     to be trainable parameters."""

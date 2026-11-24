@@ -9,6 +9,7 @@ import jax
 import numpy as np
 from jaxtyping import Array, Float, PRNGKeyArray
 
+from context_flux_no.custom_types import Real
 from context_flux_no.simulations.initial_conditions.base import (
     Coords,
     InitialCondition,
@@ -22,8 +23,8 @@ class TruncatedFourier1D(InitialCondition):
 
     def __init__(
         self,
-        an: Float[Array, " K"],
-        bn: Float[Array, " K"],
+        an: Float[np.ndarray | Array, " K"],
+        bn: Float[np.ndarray | Array, " K"],
         a0: float = 0.0,
         L: float = 1.0,
     ) -> None:
@@ -75,7 +76,7 @@ class RandomTruncatedFourier1D(InitialConditionSampler):
         )
 
     def sample(
-        self, key: PRNGKeyArray, x_spans: Sequence[Sequence[float]]
+        self, key: PRNGKeyArray, x_spans: Sequence[Sequence[Real]]
     ) -> TruncatedFourier1D:
         """Draw `an` and `bn` uniformly in `coeff_range`, and `a0` in `offset_range` (0
         when it is `None`), with the period set to the length of the domain

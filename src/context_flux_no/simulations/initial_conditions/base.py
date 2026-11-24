@@ -21,6 +21,8 @@ from typing import Any
 import numpy as np
 from jaxtyping import Float, PRNGKeyArray
 
+from context_flux_no.custom_types import Real
+
 
 Coords = Sequence[Float[np.ndarray, "*shape"]]  # one array per spatial axis, same shape
 
@@ -140,7 +142,7 @@ class InitialConditionSampler(abc.ABC):
 
     @abc.abstractmethod
     def sample(
-        self, key: PRNGKeyArray, x_spans: Sequence[Sequence[float]]
+        self, key: PRNGKeyArray, x_spans: Sequence[Sequence[Real]]
     ) -> InitialCondition:
         """Draw one initial condition on the domain `x_spans` from `key`."""
 
@@ -159,7 +161,7 @@ class Multichannel(InitialConditionSampler):
             n_eqn=sum(s.n_eqn for s in self.samplers), n_spatial_dims=dims.pop()
         )
 
-    def sample(self, key: PRNGKeyArray, x_spans: Sequence[Sequence[float]]) -> Stacked:
+    def sample(self, key: PRNGKeyArray, x_spans: Sequence[Sequence[Real]]) -> Stacked:
         """Draw one condition per channel, each from its own split of `key`, and stack
         them."""
         import jax

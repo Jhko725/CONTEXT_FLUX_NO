@@ -1,12 +1,16 @@
 """`TrixiBackend` without Julia: the specs exist, the configuration error is clear, and the
 checks that need no Julia run before Julia is started."""
 
+from typing import cast
+
+import jaxtyping
 import numpy as np
 import pytest
 from context_flux_no.simulations import Grid, normalize_bcs
 from context_flux_no.simulations.backends import trixi
 from context_flux_no.simulations.initial_conditions import FromFunction
 from context_flux_no.simulations.pde import (
+    AbstractPDEFamily,
     Burgers1D,
     CubicFlux1D,
     CubicFlux2D,
@@ -20,29 +24,37 @@ from context_flux_no.simulations.pde import (
 def test_six_families_have_a_trixi_spec():
     """Each of the six families solved by Trixi names its own Trixi equations, `h_floor`
     reaches the shallow-water parameters, and `ViscousBurgers1D` has no Trixi spec."""
+    # Type-level only: ty 0.0.84 types an instance built through equinox's unannotated
+    # `_ModuleMeta.__call__` as `eqx.Module`, not as the class that was called.
     families = [
-        CubicFlux1D(),
-        CubicFlux2D(),
-        SineFlux1D(),
-        ParametrizedShallowWater1D(),
-        Burgers1D(),
-        Euler2D(),
+        cast(AbstractPDEFamily, family())
+        for family in (
+            CubicFlux1D,
+            CubicFlux2D,
+            SineFlux1D,
+            ParametrizedShallowWater1D,
+            Burgers1D,
+            Euler2D,
+        )
     ]
     names = {f.trixi_spec.equations for f in families}
     assert len(names) == 6
-    assert (
-        ParametrizedShallowWater1D(h_floor=1e-6).trixi_spec.parameters["h_floor"]
-        == 1e-6
+    shallow_water = cast(
+        ParametrizedShallowWater1D, ParametrizedShallowWater1D(h_floor=1e-6)
     )
+    assert shallow_water.trixi_spec.parameters["h_floor"] == 1e-6
     with pytest.raises(NotImplementedError):
-        ViscousBurgers1D().trixi_spec
+        cast(ViscousBurgers1D, ViscousBurgers1D()).trixi_spec
 
 
 def test_backend_options_and_checks_before_julia():
     """`TrixiBackend` rejects an unknown surface flux, a degree below one, a boundary
     that is not periodic and a mismatched initial condition before it calls Julia."""
-    with pytest.raises(ValueError):
-        trixi.TrixiBackend(surface_flux="roe")
+    # Type-level only: the test passes a flux outside `SurfaceFlux` on purpose. Under
+    # the import hook of tests/conftest.py the annotation rejects it before the guard
+    # does.
+    with pytest.raises((ValueError, jaxtyping.TypeCheckError)):
+        trixi.TrixiBackend(surface_flux=cast(trixi.SurfaceFlux, "roe"))
     with pytest.raises(ValueError):
         trixi.TrixiBackend(polydeg=0)
     backend = trixi.TrixiBackend()

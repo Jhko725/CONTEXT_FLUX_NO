@@ -1,13 +1,13 @@
 """`training.experiment.train`: the script-level assembly (run dir, resume, warm start,
 wandb disabled) on a tiny MLP, driven through Hydra's compose API with a fake output dir."""
 
+import equinox as eqx
 import jax
 import jax.numpy as jnp
 import pytest
 from context_flux_no import experiment, runs
 from context_flux_no.runs import Run
-from hydra.core.hydra_config import HydraConfig
-from omegaconf import OmegaConf, open_dict
+from omegaconf import open_dict
 
 from tests.helpers import point_hydra_output_dir_at
 from tests.unit.test_run import _cfg, _loader, _Loss
@@ -56,12 +56,13 @@ def test_train_writes_run_in_hydra_output_dir(hydra_output_dir):
     assert run.record.index["dataset_id"] == "toy:train:0000"
     assert run.record.wandb is None
     model, _ = runs.load_run(hydra_output_dir)
+    assert isinstance(model, eqx.nn.MLP)
     assert jnp.allclose(
         jax.vmap(model)(jnp.ones((2, 2))), jax.vmap(state.model)(jnp.ones((2, 2)))
     )
 
 
-def test_resume_in_place_and_warm_start(hydra_output_dir):
+def test_resume_in_place_and_warm_start(hydra_output_dir, monkeypatch):
     """Resuming in place continues the step count in the same run; a warm start is a new
     run whose record names the run and step it started from."""
     _train(_full_cfg(), 4)
@@ -70,17 +71,18 @@ def test_resume_in_place_and_warm_start(hydra_output_dir):
     state = _train(cfg, 2)
     assert int(state.step) == 6
     run = Run.open(hydra_output_dir)
+    assert run.record.resumed is not None
     assert run.record.resumed["from_step"] == 4 and run.record.final_step == 6
 
     other = hydra_output_dir.parent / "warm"
     cfg = _full_cfg()
     cfg.warm_start = str(hydra_output_dir)
-    hc = OmegaConf.create({"runtime": {"output_dir": str(other)}, "mode": None})
-    HydraConfig.get = staticmethod(lambda: hc)  # type: ignore[method-assign]
+    point_hydra_output_dir_at(monkeypatch, other)
     state = _train(cfg, 1)
     assert int(state.step) == 7
     warm = Run.open(other)
     assert warm.record.run_id != run.record.run_id
+    assert warm.record.resumed_from is not None
     assert warm.record.resumed_from["step"] == 6
     assert warm.record.resumed_from["run_id"] == run.record.run_id
 

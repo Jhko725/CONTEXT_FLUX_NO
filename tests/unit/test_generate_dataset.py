@@ -6,6 +6,7 @@ end to end: a tiny cubic-1D store through Classic PyClaw, read back with
 import copy
 import dataclasses
 import json
+from typing import cast
 
 import numpy as np
 import pytest
@@ -41,6 +42,20 @@ _scalar = st.one_of(
 _flat = st.dictionaries(st.text(min_size=1, max_size=8), _scalar, max_size=5)
 
 
+def _group(parent: zarr.Group, name: str) -> zarr.Group:
+    """The member `name` of `parent`, which must be a group."""
+    member = parent[name]
+    assert isinstance(member, zarr.Group), f"{name} is not a group"
+    return member
+
+
+def _array(parent: zarr.Group, name: str) -> zarr.Array:
+    """The member `name` of `parent`, which must be an array."""
+    member = parent[name]
+    assert isinstance(member, zarr.Array), f"{name} is not an array"
+    return member
+
+
 @settings(max_examples=30, deadline=None)
 @given(extra=_flat, n_failed=st.integers(0, 100))
 def test_record_round_trip(extra, n_failed):
@@ -63,7 +78,9 @@ def test_writer_layout_and_boundary_conditions(tmp_path):
     """`WellWriter` writes the boundary-condition groups and masks of periodic and of
     non-periodic axes, and `finalize` shrinks the store to the trajectories written
     and records the failures."""
-    pde = CubicFlux1D(1.0, 0.0, 0.0)
+    # Type-level only: ty 0.0.84 types an instance built through equinox's unannotated
+    # `_ModuleMeta.__call__` as `eqx.Module`, not as the class that was called.
+    pde = cast(CubicFlux1D, CubicFlux1D(1.0, 0.0, 0.0))
     grid = Grid(((0.0, 1.0),), (8,))
     t_out = np.linspace(0, 0.1, 3)
     for bc, groups in [
@@ -87,27 +104,27 @@ def test_writer_layout_and_boundary_conditions(tmp_path):
             record=make_dataset_record(bcs=bcs),
         )
         root = zarr.open_group(path, mode="r")
-        assert set(root["boundary_conditions"].keys()) == set(groups)
+        boundary_conditions = _group(root, "boundary_conditions")
+        assert set(boundary_conditions.keys()) == set(groups)
         for name, (bc_type, mask) in groups.items():
-            g = root["boundary_conditions"][name]
+            g = _group(boundary_conditions, name)
             assert g.attrs["bc_type"] == bc_type and g.attrs["associated_dims"] == ["x"]
-            assert list(g["mask"][:]) == mask
+            assert np.asarray(_array(g, "mask")).tolist() == mask
         assert root.attrs["simulation_parameters"] == ["a", "b", "c"]
-        assert root["t0_fields"]["u"].shape == (4, 3, 8)
+        assert _array(_group(root, "t0_fields"), "u").shape == (4, 3, 8)
         assert sidecar_path(path).exists()
         w.write_trajectory(0, np.zeros((3, 1, 8)), pde.parameters)
         w.finalize(1, n_failed=3)
         root = zarr.open_group(path, mode="r")
         rec = DatasetRecord.read(sidecar_path(path))
-        assert root.attrs["n_trajectories"] == 1 and root["t0_fields"]["u"].shape == (
-            1,
-            3,
-            8,
-        )
+        assert root.attrs["n_trajectories"] == 1
+        assert _array(_group(root, "t0_fields"), "u").shape == (1, 3, 8)
         assert (
             rec.status == "complete" and rec.n_failed == 3 and rec.n_trajectories == 1
         )
-        assert DatasetRecord.from_dict(dict(root.attrs["dataset_record"])) == rec
+        stored_record = root.attrs["dataset_record"]
+        assert isinstance(stored_record, dict)
+        assert DatasetRecord.from_dict(stored_record) == rec
 
 
 def _write_and_read_back(
@@ -149,7 +166,7 @@ def _write_and_read_back(
 def test_store_channel_order_of_euler_2d_matches_the_store(tmp_path):
     """`store_channel_order` of `Euler2D` is the permutation between the family's
     channel order and the order that a store reads back in."""
-    pde = Euler2D()
+    pde = cast(Euler2D, Euler2D())  # type-level only, as in the test above
     u_family, u_store = _write_and_read_back(
         tmp_path, pde, Grid(((0, 1), (0, 1)), (4, 3))
     )
@@ -163,7 +180,7 @@ def test_store_channel_order_of_euler_2d_matches_the_store(tmp_path):
 
 def test_store_channel_order_of_a_scalar_family_is_the_identity(tmp_path):
     """A family with one scalar field reads back in its own order."""
-    pde = CubicFlux1D(1.0, 0.0, 0.0)
+    pde = cast(CubicFlux1D, CubicFlux1D(1.0, 0.0, 0.0))  # type-level only, as above
     u_family, u_store = _write_and_read_back(tmp_path, pde, Grid(((0, 1),), (8,)))
     assert store_channel_order(pde.field_rank_names, pde.n_spatial_dims) == (0,)
     np.testing.assert_array_equal(u_store, u_family)

@@ -24,6 +24,10 @@ def main(cfg: DictConfig) -> None:
     if cfg.gpu_id != "auto":
         jax.config.update("jax_default_device", jax.devices("gpu")[cfg.gpu_id])
 
+    bc = cfg.bc if isinstance(cfg.bc, str) else OmegaConf.to_container(cfg.bc)
+    if not isinstance(bc, (str, list)):
+        raise TypeError(f"bc is {bc!r}, neither a name nor a list of pairs")
+
     backend = None
     if not cfg.backend.get("null_backend", False):
         backend = hydra.utils.instantiate(cfg.backend)
@@ -39,7 +43,7 @@ def main(cfg: DictConfig) -> None:
         Nxs=cfg.pde.Nxs,
         t_span=tuple(cfg.pde.t_span),
         Nt=cfg.pde.Nt,
-        bc=OmegaConf.to_container(cfg.bc) if not isinstance(cfg.bc, str) else cfg.bc,
+        bc=bc,
         dataset_type=cfg.dataset_type,
         coeff_sampling_strategy=cfg.coeff_sampling_strategy,
         seed=cfg.seed,

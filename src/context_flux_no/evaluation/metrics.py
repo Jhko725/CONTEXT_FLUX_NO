@@ -410,16 +410,17 @@ def first_true_step(
 
 
 def valid_horizon(
-    l2: Float[np.ndarray, " *batch steps"],
-    l2_identity: Float[np.ndarray, " *batch steps"],
-    nonfinite: Bool[np.ndarray, " *batch steps"],
+    l2: Float[np.ndarray, " *#batch steps"],
+    l2_identity: Float[np.ndarray, " *#batch steps"],
+    nonfinite: Bool[np.ndarray, " *#batch steps"],
 ) -> Int[np.ndarray, " *batch"]:
     """Return the first step at which a rollout is no better than the identity baseline.
 
     The valid horizon is the first step `n` with `l2[n] >= l2_identity[n]`, where the
     identity baseline holds the last context state over the whole rollout. A step with
-    a non-finite prediction or a non-finite error also ends it. This function runs on
-    the host.
+    a non-finite prediction or a non-finite error also ends it. The three arrays
+    broadcast against each other, so that one identity baseline serves the rollouts of
+    every seed. This function runs on the host.
 
     **Arguments:**
 
@@ -429,9 +430,9 @@ def valid_horizon(
 
     **Returns:**
 
-    The valid horizon of each rollout, counted from 1. A rollout that stays below the
-    identity-baseline error receives `steps + 1`, so the caller can tell it apart from
-    a rollout that crosses at the last step.
+    The valid horizon of each rollout, counted from 1, over the broadcast batch shape.
+    A rollout that stays below the identity-baseline error receives `steps + 1`, so the
+    caller can tell it apart from a rollout that crosses at the last step.
     """
     with np.errstate(invalid="ignore"):
         no_better = l2 >= l2_identity

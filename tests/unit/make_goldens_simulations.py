@@ -11,10 +11,16 @@ which commit changed PyClaw's output and why:
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any, cast
 
 import numpy as np
-from context_flux_no.simulations.initial_conditions import Conserved, FromFunction
+from context_flux_no.simulations.initial_conditions import (
+    Conserved,
+    FromFunction,
+    InitialCondition,
+)
 from context_flux_no.simulations.pde import (
+    AbstractPDEFamily,
     Burgers1D,
     CubicFlux1D,
     Euler2D,
@@ -48,14 +54,26 @@ def _euler_primitive(coords):
 
 ic_scalar = FromFunction(_scalar, n_eqn=1, n_spatial_dims=1)
 ic_sw = FromFunction(_shallow_water, n_eqn=2, n_spatial_dims=1)
-_euler = Euler2D(1.4)
+# Type-level only: ty 0.0.84 types an instance built through equinox's unannotated
+# `_ModuleMeta.__call__` as `eqx.Module`, not as the class that was called.
+_euler = cast(Euler2D, Euler2D(1.4))
 ic_euler = Conserved(FromFunction(_euler_primitive, n_eqn=4, n_spatial_dims=2), _euler)
 
+Case = tuple[
+    AbstractPDEFamily,
+    InitialCondition,
+    list[tuple[float, float]],
+    list[int],
+    tuple[float, float],
+    int,
+    dict[str, Any],
+]
+"""A family, its initial condition, `x_spans`, `Nxs`, `t_span`, `Nt` and further
+keyword arguments of `solve`."""
 
-# name: (pde, ic_factory, x_spans, Nxs, t_span, Nt, solve kwargs)
-CASES = {
+CASES: dict[str, Case] = {
     "cubic_1d": (
-        CubicFlux1D(1.0, -0.5, 0.25),
+        cast(CubicFlux1D, CubicFlux1D(1.0, -0.5, 0.25)),
         ic_scalar,
         [(0, 1)],
         [64],
@@ -63,10 +81,26 @@ CASES = {
         4,
         {},
     ),
-    "sine_1d": (SineFlux1D(1.0, 2.0), ic_scalar, [(0, 1)], [64], (0, 0.2), 4, {}),
-    "burgers_1d": (Burgers1D(), ic_scalar, [(0, 1)], [64], (0, 0.2), 4, {}),
+    "sine_1d": (
+        cast(SineFlux1D, SineFlux1D(1.0, 2.0)),
+        ic_scalar,
+        [(0, 1)],
+        [64],
+        (0, 0.2),
+        4,
+        {},
+    ),
+    "burgers_1d": (
+        cast(Burgers1D, Burgers1D()),
+        ic_scalar,
+        [(0, 1)],
+        [64],
+        (0, 0.2),
+        4,
+        {},
+    ),
     "shallow_water_1d": (
-        ParametrizedShallowWater1D(1.0, 1.0, 1.0),
+        cast(ParametrizedShallowWater1D, ParametrizedShallowWater1D(1.0, 1.0, 1.0)),
         ic_sw,
         [(0, 1)],
         [64],

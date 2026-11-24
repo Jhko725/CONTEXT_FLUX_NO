@@ -4,6 +4,7 @@ id on the store's test split. The result file must hold the run's group and the
 references with the shapes of the rollouts, and the record must round-trip."""
 
 from pathlib import Path
+from typing import cast
 
 import h5py
 import hydra
@@ -42,7 +43,9 @@ def _translating_waves(
 
 def _write_store(base: Path, split: str, seed: int) -> None:
     """Write the `cubic_1d` store of one split under `base`."""
-    pde = CubicFlux1D(1.0, 0.0, 0.0)
+    # Type-level only: ty 0.0.84 types an instance built through equinox's unannotated
+    # `_ModuleMeta.__call__` as `eqx.Module`, not as the class that was called.
+    pde = cast(CubicFlux1D, CubicFlux1D(1.0, 0.0, 0.0))
     grid = Grid(((0.0, 1.0),), (NUM_CELLS,))
     bcs = normalize_bcs("periodic", 1)
     num_trajectories = NUM_TRAJECTORIES[split]

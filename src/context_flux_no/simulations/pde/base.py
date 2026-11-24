@@ -18,6 +18,7 @@ import jax.numpy as jnp
 import numpy as np
 from jaxtyping import Array, Bool, Float
 
+from context_flux_no.custom_types import Real
 from context_flux_no.simulations.backends.base import normalize_bcs, SolverBackend
 from context_flux_no.simulations.grid import Grid
 from context_flux_no.simulations.initial_conditions.base import InitialCondition
@@ -103,9 +104,9 @@ class AbstractPDEFamily(eqx.Module):
     def solve(
         self,
         ic: InitialCondition,
-        x_spans: Sequence[Sequence[float]],
+        x_spans: Sequence[Sequence[Real]],
         Nxs: Sequence[int],
-        t_span: tuple[float, float],
+        t_span: tuple[Real, Real],
         Nt: int,
         bc: str | Sequence[Any] = "periodic",
         *,

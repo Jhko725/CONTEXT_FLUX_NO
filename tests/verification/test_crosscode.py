@@ -9,6 +9,8 @@ third-order SSP Runge–Kutta on both sides, as in Shu's FD/FV-WENO vs DG compar
 Shu 2001, ICASE 2001-11 §4] — so the distance measures the spatial schemes. Generator defaults
 are untouched (`SSP104`). The ratio criterion is V18a's (ADR-0011 §4)."""
 
+from typing import cast
+
 import numpy as np
 import pytest
 from context_flux_no.simulations import Grid, normalize_bcs
@@ -103,7 +105,9 @@ def test_reference_backends_euler_2d():
 def test_reference_backends_cubic_2d():
     """V18 for `CubicFlux2D`, whose only other solver is its own first-order Rusanov
     stepper (F8): the distance to Trixi shrinks at that stepper's rate (ratio → 2)."""
-    pde = CubicFlux2D(1.0, 0.0, 0.0)
+    # Type-level only: ty 0.0.84 types an instance built through equinox's unannotated
+    # `_ModuleMeta.__call__` as `eqx.Module`, not as the class that was called.
+    pde = cast(CubicFlux2D, CubicFlux2D(1.0, 0.0, 0.0))
     ic = FromFunction(
         lambda c: (0.5 * np.sin(2 * np.pi * c[0]) * np.cos(2 * np.pi * c[1]))[None],
         n_eqn=1,

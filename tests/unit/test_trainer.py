@@ -1,5 +1,7 @@
 """The training loop with injected side effects, on a tiny model (CPU)."""
 
+from typing import cast
+
 import equinox as eqx
 import jax
 import jax.numpy as jnp
@@ -27,7 +29,9 @@ def _loader(n_batches, seed=0, batch=32):
 
 
 def _trainer():
-    return Trainer(optax.adam(1e-2), _Loss())
+    # Type-level only: ty 0.0.84 types an instance built through equinox's unannotated
+    # `_ModuleMeta.__call__` as `eqx.Module`, not as the class that was called.
+    return Trainer(optax.adam(1e-2), cast(_Loss, _Loss()))
 
 
 def _model(seed=0):

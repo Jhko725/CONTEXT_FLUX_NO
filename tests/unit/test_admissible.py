@@ -1,6 +1,8 @@
 """Laws of `AbstractPDEFamily.positive_quantities` and `admissible`, and of `Euler2D.pressure`
 (rule R11: properties and hand-built states, no second copy of a formula)."""
 
+from typing import cast
+
 import jax.numpy as jnp
 import numpy as np
 from context_flux_no.simulations.pde import (
@@ -37,7 +39,9 @@ def test_shallow_water_one_negative_depth_is_not_admissible(
 ) -> None:
     """A shallow-water state with positive depth everywhere is admissible, and negating
     the depth of any one cell makes it inadmissible."""
-    pde = ParametrizedShallowWater1D()
+    # Type-level only: ty 0.0.84 types an instance built through equinox's unannotated
+    # `_ModuleMeta.__call__` as `eqx.Module`, not as the class that was called.
+    pde = cast(ParametrizedShallowWater1D, ParametrizedShallowWater1D())
     u = jnp.asarray(np.stack([depth, momentum]))
     assert bool(pde.admissible(u))
     assert bool(~pde.admissible(u.at[0, cell].set(-depth[cell])))
@@ -57,7 +61,7 @@ def test_euler_pressure_inverts_to_conserved(
 ) -> None:
     """`Euler2D.pressure` recovers the pressure from which `to_conserved` built the
     state, and the state is admissible."""
-    pde = Euler2D(gamma)
+    pde = cast(Euler2D, Euler2D(gamma))  # type-level only, as above
     u = jnp.asarray(pde.to_conserved(rho, velocity[0], velocity[1], p))
     np.testing.assert_allclose(pde.pressure(u), p, rtol=PRESSURE_ROUND_TRIP_RTOL)
     assert bool(pde.admissible(u))
@@ -65,7 +69,7 @@ def test_euler_pressure_inverts_to_conserved(
 
 def test_euler_negative_density_or_pressure_is_not_admissible() -> None:
     """At rest, `E = p / (gamma - 1)` by hand, so `E = -1` is the pressure `-0.4`."""
-    pde = Euler2D(1.4)
+    pde = cast(Euler2D, Euler2D(1.4))  # type-level only, as above
     at_rest = jnp.array([[1.0, 1.0], [0.0, 0.0], [0.0, 0.0], [2.5, 2.5]])[..., None]
     assert bool(pde.admissible(at_rest))
     assert bool(~pde.admissible(at_rest.at[0, 1].set(-1.0)))
@@ -77,6 +81,6 @@ def test_family_without_positive_quantities_admits_every_state(
     u: Float[np.ndarray, "1 cells"],
 ) -> None:
     """A family without positive quantities returns none and admits every state."""
-    pde = CubicFlux1D(1.0, 0.0, 0.0)
+    pde = cast(CubicFlux1D, CubicFlux1D(1.0, 0.0, 0.0))  # type-level only, as above
     assert pde.positive_quantities(jnp.asarray(u)).shape == (0, _N_CELLS)
     assert bool(pde.admissible(jnp.asarray(u)))

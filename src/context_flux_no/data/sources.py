@@ -10,7 +10,7 @@ from collections.abc import Sequence
 from functools import cached_property
 from itertools import accumulate
 from pathlib import Path
-from typing import Any, Iterator, Literal, Protocol, TypeVar
+from typing import Any, Iterator, Literal, Protocol, runtime_checkable, TypeVar
 
 import fsspec
 import grain
@@ -39,6 +39,7 @@ IO_PARAMS = {
 }
 
 
+@runtime_checkable
 class HierarchicalStorage(Protocol):
     """Protocol for an object representing a hierarchical dataset.
 
@@ -378,7 +379,7 @@ class WellDatasetSourceBase(grain.sources.RandomAccessDataSource):
         return rearrange(item, "t ... c -> t c ...")
 
     @property
-    def loss_args(self) -> tuple[float, ...]:
+    def loss_args(self) -> tuple[np.floating, ...]:
         """The time step and the grid spacings that a loss takes as its positional
         arguments.
 
@@ -386,7 +387,8 @@ class WellDatasetSourceBase(grain.sources.RandomAccessDataSource):
 
         `(dt, dx_1, ..., dx_d)`: `dt` is `metadata_common["temporal_resolution"]` and the
         spacings are `metadata_common["spatial_resolution"]`, which `TheWellDataSource`
-        multiplies by its `downsample_spatial`.
+        multiplies by its `downsample_spatial`. Each is a NumPy scalar of the dtype of
+        the store's coordinate arrays.
         """
         dt = self.metadata_common["temporal_resolution"]
         dxs = self.metadata_common["spatial_resolution"]

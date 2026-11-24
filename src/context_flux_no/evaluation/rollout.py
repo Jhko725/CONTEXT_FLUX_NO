@@ -13,7 +13,7 @@ on a model class.
 
 import dataclasses
 from collections.abc import Callable
-from typing import Any, Protocol
+from typing import Any, Protocol, runtime_checkable
 
 import equinox as eqx
 import jax
@@ -33,6 +33,7 @@ from .metrics import (
 )
 
 
+@runtime_checkable
 class Operator(Protocol):
     """A model that predicts future frames autoregressively from a context window."""
 

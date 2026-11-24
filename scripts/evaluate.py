@@ -135,9 +135,10 @@ def resolve_runs(entries: Sequence[str], root: Path) -> list[Path]:
         if Path(entry).is_dir():
             run_dirs.append(Path(entry))
             continue
-        matches = (
-            [] if table is None or table.empty else runs.select(table, run_id=entry)
-        )
+        if table is None or table.empty:
+            unresolved.append(f"{entry!r} (0 runs)")
+            continue
+        matches = runs.select(table, run_id=entry)
         if len(matches) == 1:
             run_dirs.append(Path(matches["run_dir"].iloc[0]))
         else:

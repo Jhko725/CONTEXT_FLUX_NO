@@ -105,6 +105,7 @@ dev = [
     "ruff==0.15.11",
     "juliacall>=0.9.37",
     "juliapkg>=0.1.28",
+    "beartype>=0.23.1",
 ]
 
 [tool.context_flux_no]

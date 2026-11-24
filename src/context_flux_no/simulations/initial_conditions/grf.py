@@ -11,6 +11,7 @@ import jax
 import numpy as np
 from jaxtyping import Float, PRNGKeyArray
 
+from context_flux_no.custom_types import Real
 from context_flux_no.simulations.initial_conditions.base import (
     Coords,
     InitialCondition,
@@ -92,7 +93,7 @@ class GaussianRandomField(InitialConditionSampler):
         )
 
     def sample(
-        self, key: PRNGKeyArray, x_spans: Sequence[Sequence[float]]
+        self, key: PRNGKeyArray, x_spans: Sequence[Sequence[Real]]
     ) -> GaussianRandomFieldCondition:
         """Draw one gstools seed per channel from `key`, on the CPU. Raises `ValueError`
         unless the domain has the sampler's dimension and every axis has length

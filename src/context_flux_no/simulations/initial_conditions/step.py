@@ -19,6 +19,7 @@ import jax.numpy as jnp
 import numpy as np
 from jaxtyping import Float, PRNGKeyArray
 
+from context_flux_no.custom_types import Real
 from context_flux_no.simulations.initial_conditions.base import (
     Coords,
     InitialCondition,
@@ -74,7 +75,7 @@ class PeriodicRandomStepFunction1D(InitialConditionSampler):
         self.value_max = float(value_max)
 
     def sample(
-        self, key: PRNGKeyArray, x_spans: Sequence[Sequence[float]]
+        self, key: PRNGKeyArray, x_spans: Sequence[Sequence[Real]]
     ) -> PeriodicStep1D:
         """Draw the number of jumps, their positions in the domain `x_spans` and one
         value per interval, each from its own split of `key`."""
@@ -97,7 +98,7 @@ class PeriodicVoronoi2D(InitialCondition):
         self,
         seeds: Float[np.ndarray, "R 2"],
         values: Float[np.ndarray, "C R"],
-        x_spans: Sequence[Sequence[float]],
+        x_spans: Sequence[Sequence[Real]],
     ) -> None:
         self.seeds = np.asarray(seeds, dtype=float)
         self.values = np.asarray(values, dtype=float)
@@ -147,7 +148,7 @@ class PeriodicRandomStepFunction2D(InitialConditionSampler):
         self.value_max = np.broadcast_to(np.asarray(value_max, float), (self.channels,))
 
     def sample(
-        self, key: PRNGKeyArray, x_spans: Sequence[Sequence[float]]
+        self, key: PRNGKeyArray, x_spans: Sequence[Sequence[Real]]
     ) -> PeriodicVoronoi2D:
         """Draw the number of regions, their seeds in the domain `x_spans` and one value
         vector per region, each from its own split of `key`. Raises `ValueError`

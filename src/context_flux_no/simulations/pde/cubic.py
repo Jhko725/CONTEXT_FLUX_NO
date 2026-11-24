@@ -11,6 +11,7 @@ import jax.numpy as jnp
 import numpy as np
 from jaxtyping import Array, Float
 
+from context_flux_no.custom_types import Real
 from context_flux_no.simulations.backends.pyclaw import PyClawSpec
 from context_flux_no.simulations.backends.trixi import TrixiSpec
 from context_flux_no.simulations.grid import Grid
@@ -20,8 +21,8 @@ from context_flux_no.simulations.pde.base import AbstractPDEFamily
 def riemann_cubic_1D(
     q_l: Float[np.ndarray, "num_eqns num_riemanns"],
     q_r: Float[np.ndarray, "num_eqns num_riemanns"],
-    aux_l: Float[np.ndarray, "num_aux num_riemanns"],
-    aux_r: Float[np.ndarray, "num_aux num_riemanns"],
+    aux_l: Float[np.ndarray, "num_aux num_riemanns"] | None,
+    aux_r: Float[np.ndarray, "num_aux num_riemanns"] | None,
     problem_data: dict[str, float],
 ) -> tuple[
     Float[np.ndarray, "num_eqns num_waves num_riemanns"],
@@ -31,7 +32,8 @@ def riemann_cubic_1D(
 ]:
     """
     num_riemanns correspond to number of grid cells
-    For this problem, num_eqns=1 and num_waves=1.
+    For this problem, num_eqns=1 and num_waves=1. PyClaw passes `None` as `aux_l` and
+    `aux_r`, since the problem has no auxiliary arrays.
     """
 
     a, b, c = problem_data["a"], problem_data["b"], problem_data["c"]
@@ -174,9 +176,9 @@ class CubicFlux2D(AbstractPDEFamily):
     def solve(
         self,
         ic,
-        x_spans: Sequence[Sequence[float]],
+        x_spans: Sequence[Sequence[Real]],
         Nxs: Sequence[int],
-        t_span: tuple[float, float],
+        t_span: tuple[Real, Real],
         Nt: int,
         bc: str | Sequence[Any] = "periodic",
         *,

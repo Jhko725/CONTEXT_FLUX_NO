@@ -1,5 +1,7 @@
 """`Run` directories and the `runs` index/loader, end to end on a tiny MLP (CPU)."""
 
+from typing import cast
+
 import equinox as eqx
 import jax
 import jax.numpy as jnp
@@ -50,7 +52,9 @@ def _cfg(seed=0, lr=1e-2):
 
 def _train(run: Run, num_steps, state=None, seed=0):
     cfg = run.config
-    trainer = Trainer(experiment.build_optimizer(cfg), _Loss())
+    # Type-level only: ty 0.0.84 types an instance built through equinox's unannotated
+    # `_ModuleMeta.__call__` as `eqx.Module`, not as the class that was called.
+    trainer = Trainer(experiment.build_optimizer(cfg), cast(_Loss, _Loss()))
     start = state if state is not None else experiment.build_model(cfg)
     with run.checkpointer(save_every=2) as ckpt:
         out = trainer.train(
@@ -112,6 +116,7 @@ def test_resume_continues_step_and_records_changes(tmp_path):
     resumed = Run.from_config(_cfg(lr=5e-3), tmp_path / "r", resume=True)
     assert resumed.record.run_id == run_id
     assert resumed.record.status == "running"
+    assert resumed.record.resumed is not None
     assert resumed.record.resumed["from_step"] == 4
     assert resumed.record.resumed["config_changes"] == {
         "training.optimizer.learning_rate": {"old": 1e-2, "new": 5e-3}
