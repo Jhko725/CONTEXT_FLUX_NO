@@ -4,8 +4,10 @@ This file is read at the start of every session. It says how work is recorded, s
 knowledge survives between sessions and between Joon and Claude. The documents it refers to
 live under `docs/`; `docs/index.md` lists them all.
 
-Joon's personal rules are in his global `CLAUDE.md`, and the conventions they rest on —
-design, naming, typing, the JAX ecosystem — are in the `code-conventions` skill.
+Joon's working rules are in `.claude/rules/`: `working-rules.md` for every session, and
+`python.md` when a Python file is read. They are copies of his global `CLAUDE.md`, which a
+cloud session does not load. The conventions they rest on (design, naming, typing, the JAX
+ecosystem) are in the `code-conventions` skill.
 [`docs/coding-standards.md`](docs/coding-standards.md) says where each convention is
 enforced here, and which checks stand in for prose.
 
@@ -73,6 +75,12 @@ Claude updates the change document in the same commit as any code change on the 
   --extra cuda`.
 - `git log -p docs/roadmap.md` is the project diary; `git blame` dates every Done row.
 - Tags cannot be pushed from Claude's sessions (proxy policy); Joon pushes tags.
+- A pushed commit is never amended or rebased, and a branch is never force-pushed: a
+  change to a pushed commit is a new commit on top, because Joon may already have merged
+  it. A hook in `.claude/settings.json` blocks every `git rebase` and force-push, and a
+  `git commit --amend` of a pushed HEAD.
+- `.claude/agents/implementer.md` is the subagent that implements one commit of a handoff
+  document; a hook in its frontmatter blocks `git push` while it runs.
 - Numerics conventions (stencil `(a, b)`, faces, padding, BCs, axis handling) are in
   `docs/design/fv-conventions.md` and are not restated in code comments.
 - Markdown must render on GitHub: display math only as a standalone `$$` block, never

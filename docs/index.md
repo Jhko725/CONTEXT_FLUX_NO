@@ -73,6 +73,7 @@ recorded in the roadmap tables and the change documents that implement them.
 | `phase2a-pyclaw-backend` | merged 2026-10-26 | [`2026-10-25-phase2a-pyclaw-backend.md`](changes/2026-10-25-phase2a-pyclaw-backend.md) |
 | `phase2a-trixi-backend` | merged 2026-10-26 (Python side 2026-10-25; Julia package `ContextFluxTrixi`, committed lock and V18 green 2026-10-26; opt-in CI Julia job unverified) | [`2026-10-25-phase2a-trixi-backend.md`](changes/2026-10-25-phase2a-trixi-backend.md) |
 | `conventions-docs` | landed (recreated from `main` 2026-10-26: spelling checks wired, sweep applied) | [`2026-10-25-conventions-docs.md`](changes/2026-10-25-conventions-docs.md) |
+| `workflow-bootstrap` | landed (rules, the `implementer` agent and two hooks; prerequisite of `refactor-foundation`) | [`2026-11-25-workflow-bootstrap.md`](changes/2026-11-25-workflow-bootstrap.md) |
 
 ## Historical
 
