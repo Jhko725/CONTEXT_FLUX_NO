@@ -54,14 +54,14 @@ class PeriodicStep1D(InitialCondition):
 class PeriodicRandomStepFunction1D(InitialConditionSampler):
     def __init__(
         self,
-        num_jumps_min: int = 1,
+        num_jumps_min: int = 2,
         num_jumps_max: int = 5,
         value_min: float = -1.0,
         value_max: float = 1.0,
     ) -> None:
         super().__init__(n_eqn=1, n_spatial_dims=1)
-        if num_jumps_min < 1 or num_jumps_max < num_jumps_min:
-            raise ValueError("need 1 <= num_jumps_min <= num_jumps_max")
+        if num_jumps_min < 2 or num_jumps_max < num_jumps_min:
+            raise ValueError("need 2 <= num_jumps_min <= num_jumps_max")
         self.num_jumps_min = int(num_jumps_min)
         self.num_jumps_max = int(num_jumps_max)
         self.value_min = float(value_min)

@@ -36,7 +36,7 @@ def _samplers():
             3, 2, 6, [0.6, -0.8, 0.6], [1.4, 0.8, 1.4]
         ),
         "multi": Multichannel(
-            [PeriodicRandomStepFunction1D(1, 3), PeriodicRandomStepFunction1D(1, 3)]
+            [PeriodicRandomStepFunction1D(2, 3), PeriodicRandomStepFunction1D(2, 3)]
         ),
         "fourier": RandomTruncatedFourier1D(4, offset_range=(-0.5, 0.5)),
     }
@@ -105,6 +105,12 @@ def test_grf_matches_gstools_structured_evaluation():
         np.testing.assert_allclose(
             u[k], structured * sampler.scales[k] + sampler.means[k]
         )
+
+
+def test_step_rejects_fewer_than_two_jumps():
+    # one periodic jump is a constant state, which makes relative errors undefined
+    with pytest.raises(ValueError):
+        PeriodicRandomStepFunction1D(1, 3)
 
 
 def test_grf_rejects_a_mismatched_period():

@@ -125,3 +125,5 @@ end of the branch.
 | `scripts/checks/check_spelling.py` — `SKIP_PARTS` loses `third_party`, `icon` and `notebooks` |  |  |
 | `src/context_flux_no/models/multiphysics/disco/operatornet.py` — the second bottleneck convolution takes `keys_bot[1]` instead of reusing `keys_bot[0]`; the four comment lines about F15 removed | | |
 | `tests/unit/test_key_hygiene.py` — the DISCO case is a plain tuple again, without the strict `xfail` | | |
+| `src/context_flux_no/simulations/initial_conditions/step.py` — `PeriodicRandomStepFunction1D` defaults `num_jumps_min` to 2 and raises `ValueError` below 2: one periodic jump is a constant state |  |  |
+| `tests/unit/test_initial_conditions.py` — the multichannel case passes 2 instead of 1; new test that `PeriodicRandomStepFunction1D(1, 3)` raises |  |  |
