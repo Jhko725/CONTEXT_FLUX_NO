@@ -160,3 +160,6 @@ end of the branch.
 | `scripts/training/configs/training/the_well.yaml` — the opening comment no longer names `train_the_well.py` | | |
 | `tests/unit/test_loader.py` — new: the laws of `make_loader` and `gc_paused` on an in-memory source | | |
 | `scripts/training/train_multiphysics.py` — deleted: replaced by `scripts/train.py`; git no longer reads the pair as a rename once the local `make_loader` is gone | | |
+| `src/context_flux_no/evaluation/metrics.py` — new: the metric functions and containers of the rebuttal branch's `metrics.py` with lower-case names and equinox-style docstrings, without `ideal_gas_pressure` | | |
+| `src/context_flux_no/evaluation/__init__.py` — new: exports the public names of `metrics` | | |
+| `tests/unit/test_metrics.py` — new: the rebuttal branch's `tests/test_metrics.py` with the new names, without the `ideal_gas_pressure` test | | |
