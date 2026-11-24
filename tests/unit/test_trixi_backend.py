@@ -18,6 +18,8 @@ from context_flux_no.simulations.pde import (
 
 
 def test_six_families_have_a_trixi_spec():
+    """Each of the six families solved by Trixi names its own Trixi equations, `h_floor`
+    reaches the shallow-water parameters, and `ViscousBurgers1D` has no Trixi spec."""
     families = [
         CubicFlux1D(),
         CubicFlux2D(),
@@ -37,6 +39,8 @@ def test_six_families_have_a_trixi_spec():
 
 
 def test_backend_options_and_checks_before_julia():
+    """`TrixiBackend` rejects an unknown surface flux, a degree below one, a boundary
+    that is not periodic and a mismatched initial condition before it calls Julia."""
     with pytest.raises(ValueError):
         trixi.TrixiBackend(surface_flux="roe")
     with pytest.raises(ValueError):
@@ -75,6 +79,8 @@ def test_describe_records_the_julia_side_versions():
 
 @pytest.mark.skipif(trixi.available(), reason="Julia is set up here")
 def test_unavailable_is_a_clear_configuration_error():
+    """Without Julia, `solve` and `describe` raise `TrixiUnavailable` with a message
+    that says how to set Julia up."""
     backend = trixi.TrixiBackend()
     ic = FromFunction(lambda c: np.sin(c[0])[None], n_eqn=1, n_spatial_dims=1)
     with pytest.raises(trixi.TrixiUnavailable, match="setup_julia|Julia project"):

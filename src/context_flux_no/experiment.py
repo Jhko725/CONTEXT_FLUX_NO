@@ -31,10 +31,12 @@ log = logging.getLogger(__name__)
 
 
 def build_model(cfg: DictConfig) -> eqx.Module:
+    """Instantiate the model of `cfg.model`."""
     return hydra.utils.instantiate(cfg.model)
 
 
 def build_optimizer(cfg: DictConfig):
+    """Instantiate the optimizer of `cfg.training.optimizer`."""
     return hydra.utils.instantiate(cfg.training.optimizer)
 
 
@@ -50,6 +52,7 @@ def state_template(cfg: DictConfig) -> TrainerState:
 
 
 def select_device(cfg: DictConfig) -> None:
+    """Make GPU `cfg.gpu_id` JAX's default device, unless `cfg.gpu_id` is `"auto"`."""
     if cfg.gpu_id != "auto":
         jax.config.update("jax_default_device", jax.devices("gpu")[cfg.gpu_id])
 
@@ -68,6 +71,8 @@ def run_directory(cfg: DictConfig) -> Path:
 
 
 def start_run(cfg: DictConfig, *, dataset_id: str | None) -> Run:
+    """Start the run of `cfg` in `run_directory(cfg)`, resuming it in place when
+    `cfg.resume` is set, and record `dataset_id` and whether x64 is on."""
     return Run.from_config(
         cfg,
         run_directory(cfg),
@@ -127,6 +132,8 @@ INDEX_TAGS = ("model", "encoder", "target_network", "conditioning", "data", "los
 
 
 def wandb_group(cfg: DictConfig) -> str | None:
+    """The wandb group of a run: `cfg.experiment` if set, else the sweep directory's
+    name under a Hydra multirun, else the data name, else `None`."""
     experiment = cfg.get("experiment")
     if experiment:
         return str(experiment)

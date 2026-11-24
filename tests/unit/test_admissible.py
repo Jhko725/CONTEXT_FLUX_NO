@@ -35,6 +35,8 @@ def test_shallow_water_one_negative_depth_is_not_admissible(
     momentum: Float[np.ndarray, " cells"],
     cell: int,
 ) -> None:
+    """A shallow-water state with positive depth everywhere is admissible, and negating
+    the depth of any one cell makes it inadmissible."""
     pde = ParametrizedShallowWater1D()
     u = jnp.asarray(np.stack([depth, momentum]))
     assert bool(pde.admissible(u))
@@ -53,6 +55,8 @@ def test_euler_pressure_inverts_to_conserved(
     p: Float[np.ndarray, "x y"],
     gamma: float,
 ) -> None:
+    """`Euler2D.pressure` recovers the pressure from which `to_conserved` built the
+    state, and the state is admissible."""
     pde = Euler2D(gamma)
     u = jnp.asarray(pde.to_conserved(rho, velocity[0], velocity[1], p))
     np.testing.assert_allclose(pde.pressure(u), p, rtol=PRESSURE_ROUND_TRIP_RTOL)
@@ -72,6 +76,7 @@ def test_euler_negative_density_or_pressure_is_not_admissible() -> None:
 def test_family_without_positive_quantities_admits_every_state(
     u: Float[np.ndarray, "1 cells"],
 ) -> None:
+    """A family without positive quantities returns none and admits every state."""
     pde = CubicFlux1D(1.0, 0.0, 0.0)
     assert pde.positive_quantities(jnp.asarray(u)).shape == (0, _N_CELLS)
     assert bool(pde.admissible(jnp.asarray(u)))

@@ -1,3 +1,6 @@
+"""The cubic-flux families `u_t + (a u**3 + b u**2 + c u)_x = 0`: `CubicFlux1D`, solved
+by PyClaw or Trixi, and `CubicFlux2D`, which has its own Rusanov stepper."""
+
 from math import ceil
 from typing import ClassVar
 
@@ -64,16 +67,21 @@ class CubicFlux1D(AbstractPDEFamily):
 
     @property
     def parameters(self) -> dict[str, float]:
+        """The physical parameters by name, recorded as the Well `scalars` of a dataset."""
         return {"a": self.a, "b": self.b, "c": self.c}
 
     def flux(self, u):
+        """The flux `f(u) = a u**3 + b u**2 + c u`, evaluated by Horner's rule."""
         return ((self.a * u + self.b) * u + self.c) * u
 
     def flux_speed(self, u):
+        """The characteristic speed `f'(u) = 3 a u**2 + 2 b u + c`."""
         return (3 * self.a * u + 2 * self.b) * u + self.c
 
     @property
     def pyclaw_spec(self) -> PyClawSpec:
+        """Classic PyClaw with `riemann_cubic_1D` and the MC limiter, at a desired CFL
+        number of 0.5 and a maximum of 0.9."""
         return PyClawSpec(
             riemann_solver=riemann_cubic_1D,
             num_waves=1,
@@ -84,6 +92,7 @@ class CubicFlux1D(AbstractPDEFamily):
 
     @property
     def trixi_spec(self) -> TrixiSpec:
+        """Trixi's `CubicFluxEquation1D` with the family's parameters."""
         return TrixiSpec("CubicFluxEquation1D", self.parameters)
 
 
@@ -105,16 +114,20 @@ class CubicFlux2D(AbstractPDEFamily):
 
     @property
     def parameters(self) -> dict[str, float]:
+        """The physical parameters by name, recorded as the Well `scalars` of a dataset."""
         return {"a": self.a, "b": self.b, "c": self.c}
 
     @property
     def trixi_spec(self) -> TrixiSpec:
+        """Trixi's `CubicFluxEquation2D` with the family's parameters."""
         return TrixiSpec("CubicFluxEquation2D", self.parameters)
 
     def flux(self, u: Float[Array, "x y"]) -> Float[Array, "x y"]:
+        """The flux `f(u) = a u**3 + b u**2 + c u`, the same along both axes."""
         return ((self.a * u + self.b) * u + self.c) * u
 
     def flux_speed(self, u: Float[Array, "x y"]) -> Float[Array, "x y"]:
+        """The characteristic speed `f'(u) = 3 a u**2 + 2 b u + c`."""
         return (3 * self.a * u + 2 * self.b) * u + self.c
 
     def _step_rusanov_2d(self, u, dxs, dt):
@@ -167,6 +180,26 @@ class CubicFlux2D(AbstractPDEFamily):
         cfl: float = 0.4,
         **kwargs,
     ):
+        """Evolve `ic` with the family's first-order Rusanov stepper on a periodic grid.
+
+        The stepper takes `n_sub` equal substeps between output times, so that every
+        output time is hit exactly. The substep follows from `cfl` and the largest
+        `|f'(u)|` of the initial state; with a largest speed at or below `1e-12`,
+        `n_sub` is 1.
+
+        **Arguments:**
+
+        - `ic`: The initial condition, evaluated at the cell centers.
+        - `x_spans`, `Nxs`: The domain and the number of cells along each axis.
+        - `t_span`, `Nt`: The time span and the number of output intervals.
+        - `bc`: Only `"periodic"` is supported; any other value raises `NotImplementedError`.
+        - `cfl`: The CFL number of the substep.
+
+        **Returns:**
+
+        `(u, t, (x, y))`: the state of shape `(Nt + 1, 1, Nx, Ny)`, the `Nt + 1` output
+        times and the cell centers of each axis. Passing `backend=` raises `ValueError`.
+        """
         if kwargs.pop("backend", None) is not None:
             raise ValueError(
                 f"{type(self).__name__} uses its own stepper; backend= is not supported"

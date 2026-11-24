@@ -17,6 +17,8 @@ from omegaconf import DictConfig, OmegaConf
 
 @hydra.main(config_path="./configs", config_name="config", version_base=None)
 def main(cfg: DictConfig) -> None:
+    """Generate the dataset that `cfg` describes, with the backend of `cfg.backend`, or
+    the family's own default when `cfg.backend.null_backend` is set."""
     print(OmegaConf.to_yaml(cfg))
     solve_kwargs = dict(cfg.pde.get("solve_kwargs") or {})
     if cfg.gpu_id != "auto":

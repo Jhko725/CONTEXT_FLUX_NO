@@ -24,12 +24,19 @@ Status = Literal["writing", "complete", "failed", "legacy"]
 
 
 def new_dataset_id(family: str, split: str) -> str:
+    """A new dataset id, `<family>-<split>-<UTC timestamp>-<8 hex digits>`: sortable by
+    creation time and unique by its uuid4 suffix."""
     stamp = _dt.datetime.now(_dt.UTC).strftime("%Y%m%d-%H%M%S")
     return f"{family}-{split}-{stamp}-{uuid.uuid4().hex[:8]}"
 
 
 @dataclass(frozen=True)
 class DatasetRecord:
+    """The provenance of one generated store: what was solved (family, parameters,
+    initial conditions, grid, times, boundary conditions), how (`backend`, `seed`),
+    by which code (`git`, `package_version`) and how far the writing got (`status`,
+    `n_trajectories`, `n_failed`)."""
+
     id: str
     family: str  # the PDE class name
     dataset_name: str  # the Well dataset name (directory under the base path)
@@ -72,6 +79,9 @@ class DatasetRecord:
         extra: dict[str, Any] | None = None,
         id: str | None = None,
     ) -> DatasetRecord:
+        """A record of a store about to be written: a new `id` unless one is given, the
+        creation time, status `"writing"`, and the current git state and package
+        version."""
         sha, dirty = git_state()
         return cls(
             id=id or new_dataset_id(dataset_name, split),
@@ -96,6 +106,8 @@ class DatasetRecord:
 
     @classmethod
     def from_dict(cls, d: dict[str, Any]) -> DatasetRecord:
+        """The record of a dictionary as `write` stores it. Keys that are not fields are
+        kept under `extra["_unknown"]`, so a newer record still reads."""
         known = {f.name for f in dataclasses.fields(cls)}
         unknown = {k: v for k, v in d.items() if k not in known}
         kwargs = {k: v for k, v in d.items() if k in known}
@@ -104,8 +116,10 @@ class DatasetRecord:
         return cls(**kwargs)
 
     def write(self, path: Path) -> None:
+        """Write the record as JSON to `path`."""
         path.write_text(dumps(dataclasses.asdict(self)) + "\n")
 
     @classmethod
     def read(cls, path: Path) -> DatasetRecord:
+        """Read a record that `write` wrote to `path`."""
         return cls.from_dict(json.loads(path.read_text()))

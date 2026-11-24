@@ -79,6 +79,8 @@ CASES = {
 
 
 def main() -> None:
+    """Solve every case of `CASES` with its family's default `solve()` and save the
+    result as `goldens_simulations/<case>.npz`."""
     GOLDENS.mkdir(exist_ok=True)
     for name, (pde, ic, x_spans, Nxs, t_span, Nt, kwargs) in CASES.items():
         u, t, _ = pde.solve(ic, x_spans, Nxs, t_span, Nt, "periodic", **kwargs)

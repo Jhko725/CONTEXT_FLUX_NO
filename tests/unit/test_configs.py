@@ -54,11 +54,13 @@ def _pairs() -> list[tuple[str, str]]:
 
 
 def test_dimension_table_names_existing_model_configs():
+    """Every model config named in `DIMENSIONS` exists and is selectable."""
     assert set(DIMENSIONS) <= set(_selectable_models())
 
 
 @pytest.mark.parametrize(("model", "data"), _pairs())
 def test_model_config_builds_against_data_config(model: str, data: str):
+    """The model config builds against the data config it is paired with."""
     with initialize_config_dir(config_dir=str(CONFIG_DIR), version_base=None):
         cfg = compose(
             config_name="config", overrides=[f"model={model}", f"data={data}"]

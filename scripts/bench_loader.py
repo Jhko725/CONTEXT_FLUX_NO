@@ -24,6 +24,8 @@ DATA_CONFIGS = Path(__file__).resolve().parent / "training/configs/data"
 
 
 def main() -> None:
+    """Parse the command line, build the loader of the data config and print its host
+    and device rates."""
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("dataset", help="name of a data config, such as cubic_1d")
     parser.add_argument("--split", default="train", help="split of the dataset")

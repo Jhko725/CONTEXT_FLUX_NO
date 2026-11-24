@@ -1,3 +1,5 @@
+"""Helpers on arrays and pytrees of arrays."""
+
 from operator import add
 from typing import Any
 

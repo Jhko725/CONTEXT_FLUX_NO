@@ -1,3 +1,6 @@
+"""Laws of the loggers: the delay of `DelayedLogger`, the fan-out of `MultiLogger`, the
+thinning of `PrintLogger`, and `to_floats`."""
+
 import jax.numpy as jnp
 from context_flux_no.training.loggers import (
     DelayedLogger,
@@ -9,6 +12,8 @@ from context_flux_no.training.loggers import (
 
 
 def test_delayed_logger_forwards_previous_step_and_flushes_on_close():
+    """`DelayedLogger` forwards each step's metrics one call later and flushes the last
+    on close."""
     inner = ListLogger()
     with DelayedLogger(inner) as log:
         log.log({"a": jnp.asarray(1.0)}, 1)
@@ -19,6 +24,7 @@ def test_delayed_logger_forwards_previous_step_and_flushes_on_close():
 
 
 def test_multi_logger_fans_out_and_closes():
+    """`MultiLogger` forwards every call to every logger."""
     a, b = ListLogger(), ListLogger()
     with MultiLogger(a, b) as log:
         log.log({"x": 3}, 7)
@@ -26,6 +32,8 @@ def test_multi_logger_fans_out_and_closes():
 
 
 def test_print_logger_thins(capsys):
+    """`PrintLogger` prints only the steps that are multiples of `every`, and only the
+    keys it is given."""
     log = PrintLogger(every=2, keys=("loss",))
     log.log({"loss": 1.0}, 1)
     log.log({"loss": 0.5, "other": 9}, 2)
@@ -34,4 +42,5 @@ def test_print_logger_thins(capsys):
 
 
 def test_to_floats_syncs_device_scalars():
+    """`to_floats` converts device scalars and Python numbers to floats."""
     assert to_floats({"a": jnp.asarray(2.5), "b": 1}) == {"a": 2.5, "b": 1.0}

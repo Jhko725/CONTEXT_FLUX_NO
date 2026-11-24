@@ -40,6 +40,8 @@ needs_trixi = pytest.mark.skipif(
 
 
 def test_euler_2d_classic_vs_sharpclaw():
+    """On `Euler2D`, the difference between Classic and SharpClaw falls by at least 1.5
+    with every doubling of the grid."""
     pde, ic, x_spans, _, _, _, kwargs = CASES["euler_2d"]
     d = []
     for N in (16, 32, 64):

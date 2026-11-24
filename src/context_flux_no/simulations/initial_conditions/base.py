@@ -49,6 +49,8 @@ class InitialCondition(abc.ABC):
         """Values at the points whose per-axis coordinates are `coords` (all of one shape)."""
 
     def check_coords(self, coords: Coords) -> tuple[np.ndarray, ...]:
+        """Return `coords` as `float` arrays. Raises `ValueError` unless there is one
+        array per spatial dimension and all arrays share one shape."""
         arrays = tuple(np.asarray(c, dtype=float) for c in coords)
         if len(arrays) != self.n_spatial_dims:
             raise ValueError(
@@ -76,6 +78,8 @@ class FromFunction(InitialCondition):
         self.fn = fn
 
     def at_points(self, coords: Coords) -> Float[np.ndarray, "n_eqn *shape"]:
+        """Evaluate the function at `coords`. Raises `ValueError` when it returns
+        another shape than `[n_eqn, *shape]`."""
         arrays = self.check_coords(coords)
         out = np.asarray(self.fn(arrays), dtype=float)
         if out.shape != (self.n_eqn, *arrays[0].shape):
@@ -99,6 +103,7 @@ class Stacked(InitialCondition):
         )
 
     def at_points(self, coords: Coords) -> Float[np.ndarray, "n_eqn *shape"]:
+        """The values of every part at `coords`, concatenated along the channel axis."""
         return np.concatenate([p.at_points(coords) for p in self.parts], axis=0)
 
 
@@ -114,6 +119,7 @@ class Conserved(InitialCondition):
         self.pde = pde
 
     def at_points(self, coords: Coords) -> Float[np.ndarray, "n_eqn *shape"]:
+        """The primitive condition at `coords`, converted with `pde.to_conserved`."""
         return np.asarray(self.pde.to_conserved(*self.primitive.at_points(coords)))
 
 
@@ -133,7 +139,8 @@ class InitialConditionSampler(abc.ABC):
     @abc.abstractmethod
     def sample(
         self, key: PRNGKeyArray, x_spans: Sequence[Sequence[float]]
-    ) -> InitialCondition: ...
+    ) -> InitialCondition:
+        """Draw one initial condition on the domain `x_spans` from `key`."""
 
 
 class Multichannel(InitialConditionSampler):
@@ -151,6 +158,8 @@ class Multichannel(InitialConditionSampler):
         )
 
     def sample(self, key: PRNGKeyArray, x_spans: Sequence[Sequence[float]]) -> Stacked:
+        """Draw one condition per channel, each from its own split of `key`, and stack
+        them."""
         import jax
 
         keys = jax.random.split(key, len(self.samplers))

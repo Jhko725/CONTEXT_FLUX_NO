@@ -110,6 +110,9 @@ def _train_run(output_dir: Path, monkeypatch: pytest.MonkeyPatch) -> str:
 
 
 def test_evaluate_writes_the_run_group_and_its_record(tmp_path, monkeypatch):
+    """`scripts/evaluate.py` writes one group per run with metrics of the expected
+    shapes, the identity reference, and an `EvaluationRecord` that survives a round
+    trip."""
     monkeypatch.chdir(tmp_path)
     for seed, split in enumerate(NUM_TRAJECTORIES):
         _write_store(tmp_path / "data" / "datasets", split, seed)

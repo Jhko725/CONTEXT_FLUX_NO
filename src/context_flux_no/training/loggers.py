@@ -31,9 +31,11 @@ class Logger(abc.ABC):
     raised."""
 
     @abc.abstractmethod
-    def log(self, metrics: Metrics, step: int) -> None: ...
+    def log(self, metrics: Metrics, step: int) -> None:
+        """Record the scalar `metrics` of `step`."""
 
     def close(self) -> None:
+        """Release what the logger holds; a no-op unless a subclass overrides it."""
         pass
 
     def __enter__(self):
@@ -49,7 +51,10 @@ def to_floats(metrics: Metrics) -> dict[str, float]:
 
 
 class NullLogger(Logger):
+    """A logger that discards everything, for tests."""
+
     def log(self, metrics: Metrics, step: int) -> None:
+        """Discard `metrics`."""
         pass
 
 
@@ -60,14 +65,20 @@ class ListLogger(Logger):
         self.records: list[tuple[int, dict[str, float]]] = []
 
     def log(self, metrics: Metrics, step: int) -> None:
+        """Append `(step, metrics)`, with the metrics converted to floats."""
         self.records.append((step, to_floats(metrics)))
 
 
 class PrintLogger(Logger):
+    """Print the metrics of every `every`-th step to the terminal, those named in `keys`
+    or all of them when `keys` is `None`."""
+
     def __init__(self, every: int = 1, keys: tuple[str, ...] | None = None) -> None:
         self.every, self.keys = every, keys
 
     def log(self, metrics: Metrics, step: int) -> None:
+        """Print one line of the metrics of `step` with four significant digits, unless
+        `step` is not a multiple of `every`."""
         if step % self.every:
             return
         values = to_floats(metrics)
@@ -84,6 +95,8 @@ class WandbLogger(Logger):
         self.run, self.every = run, every
 
     def log(self, metrics: Metrics, step: int) -> None:
+        """Log the metrics of `step` to the wandb run as floats, if `step` is a multiple
+        of `every`."""
         if step % self.every == 0:
             self.run.log(to_floats(metrics), step=step)
 
@@ -96,11 +109,13 @@ class DelayedLogger(Logger):
         self._pending: tuple[Metrics, int] | None = None
 
     def log(self, metrics: Metrics, step: int) -> None:
+        """Forward the pending call to the inner logger and hold this one."""
         if self._pending is not None:
             self.inner.log(*self._pending)
         self._pending = (metrics, step)
 
     def close(self) -> None:
+        """Forward the pending call, if there is one, and close the inner logger."""
         if self._pending is not None:
             self.inner.log(*self._pending)
             self._pending = None
@@ -114,9 +129,11 @@ class MultiLogger(Logger):
         self.loggers = loggers
 
     def log(self, metrics: Metrics, step: int) -> None:
+        """Forward `metrics` to every logger, in order."""
         for logger in self.loggers:
             logger.log(metrics, step)
 
     def close(self) -> None:
+        """Close every logger, in order."""
         for logger in self.loggers:
             logger.close()

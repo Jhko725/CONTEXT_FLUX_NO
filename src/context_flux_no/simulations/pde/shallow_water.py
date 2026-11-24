@@ -1,3 +1,6 @@
+"""The three-parameter shallow-water-like family `ParametrizedShallowWater1D` and its
+Roe-type Riemann solver for PyClaw."""
+
 from typing import ClassVar
 
 import equinox as eqx
@@ -148,6 +151,8 @@ class ParametrizedShallowWater1D(AbstractPDEFamily):
 
     @property
     def parameters(self) -> dict[str, float]:
+        """The physical parameters by name, recorded as the Well `scalars` of a dataset.
+        `h_floor` is not among them."""
         return {"gamma": self.gamma, "alpha": self.alpha, "beta": self.beta}
 
     def positive_quantities(
@@ -167,6 +172,8 @@ class ParametrizedShallowWater1D(AbstractPDEFamily):
 
     @property
     def pyclaw_spec(self) -> PyClawSpec:
+        """Classic PyClaw with `riemann_param_shallow_water_1D` and the MC limiter,
+        given the parameters and `h_floor`."""
         return PyClawSpec(
             riemann_solver=riemann_param_shallow_water_1D,
             num_waves=2,
@@ -177,6 +184,8 @@ class ParametrizedShallowWater1D(AbstractPDEFamily):
 
     @property
     def trixi_spec(self) -> TrixiSpec:
+        """Trixi's `ParametrizedShallowWaterEquations1D`, given the parameters and
+        `h_floor`."""
         return TrixiSpec(
             "ParametrizedShallowWaterEquations1D",
             {**self.parameters, "h_floor": self.h_floor},

@@ -1,5 +1,5 @@
 # Training settings for the Well datasets: default.yaml plus gradient clipping. The whole
-# optimizer is in the config so that runs.state_template can rebuild the checkpointed
+# optimizer is in the config so that experiment.state_template can rebuild the checkpointed
 # TrainerState from config.yaml alone (ADR-0010). Not derived from default.yaml with a
 # defaults list because OmegaConf merges would keep default's `learning_rate` key inside
 # the `optax.chain` node.

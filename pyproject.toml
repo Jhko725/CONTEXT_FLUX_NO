@@ -62,7 +62,27 @@ fixable = ["I001", "F401"]
 # E501: ruff format governs line length; long strings/comments are allowed.
 # F722/F821: jaxtyping shape strings (Float[Array, "channels *grids"]) are not forward references.
 ignore = ["E402", "E501", "E721", "E731", "E741", "F722", "F821"]
-select = ["E", "F", "I001", "TID251"]
+# Adapted from Jhko725/UniversalForceReconstruction pyproject.toml at b80a341.
+# TID251 enforces banned-api below. W605 rejects an invalid escape, such as LaTeX's
+# "\Phi" in a docstring that is not raw, which Python only reports as a SyntaxWarning.
+# D100-D103 require a docstring on every public module, class, method and function of
+# the clean paths. C901 bounds the decision points of one function (`if`, loop,
+# `except`, `case`, `and`, `or`).
+select = ["E", "F", "W605", "I001", "TID251", "D100", "D101", "D102", "D103", "C901"]
+
+[tool.ruff.lint.mccabe]
+# Lower than ruff's default of 10, as in UniversalForceReconstruction, where 8 flags
+# every function that its reviews called nested.
+max-complexity = 8
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"  # the section parser; only the selected D rules run
+
+[tool.ruff.lint.per-file-ignores]
+# The D rules apply to the clean paths only (rule R7): everything outside them is
+# exempt. This pattern copies `clean` under [tool.context_flux_no], which ruff cannot
+# read.
+"!{src/context_flux_no/simulations/**,src/context_flux_no/runs/**,src/context_flux_no/utils/**,src/context_flux_no/data/**,src/context_flux_no/training/**,src/context_flux_no/evaluation/**,src/context_flux_no/experiment.py,src/context_flux_no/custom_types.py,tests/unit/**,tests/verification/**,tests/helpers.py,tests/conftest.py,scripts/**}" = ["D"]
 
 [tool.ruff.lint.flake8-tidy-imports.banned-api]
 # Python floor is 3.13 (requires-python): copy.replace is the one way to copy-with-changes.

@@ -51,56 +51,59 @@ def _tail(target: str | None) -> str | None:
     return None if target is None else str(target).rsplit(".", 1)[-1]
 
 
+def _config_value(cfg: Any, *path: str) -> Any:
+    """The node at `path` in a nested config, or `None` when a key along it is missing
+    or a node along it is `None`."""
+    node: Any = cfg
+    for key in path:
+        try:
+            node = node[key] if not hasattr(node, "get") else node.get(key)
+        except (KeyError, TypeError, AttributeError):
+            return None
+        if node is None:
+            return None
+    return node
+
+
+def _peak_learning_rate(opt: Any) -> Any:
+    """`learning_rate` of an optimizer node — a number, a schedule's `peak_value`, or
+    the first one found inside an `optax.chain`'s `_args_`."""
+    if opt is None or not hasattr(opt, "get"):
+        return None
+    lr = opt.get("learning_rate")
+    if lr is not None:
+        return lr.get("peak_value") if hasattr(lr, "get") else lr
+    for part in opt.get("_args_") or []:
+        found = _peak_learning_rate(part)
+        if found is not None:
+            return found
+    return None
+
+
 def index_from_config(cfg: Any, *, dataset_id: str | None = None) -> dict[str, Any]:
     """The index columns read off a resolved config (a plain dict or an OmegaConf
     `DictConfig`). Missing pieces become `None` rather than raising, because older
     configs lack some of them."""
-
-    def get(*path: str, default: Any = None) -> Any:
-        node: Any = cfg
-        for key in path:
-            try:
-                node = node[key] if not hasattr(node, "get") else node.get(key)
-            except (KeyError, TypeError, AttributeError):
-                return default
-            if node is None:
-                return default
-        return node
-
-    def peak_lr_of(opt: Any) -> Any:
-        """`learning_rate` of an optimizer node — a number, a schedule's `peak_value`, or
-        the first one found inside an `optax.chain`'s `_args_`."""
-        if opt is None or not hasattr(opt, "get"):
-            return None
-        lr = opt.get("learning_rate")
-        if lr is not None:
-            return lr.get("peak_value") if hasattr(lr, "get") else lr
-        for part in opt.get("_args_") or []:
-            found = peak_lr_of(part)
-            if found is not None:
-                return found
-        return None
-
-    peak_lr = peak_lr_of(get("training", "optimizer"))
+    peak_lr = _peak_learning_rate(_config_value(cfg, "training", "optimizer"))
     return {
-        "model": _tail(get("model", "_target_")),
-        "encoder": get("model", "encoder_type"),
-        "target_network": get("model", "target_network_type"),
+        "model": _tail(_config_value(cfg, "model", "_target_")),
+        "encoder": _config_value(cfg, "model", "encoder_type"),
+        "target_network": _config_value(cfg, "model", "target_network_type"),
         # Phase 3 makes conditioning a config field; until then it is implied by the class
         "conditioning": {
             "HyperFluxFNOLocal": "hypernet",
             "HyperNeuralOperator": "hypernet",
             "HyperNeuralOperatorv2": "hypernet",
             "ContextAppendedFluxNO": "context-append",
-        }.get(_tail(get("model", "_target_"))),
-        "data": get("data", "name"),
+        }.get(_tail(_config_value(cfg, "model", "_target_"))),
+        "data": _config_value(cfg, "data", "name"),
         "dataset_id": dataset_id,
-        "seed": get("model", "key", "seed"),
-        "loss": _tail(get("loss_fn", "_target_")),
-        "context_length": get("training", "context_length"),
-        "batch_size": get("training", "batch_size"),
+        "seed": _config_value(cfg, "model", "key", "seed"),
+        "loss": _tail(_config_value(cfg, "loss_fn", "_target_")),
+        "context_length": _config_value(cfg, "training", "context_length"),
+        "batch_size": _config_value(cfg, "training", "batch_size"),
         "peak_lr": peak_lr,
-        "max_steps": get("training", "max_steps"),
+        "max_steps": _config_value(cfg, "training", "max_steps"),
     }
 
 
@@ -140,6 +143,8 @@ class RunRecord:
         extra: dict[str, Any] | None = None,
         run_id: str | None = None,
     ) -> RunRecord:
+        """A record of a new run: a new `run_id` unless one is given, the creation time,
+        status `"running"`, and the current git state and package version."""
         sha, dirty = git_state()
         return cls(
             run_id=run_id or new_run_id(),
@@ -157,6 +162,9 @@ class RunRecord:
     # ------------------------------------------------------------ (de)serialize --
     @classmethod
     def from_dict(cls, d: dict[str, Any]) -> RunRecord:
+        """The record of a dictionary as `write` stores it. Keys that are not fields are
+        kept under `extra["_unknown"]`, so a newer record still reads; a status
+        outside `Status` raises `ValueError`."""
         known = {f.name for f in dataclasses.fields(cls)}
         unknown = {k: v for k, v in d.items() if k not in known}
         kwargs = {k: v for k, v in d.items() if k in known}
@@ -170,10 +178,12 @@ class RunRecord:
         return cls(**kwargs)
 
     def write(self, path: Path) -> None:
+        """Write the record as JSON to `path`."""
         path.write_text(dumps(dataclasses.asdict(self)) + "\n")
 
     @classmethod
     def read(cls, path: Path) -> RunRecord:
+        """Read a record that `write` wrote to `path`."""
         return cls.from_dict(json.loads(path.read_text()))
 
     # ------------------------------------------------------------ views ----------

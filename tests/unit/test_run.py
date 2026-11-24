@@ -68,6 +68,8 @@ def _train(run: Run, num_steps, state=None, seed=0):
 
 
 def test_from_config_writes_layout_and_refuses_reuse(tmp_path):
+    """`Run.from_config` writes the config and the record, refuses a directory that
+    holds a run, and `Run.open` reads both back."""
     run = Run.from_config(_cfg(), tmp_path / "r", dataset_id="toy:train:0000")
     assert run.config_path.exists() and run.metadata_path.exists()
     assert run.record.status == "running"
@@ -82,6 +84,8 @@ def test_from_config_writes_layout_and_refuses_reuse(tmp_path):
 
 
 def test_train_finish_and_load_run(tmp_path):
+    """A trained run is finished with its best checkpoint, its checkpoint directory
+    names the run, and `runs.load_run` returns the trained model and the record."""
     run = Run.from_config(_cfg(), tmp_path / "r")
     state = _train(run, num_steps=6)
     rec = RunRecord.read(run.metadata_path)
@@ -100,6 +104,8 @@ def test_train_finish_and_load_run(tmp_path):
 
 
 def test_resume_continues_step_and_records_changes(tmp_path):
+    """Resuming keeps the run id, records the step resumed from and the changed config
+    keys, and rewrites the config."""
     run = Run.from_config(_cfg(), tmp_path / "r")
     _train(run, num_steps=4)
     run_id = run.record.run_id
@@ -119,6 +125,8 @@ def test_resume_continues_step_and_records_changes(tmp_path):
 
 
 def test_index_and_select(tmp_path):
+    """`runs.index` tables every run under a directory, `runs.select` filters it by
+    column values, and a directory without runs gives an empty table."""
     for i, name in enumerate(["a", "b"]):
         run = Run.from_config(_cfg(seed=i), tmp_path / "runs" / name)
         if name == "a":
@@ -133,6 +141,8 @@ def test_index_and_select(tmp_path):
 
 
 def test_config_changes_reports_leaves_only():
+    """`config_changes` reports only the changed leaves, with `None` on the missing side
+    of an added or removed key."""
     old = OmegaConf.create({"a": {"b": 1, "c": [1, 2]}, "d": "x"})
     new = OmegaConf.create({"a": {"b": 2, "c": [1, 2]}, "e": True})
     assert config_changes(old, new) == {

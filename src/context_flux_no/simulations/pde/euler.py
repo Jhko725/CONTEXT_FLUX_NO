@@ -34,6 +34,9 @@ _SPEED_GAP_FLOOR = 1.0e-12
 
 
 class Euler2D(AbstractPDEFamily):
+    """The 2-D compressible Euler equations of an ideal gas with ratio of specific heats
+    `gamma`, in the conserved state `(rho, m_x, m_y, E)`."""
+
     n_spatial_dims: ClassVar[int] = 2
     field_rank_names: ClassVar[tuple[tuple[int, str], ...]] = (
         (0, "rho"),
@@ -48,10 +51,13 @@ class Euler2D(AbstractPDEFamily):
 
     @property
     def parameters(self) -> dict[str, float]:
+        """The physical parameters by name, recorded as the Well `scalars` of a dataset."""
         return {"gamma": self.gamma}
 
     @property
     def pyclaw_spec(self) -> PyClawSpec:
+        """Clawpack's compiled `riemann.euler_4wave_2D` with transverse propagation, as
+        in the Clawpack quadrants gallery."""
         # https://www.clawpack.org/gallery/pyclaw/gallery/quadrants.html
         return PyClawSpec(
             riemann_solver=riemann.euler_4wave_2D,
@@ -63,6 +69,7 @@ class Euler2D(AbstractPDEFamily):
 
     @property
     def trixi_spec(self) -> TrixiSpec:
+        """Trixi's own `CompressibleEulerEquations2D` with `gamma`."""
         return TrixiSpec("CompressibleEulerEquations2D", self.parameters)  # Trixi's own
 
     def to_conserved(self, rho, u, v, p):

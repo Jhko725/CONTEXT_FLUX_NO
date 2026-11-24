@@ -21,6 +21,8 @@ from tests.unit.make_goldens_simulations import CASES, GOLDENS  # noqa: E402
 
 @pytest.mark.parametrize("name", sorted(CASES))
 def test_classic_is_bit_identical_to_pre_2a_solve(name):
+    """`PyClawBackend("classic")` reproduces the goldens of the case bit for bit, with
+    the output times and one center array per axis."""
     pde, ic, x_spans, Nxs, t_span, Nt, kwargs = CASES[name]
     golden = np.load(GOLDENS / f"{name}.npz")
     u, t, xs = pde.solve(ic, x_spans, Nxs, t_span, Nt, "periodic", **kwargs)
@@ -32,6 +34,8 @@ def test_classic_is_bit_identical_to_pre_2a_solve(name):
 
 @pytest.mark.parametrize("name", sorted(CASES))
 def test_sharpclaw_runs_on_every_family(name):
+    """SharpClaw solves the case from the same initial state as Classic and stays within
+    a quarter of the largest final value of it."""
     pde, ic, x_spans, Nxs, t_span, Nt, kwargs = CASES[name]
     backend = PyClawBackend("sharpclaw")
     u, t, _ = pde.solve(
@@ -45,6 +49,8 @@ def test_sharpclaw_runs_on_every_family(name):
 
 
 def test_grid_matches_pyclaw_centers():
+    """`Grid.centers` equal PyClaw's cell centers bit for bit, and a grid with no cells
+    raises `ValueError`."""
     from clawpack import pyclaw
 
     g = Grid(((0.0, 1.0), (-1.0, 2.0)), (7, 5))
@@ -56,6 +62,8 @@ def test_grid_matches_pyclaw_centers():
 
 
 def test_normalize_bcs():
+    """`normalize_bcs` expands a name to every side of every axis and rejects a periodic
+    side paired with another, an unknown name and a wrong number of axes."""
     assert normalize_bcs("periodic", 2) == (("periodic", "periodic"),) * 2
     assert normalize_bcs([("extrap", "wall")], 1) == (("extrap", "wall"),)
     with pytest.raises(ValueError):
@@ -67,6 +75,9 @@ def test_normalize_bcs():
 
 
 def test_backend_input_checks_and_describe():
+    """`PyClawBackend.solve` rejects a mismatched initial condition and a single output
+    time, `describe` records the scheme and the overrides, and an unknown scheme
+    raises `ValueError`."""
     pde, ic, x_spans, Nxs, t_span, Nt, _ = CASES["cubic_1d"]
     backend = PyClawBackend("classic", cfl_desired=0.3)
     grid = Grid(x_spans, Nxs)
@@ -90,12 +101,15 @@ def test_backend_input_checks_and_describe():
 
 
 def test_non_periodic_bcs_run(tmp_path: Path):
+    """PyClaw solves a case with extrapolating boundaries to a finite state."""
     pde, ic, x_spans, Nxs, t_span, Nt, _ = CASES["burgers_1d"]
     u, *_ = pde.solve(ic, x_spans, Nxs, t_span, Nt, [("extrap", "extrap")])
     assert np.isfinite(u).all()
 
 
 def test_blow_up_is_a_solver_failure():
+    """A PyClaw run that PyClaw refuses raises `SolverFailure` naming the backend and
+    scheme."""
     from context_flux_no.simulations import SolverFailure
 
     pde, ic, x_spans, Nxs, t_span, Nt, _ = CASES["cubic_1d"]

@@ -1,3 +1,5 @@
+"""The sine-flux family `u_t + (a sin(b u))_x = 0` and its Riemann solver for PyClaw."""
+
 from typing import ClassVar
 
 import equinox as eqx
@@ -9,6 +11,17 @@ from context_flux_no.simulations.pde.base import AbstractPDEFamily
 
 
 def riemann_sine_1D(q_l, q_r, aux_l, aux_r, problem_data):
+    """Solve the Riemann problems of `f(u) = a sin(b u)` at every cell interface, in
+    PyClaw's Python Riemann-solver interface.
+
+    The one wave is the jump `q_r - q_l`, and its speed is `f'` at the mean of the two
+    states rather than the Roe speed. `aux_l` and `aux_r` are unused.
+
+    **Returns:**
+
+    `(wave, s, amdq, apdq)`: the wave, its speed, and the left- and right-going
+    fluctuations.
+    """
     a = problem_data["a"]
     b = problem_data["b"]
 
@@ -45,13 +58,17 @@ class SineFlux1D(AbstractPDEFamily):
 
     @property
     def parameters(self) -> dict[str, float]:
+        """The physical parameters by name, recorded as the Well `scalars` of a dataset."""
         return {"a": self.a, "b": self.b}
 
     def flux(self, u):
+        """The flux `f(u) = a sin(b u)`."""
         return self.a * np.sin(self.b * u)
 
     @property
     def pyclaw_spec(self) -> PyClawSpec:
+        """Classic PyClaw with `riemann_sine_1D` and the MC limiter, at a desired CFL
+        number of 0.5 and a maximum of 0.9."""
         return PyClawSpec(
             riemann_solver=riemann_sine_1D,
             num_waves=1,
@@ -62,4 +79,5 @@ class SineFlux1D(AbstractPDEFamily):
 
     @property
     def trixi_spec(self) -> TrixiSpec:
+        """Trixi's `SineFluxEquation1D` with the family's parameters."""
         return TrixiSpec("SineFluxEquation1D", self.parameters)

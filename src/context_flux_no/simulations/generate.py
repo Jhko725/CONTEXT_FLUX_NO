@@ -45,6 +45,20 @@ def sample_coefficients(
     strategy: Literal["uniform", "linspace"],
     n_coeffs: int,
 ) -> dict[str, Array]:
+    """Draw `n_coeffs` values of every parameter in `coeff_range_dict`, each from its
+    own split of `key`.
+
+    **Arguments:**
+
+    - `key`: The PRNG key; `"linspace"` does not use it.
+    - `coeff_range_dict`: The `(low, high)` range of each parameter.
+    - `strategy`: `"uniform"` draws uniformly in the range; `"linspace"` takes evenly spaced values that include both ends. Any other value raises `ValueError`.
+    - `n_coeffs`: The number of values per parameter.
+
+    **Returns:**
+
+    The values of each parameter, of shape `(n_coeffs,)`.
+    """
     subkeys = jax.random.split(key, len(coeff_range_dict))
     if strategy == "uniform":
 

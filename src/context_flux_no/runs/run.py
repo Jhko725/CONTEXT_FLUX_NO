@@ -10,7 +10,7 @@ default; a sweep adds `<job-num>/`), so Hydra's own `.hydra/` and the run live t
 nothing has to be joined later. `Run.from_config` **refuses** a directory that already holds
 a run unless `resume=True`, in which case the record notes the step resumed from and the
 config keys that changed. A warm start from *another* run is a new run whose record carries
-`resumed_from`; the script handles that (`train_multiphysics.py`, `cfg.resume`).
+`resumed_from`; the script handles that (`scripts/train.py`, `cfg.resume`).
 
 Resume caveat (ledger, confirmed): restoring the `TrainerState` restores model, optimizer,
 step and PRNG key exactly, but the **data stream restarts** — grain's
@@ -87,18 +87,22 @@ class Run:
     # ------------------------------------------------------------ paths ----------
     @property
     def config_path(self) -> Path:
+        """The path of the run's resolved config."""
         return self.directory / self.layout.config_file
 
     @property
     def metadata_path(self) -> Path:
+        """The path of the run's `RunRecord`."""
         return self.directory / self.layout.metadata_file
 
     @property
     def checkpoint_dir(self) -> Path:
+        """The directory of the run's checkpoints."""
         return self.directory / self.layout.checkpoint_dir
 
     @staticmethod
     def exists(directory: str | Path, *, layout: RunLayout = DEFAULT_LAYOUT) -> bool:
+        """Whether `directory` holds a run, that is, a record file of `layout`."""
         return (Path(directory) / layout.metadata_file).exists()
 
     # ------------------------------------------------------------ construction ---
@@ -157,6 +161,8 @@ class Run:
 
     @classmethod
     def open(cls, directory: str | Path, *, layout: RunLayout = DEFAULT_LAYOUT) -> Run:
+        """The run in `directory`, with its record and its config (empty when the config
+        file is missing). Raises `FileNotFoundError` when the directory holds no run."""
         directory = Path(directory)
         if not cls.exists(directory, layout=layout):
             raise FileNotFoundError(
@@ -211,6 +217,7 @@ class Run:
 
     @property
     def latest_step(self) -> int | None:
+        """The latest checkpointed step, `None` when there is none."""
         if not self.checkpoint_dir.exists():
             return None
         ckpt = OrbaxCheckpointer(self.checkpoint_dir, metric=None)

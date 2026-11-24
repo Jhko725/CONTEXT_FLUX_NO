@@ -24,6 +24,7 @@ from typing import Any, Literal
 
 import numpy as np
 import zarr
+from jaxtyping import Float
 
 from context_flux_no.simulations.backends.base import BCs
 from context_flux_no.simulations.grid import Grid
@@ -81,6 +82,85 @@ def store_channel_order(
 WELL_BC_TYPE = {"periodic": "periodic", "wall": "wall", "extrap": "open"}
 
 
+def _write_dimensions(
+    root: zarr.Group,
+    grid: Grid,
+    t_out: Float[np.ndarray, " time"],
+    dtype: Literal["float32", "float64"],
+) -> None:
+    """Write the `dimensions/` group: the output times and the cell centers of each axis."""
+    dims = root.create_group("dimensions")
+    dims.attrs["spatial_dims"] = list(grid.axis_names)
+    time_arr = dims.create_array(name="time", shape=(len(t_out),), dtype=dtype)
+    time_arr[:] = np.asarray(t_out)
+    time_arr.attrs["sample_varying"] = False
+    for name, centers in zip(grid.axis_names, grid.centers):
+        arr = dims.create_array(name=name, shape=(len(centers),), dtype=dtype)
+        arr[:] = centers
+        arr.attrs["sample_varying"] = False
+        arr.attrs["time_varying"] = False
+
+
+def _write_boundary_conditions(root: zarr.Group, grid: Grid, bcs: BCs) -> None:
+    """Write the `boundary_conditions/` group: one subgroup per axis side, or one
+    `*_periodic` subgroup for both sides of a periodic axis, each with its boundary mask."""
+    bc_group = root.create_group("boundary_conditions")
+    for axis, (name, (lo, hi)) in enumerate(zip(grid.axis_names, bcs)):
+        n = grid.Nxs[axis]
+        sides = (
+            [("periodic", (0, n - 1))]
+            if lo == "periodic"
+            else [
+                (f"{lo}_lower", (0,)),
+                (f"{hi}_upper", (n - 1,)),
+            ]
+        )
+        for label, idx in sides:
+            g = bc_group.create_group(f"{name}_{label}")
+            g.attrs["associated_dims"] = [name]
+            g.attrs["associated_fields"] = []
+            g.attrs["bc_type"] = WELL_BC_TYPE[label.split("_")[0]]
+            g.attrs["sample_varying"] = False
+            g.attrs["time_varying"] = False
+            mask = np.zeros(n, dtype=bool)
+            mask[list(idx)] = True
+            m = g.create_array(name="mask", shape=(n,), dtype="bool")
+            m[:] = mask
+
+
+def _create_field_arrays(
+    root: zarr.Group,
+    pde: Any,
+    grid: Grid,
+    n_traj: int,
+    Nt1: int,
+    dtype: Literal["float32", "float64"],
+    codec: Any | None,
+) -> None:
+    """Create the empty `t0_fields/`, `t1_fields/` and `t2_fields/` arrays, one chunk per
+    trajectory, for the fields of each rank of `pde.field_rank_names`."""
+    n_dims = grid.n_spatial_dims
+    by_rank: dict[int, list[str]] = {0: [], 1: [], 2: []}
+    for r, f_name in pde.field_rank_names:
+        by_rank[r].append(f_name)
+    for r, names in by_rank.items():
+        fields = root.create_group(f"t{r}_fields")
+        fields.attrs["field_names"] = names
+        shape = (n_traj, Nt1, *grid.shape) + ((n_dims**r,) if r else ())
+        for f_name in names:
+            arr = fields.create_array(
+                name=f_name,
+                shape=shape,
+                dtype=dtype,
+                chunks=(1,) + shape[1:],
+                shards="auto",
+                compressors=codec,
+            )
+            arr.attrs["dim_varying"] = [True] * n_dims
+            arr.attrs["sample_varying"] = True
+            arr.attrs["time_varying"] = True
+
+
 class WellWriter:
     """Create with `WellWriter.create(...)`, fill with `write_trajectory(idx, u, scalars)`,
     close with `finalize(n_written)`. Reading a store back is `data.ZarrWellDatasetSource`'s
@@ -108,6 +188,22 @@ class WellWriter:
         dtype: Literal["float32", "float64"] = "float32",
         codec: Any | None = "default",
     ) -> WellWriter:
+        """Create an empty store at `path` for `record.n_trajectories` trajectories of
+        `pde` on `grid`, and write the record's sidecar.
+
+        **Arguments:**
+
+        - `path`: Where the store goes; raises `FileExistsError` if it exists.
+        - `pde`: The family, which gives the field layout and the parameter names.
+        - `grid`, `t_out`, `bcs`: The grid, the output times and the boundary conditions of every trajectory.
+        - `record`: The dataset's record, stored in the root attributes and the sidecar.
+        - `dtype`: The dtype of every stored array.
+        - `codec`: The compressor of the field arrays; `"default"` is Blosc with zstd at level 3 and bit shuffling, and `None` stores them uncompressed.
+
+        **Returns:**
+
+        The writer of the new store.
+        """
         path = Path(path)
         if path.exists():
             raise FileExistsError(f"a store already exists at {path}")
@@ -131,39 +227,8 @@ class WellWriter:
             }
         )
 
-        dims = root.create_group("dimensions")
-        dims.attrs["spatial_dims"] = list(grid.axis_names)
-        time_arr = dims.create_array(name="time", shape=(Nt1,), dtype=dtype)
-        time_arr[:] = np.asarray(t_out)
-        time_arr.attrs["sample_varying"] = False
-        for name, centers in zip(grid.axis_names, grid.centers):
-            arr = dims.create_array(name=name, shape=(len(centers),), dtype=dtype)
-            arr[:] = centers
-            arr.attrs["sample_varying"] = False
-            arr.attrs["time_varying"] = False
-
-        bc_group = root.create_group("boundary_conditions")
-        for axis, (name, (lo, hi)) in enumerate(zip(grid.axis_names, bcs)):
-            n = grid.Nxs[axis]
-            sides = (
-                [("periodic", (0, n - 1))]
-                if lo == "periodic"
-                else [
-                    (f"{lo}_lower", (0,)),
-                    (f"{hi}_upper", (n - 1,)),
-                ]
-            )
-            for label, idx in sides:
-                g = bc_group.create_group(f"{name}_{label}")
-                g.attrs["associated_dims"] = [name]
-                g.attrs["associated_fields"] = []
-                g.attrs["bc_type"] = WELL_BC_TYPE[label.split("_")[0]]
-                g.attrs["sample_varying"] = False
-                g.attrs["time_varying"] = False
-                mask = np.zeros(n, dtype=bool)
-                mask[list(idx)] = True
-                m = g.create_array(name="mask", shape=(n,), dtype="bool")
-                m[:] = mask
+        _write_dimensions(root, grid, t_out, dtype)
+        _write_boundary_conditions(root, grid, bcs)
 
         scalars = root.create_group("scalars")
         scalars.attrs["field_names"] = list(pde.parameters.keys())
@@ -172,25 +237,7 @@ class WellWriter:
             s.attrs["sample_varying"] = True
             s.attrs["time_varying"] = False
 
-        by_rank: dict[int, list[str]] = {0: [], 1: [], 2: []}
-        for r, f_name in pde.field_rank_names:
-            by_rank[r].append(f_name)
-        for r, names in by_rank.items():
-            fields = root.create_group(f"t{r}_fields")
-            fields.attrs["field_names"] = names
-            shape = (n_traj, Nt1, *grid.shape) + ((n_dims**r,) if r else ())
-            for f_name in names:
-                arr = fields.create_array(
-                    name=f_name,
-                    shape=shape,
-                    dtype=dtype,
-                    chunks=(1,) + shape[1:],
-                    shards="auto",
-                    compressors=codec,
-                )
-                arr.attrs["dim_varying"] = [True] * n_dims
-                arr.attrs["sample_varying"] = True
-                arr.attrs["time_varying"] = True
+        _create_field_arrays(root, pde, grid, n_traj, Nt1, dtype, codec)
 
         writer = cls(root, path, record)
         record.write(sidecar_path(path))
@@ -199,6 +246,7 @@ class WellWriter:
     # ------------------------------------------------------------ data -----------
     @property
     def n_trajectories(self) -> int:
+        """The number of trajectories the store was created for."""
         return int(self.root.attrs["n_trajectories"])
 
     def write_trajectory(

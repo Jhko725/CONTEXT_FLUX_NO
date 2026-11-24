@@ -48,6 +48,8 @@ def _train(cfg, num_steps):
 
 
 def test_train_writes_run_in_hydra_output_dir(hydra_output_dir):
+    """`experiment.train` writes a finished run in Hydra's output directory, without
+    wandb, and `runs.load_run` returns the trained model."""
     state = _train(_full_cfg(), 4)
     run = Run.open(hydra_output_dir)
     assert run.record.status == "finished" and run.record.final_step == 4
@@ -60,6 +62,8 @@ def test_train_writes_run_in_hydra_output_dir(hydra_output_dir):
 
 
 def test_resume_in_place_and_warm_start(hydra_output_dir):
+    """Resuming in place continues the step count in the same run; a warm start is a new
+    run whose record names the run and step it started from."""
     _train(_full_cfg(), 4)
     cfg = _full_cfg()
     cfg.resume = str(hydra_output_dir)
@@ -82,6 +86,9 @@ def test_resume_in_place_and_warm_start(hydra_output_dir):
 
 
 def test_failure_marks_record_failed(hydra_output_dir):
+    """A run whose loss becomes non-finite raises `FloatingPointError` and leaves its
+    record with status `"failed"`."""
+
     class Boom(_Loss):
         def __call__(self, model, batch, args, key):
             loss, aux = super().__call__(model, batch, args, key)

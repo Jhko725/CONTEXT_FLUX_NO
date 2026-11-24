@@ -36,18 +36,22 @@ class Grid:
 
     @property
     def n_spatial_dims(self) -> int:
+        """The number of spatial axes."""
         return len(self.Nxs)
 
     @property
     def shape(self) -> tuple[int, ...]:
+        """The number of cells along each axis."""
         return self.Nxs
 
     @property
     def axis_names(self) -> tuple[str, ...]:
+        """The names of the axes in use, `x` first."""
         return AXIS_NAMES[: self.n_spatial_dims]
 
     @property
     def dxs(self) -> tuple[float, ...]:
+        """The cell width along each axis."""
         return tuple((hi - lo) / n for (lo, hi), n in zip(self.x_spans, self.Nxs))
 
     @property
@@ -60,9 +64,13 @@ class Grid:
         ]
 
     def meshgrid(self) -> list[np.ndarray]:
+        """The cell centers broadcast to the grid's shape, one array per axis in `ij`
+        indexing."""
         return list(np.meshgrid(*self.centers, indexing="ij"))
 
     def to_dict(self) -> dict[str, Any]:
+        """The spans, cell counts and cell widths as plain lists, the form
+        `DatasetRecord.grid` stores."""
         return {
             "x_spans": [list(s) for s in self.x_spans],
             "Nxs": list(self.Nxs),

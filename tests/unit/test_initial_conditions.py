@@ -45,6 +45,8 @@ def _samplers():
 @pytest.mark.parametrize("name", sorted(_samplers()))
 @pytest.mark.parametrize("seed", [0, 7])
 def test_sampled_condition_is_a_function_of_position(name, seed):
+    """A sampled condition is a function of position: it gives the same values at the
+    same points on two grids, and the same key gives the same function."""
     sampler = _samplers()[name]
     spans = SPANS_1D if sampler.n_spatial_dims == 1 else SPANS_2D
     ic = sampler.sample(jax.random.key(seed), spans)
@@ -68,6 +70,8 @@ def test_sampled_condition_is_a_function_of_position(name, seed):
 
 
 def test_step_1d_values_and_periodicity():
+    """A 1-D step condition takes only its drawn values, within the value bounds, has
+    the period of the domain, and visits every interval."""
     ic = PeriodicRandomStepFunction1D(2, 4, 0.5, 2.5).sample(
         jax.random.key(1), SPANS_1D
     )
@@ -81,6 +85,8 @@ def test_step_1d_values_and_periodicity():
 
 
 def test_step_2d_is_periodic_and_shares_geometry_across_channels():
+    """A 2-D step condition has the periods of the domain, and its channels share one
+    tessellation."""
     ic = PeriodicRandomStepFunction2D(2, 3, 3, [0.0, 10.0], [1.0, 11.0]).sample(
         jax.random.key(2), SPANS_2D
     )
@@ -96,6 +102,8 @@ def test_step_2d_is_periodic_and_shares_geometry_across_channels():
 
 
 def test_grf_matches_gstools_structured_evaluation():
+    """A Gaussian random field evaluated at scattered points equals gstools' structured
+    evaluation, scaled and shifted."""
     sampler = _samplers()["grf2d"]
     ic = sampler.sample(jax.random.key(3), SPANS_2D)
     g = Grid(SPANS_2D, [8, 6])
@@ -108,17 +116,23 @@ def test_grf_matches_gstools_structured_evaluation():
 
 
 def test_step_rejects_fewer_than_two_jumps():
+    """A 1-D step sampler with fewer than two jumps raises `ValueError`."""
     # one periodic jump is a constant state, which makes relative errors undefined
     with pytest.raises(ValueError):
         PeriodicRandomStepFunction1D(1, 3)
 
 
 def test_grf_rejects_a_mismatched_period():
+    """A Gaussian random field on a domain whose length is not its period raises
+    `ValueError`."""
     with pytest.raises(ValueError):
         _samplers()["grf1d"].sample(jax.random.key(0), [(0.0, 2.0)])
 
 
 def test_stacked_conserved_and_from_function():
+    """`Stacked` concatenates its parts, `Conserved` converts a primitive state with the
+    family's `to_conserved`, and `FromFunction` rejects coordinates or values of the
+    wrong shape."""
     f = FromFunction(lambda c: np.stack([c[0], c[1]]), n_eqn=2, n_spatial_dims=2)
     g = FromFunction(lambda c: (c[0] * 0 + 1.0)[None], n_eqn=1, n_spatial_dims=2)
     grid = Grid(SPANS_2D, [4, 3])
@@ -141,6 +155,8 @@ def test_stacked_conserved_and_from_function():
 
 
 def test_truncated_fourier_is_periodic_with_the_domain_length():
+    """A truncated Fourier series drawn on a domain has the domain's length as its
+    period, and a shift by a third of that length changes its values."""
     ic = RandomTruncatedFourier1D(4).sample(jax.random.key(5), [(-1.0, 2.0)])
     assert isinstance(ic, TruncatedFourier1D) and ic.L == 3.0
     x = np.linspace(-1, 2, 50, endpoint=False)

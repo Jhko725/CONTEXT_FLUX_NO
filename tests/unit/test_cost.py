@@ -12,11 +12,14 @@ def _matmul(a: Float[Array, "m k"], b: Float[Array, "k n"]) -> Float[Array, "m n
 
 
 def test_count_flops_of_a_matrix_product():
+    """`count_flops` of a `(6, 5) @ (5, 4)` product is `2 * 6 * 5 * 4`."""
     a, b = jnp.ones((6, 5)), jnp.ones((5, 4))
     assert count_flops(_matmul, a, b) == 2 * 6 * 5 * 4
 
 
 def test_measure_times_every_repeat():
+    """`measure` returns one positive, finite time per repeat, the product's flop count
+    and the size of its output in bytes."""
     a, b = jnp.ones((6, 5)), jnp.ones((5, 4))
     measurement = measure(_matmul, a, b, repeats=3, warmup=1)
     assert measurement.seconds.shape == (3,)

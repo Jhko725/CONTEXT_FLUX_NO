@@ -135,6 +135,10 @@ def _julia() -> Any:
 
 
 class TrixiBackend(SolverBackend):
+    """Solve a family through Trixi.jl's discontinuous Galerkin method on a periodic
+    grid, with the family's `trixi_spec`. `polydeg` is the polynomial degree, `cfl`
+    the CFL number, and `shock_capturing` switches Trixi's shock capturing on."""
+
     name = "trixi"
 
     def __init__(
@@ -161,6 +165,10 @@ class TrixiBackend(SolverBackend):
         t_out: np.ndarray,
         bcs: BCs,
     ) -> np.ndarray:
+        """Run Trixi from the values of `ic` at the DG nodes and return the state at
+        every time of `t_out`. Raises `ValueError` for a boundary that is not
+        periodic, and `SolverFailure` when the Julia side reports a failed solve or
+        the state is not finite."""
         t_out = self.check_inputs(pde, ic, grid, t_out)
         if any(name != "periodic" for pair in bcs for name in pair):
             raise ValueError("TrixiBackend supports periodic boundaries only (V17)")
@@ -202,6 +210,8 @@ class TrixiBackend(SolverBackend):
         return u
 
     def describe(self) -> dict[str, Any]:
+        """The backend's options and the Trixi and Julia versions, which
+        `DatasetRecord.backend` stores."""
         versions = {str(k): str(v) for k, v in dict(_julia().versions()).items()}
         return {
             "name": self.name,

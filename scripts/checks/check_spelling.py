@@ -117,6 +117,8 @@ def walk(paths: Iterable[Path]) -> Iterator[Path]:
 
 
 def main(argv: list[str] | None = None) -> int:
+    """Print every finding in the files under `paths` with its line and suggestion, then
+    the count; return 1 if there are findings, else 0."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("paths", nargs="*", type=Path, default=[Path(".")])
     arguments = parser.parse_args(argv)

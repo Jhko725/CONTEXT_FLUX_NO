@@ -41,6 +41,8 @@ class PeriodicStep1D(InitialCondition):
             raise ValueError("jumps and values must be 1-D of equal length")
 
     def at_points(self, coords: Coords) -> Float[np.ndarray, "1 *shape"]:
+        """The value of the interval of each point of `coords`, after wrapping the point
+        into the periodic domain."""
         (x,) = self.check_coords(coords)
         lo, hi = self.x_span
         xp = lo + np.mod(x - lo, hi - lo)  # into the periodic domain
@@ -52,6 +54,10 @@ class PeriodicStep1D(InitialCondition):
 
 
 class PeriodicRandomStepFunction1D(InitialConditionSampler):
+    """Draw a `PeriodicStep1D` with between `num_jumps_min` and `num_jumps_max` jumps,
+    inclusive, at positions uniform in the domain and with values uniform in
+    `[value_min, value_max)`."""
+
     def __init__(
         self,
         num_jumps_min: int = 2,
@@ -70,6 +76,8 @@ class PeriodicRandomStepFunction1D(InitialConditionSampler):
     def sample(
         self, key: PRNGKeyArray, x_spans: Sequence[Sequence[float]]
     ) -> PeriodicStep1D:
+        """Draw the number of jumps, their positions in the domain `x_spans` and one
+        value per interval, each from its own split of `key`."""
         ((lo, hi),) = (tuple(s) for s in x_spans)
         key_n, key_pos, key_val = jax.random.split(key, 3)
         num_jumps = int(
@@ -101,6 +109,8 @@ class PeriodicVoronoi2D(InitialCondition):
         super().__init__(n_eqn=self.values.shape[0], n_spatial_dims=2)
 
     def at_points(self, coords: Coords) -> Float[np.ndarray, "n_eqn *shape"]:
+        """The values of the nearest seed to each point of `coords`, by the distance on
+        the torus."""
         x, y = self.check_coords(coords)
         dist_sq = np.zeros(x.shape + (self.seeds.shape[0],))
         for axis, c in enumerate((x, y)):
@@ -114,6 +124,11 @@ class PeriodicVoronoi2D(InitialCondition):
 
 
 class PeriodicRandomStepFunction2D(InitialConditionSampler):
+    """Draw a `PeriodicVoronoi2D` with `channels` channels and between `num_regions_min`
+    and `num_regions_max` regions, inclusive. Each channel's values are uniform
+    between its entry of `value_min` and `value_max`; a scalar bound applies to every
+    channel."""
+
     def __init__(
         self,
         channels: int,
@@ -134,6 +149,9 @@ class PeriodicRandomStepFunction2D(InitialConditionSampler):
     def sample(
         self, key: PRNGKeyArray, x_spans: Sequence[Sequence[float]]
     ) -> PeriodicVoronoi2D:
+        """Draw the number of regions, their seeds in the domain `x_spans` and one value
+        vector per region, each from its own split of `key`. Raises `ValueError`
+        unless the domain is 2-D."""
         spans = tuple((float(lo), float(hi)) for lo, hi in x_spans)
         if len(spans) != 2:
             raise ValueError("PeriodicRandomStepFunction2D needs a 2-D domain")

@@ -32,6 +32,8 @@ def git_state() -> tuple[str, bool]:
 
 
 def package_version() -> str:
+    """The installed version of `context-flux-no`; `""` when the package is not
+    installed."""
     try:
         return importlib.metadata.version("context-flux-no")
     except importlib.metadata.PackageNotFoundError:

@@ -16,6 +16,8 @@ from context_flux_no.simulations.backends import trixi
 
 
 def main() -> int:
+    """Resolve the Julia environment of the reference Trixi project, optionally run its
+    tests, and print the backend's description; return 1 when the project is missing."""
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument(
         "--test", action="store_true", help="run the Julia package tests"

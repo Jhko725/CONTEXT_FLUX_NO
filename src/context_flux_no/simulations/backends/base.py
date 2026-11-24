@@ -81,7 +81,9 @@ class SolverBackend(abc.ABC):
         grid: Grid,
         t_out: np.ndarray,
         bcs: BCs,
-    ) -> np.ndarray: ...
+    ) -> np.ndarray:
+        """Evolve `ic` under `pde` on `grid` with boundary conditions `bcs`, returning
+        the state at every time of `t_out` as `[len(t_out), n_eqn, *grid.shape]`."""
 
     def describe(self) -> dict[str, Any]:
         """What `DatasetRecord.backend` stores: enough to rebuild this backend."""
@@ -91,6 +93,9 @@ class SolverBackend(abc.ABC):
     def check_inputs(
         pde: Any, ic: InitialCondition, grid: Grid, t_out: np.ndarray
     ) -> np.ndarray:
+        """Check that `ic` matches `pde` and `grid` in components and dimensions, and
+        that `t_out` is a strictly increasing 1-D array of at least two times; return
+        `t_out` as a `float` array. Raises `ValueError` otherwise."""
         if ic.n_eqn != pde.n_eqns or ic.n_spatial_dims != grid.n_spatial_dims:
             raise ValueError(
                 f"initial condition is {ic.n_eqn} × {ic.n_spatial_dims}-D; "

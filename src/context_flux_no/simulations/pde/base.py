@@ -41,10 +41,13 @@ class AbstractPDEFamily(eqx.Module):
 
     @property
     def coeffs(self) -> dict[str, float]:  # legacy name
+        """The name that older code reads `parameters` by."""
         return self.parameters
 
     @property
     def n_eqns(self) -> int:
+        """The number of state components: `n_spatial_dims**r` for each rank-`r` field
+        of `field_rank_names`, summed."""
         return sum(self.n_spatial_dims**r for r, _ in self.field_rank_names)
 
     def positive_quantities(
@@ -81,13 +84,18 @@ class AbstractPDEFamily(eqx.Module):
 
     @property
     def pyclaw_spec(self) -> Any:
+        """How PyClaw solves the family; raises `NotImplementedError` unless the family
+        overrides it."""
         raise NotImplementedError(f"{type(self).__name__} is not solved by PyClaw")
 
     @property
     def trixi_spec(self) -> Any:
+        """How Trixi solves the family; raises `NotImplementedError` unless the family
+        overrides it."""
         raise NotImplementedError(f"{type(self).__name__} is not solved by Trixi")
 
     def default_backend(self, *, verbose: bool = False) -> SolverBackend:
+        """The backend that `solve` uses when it is given none: Classic PyClaw."""
         from context_flux_no.simulations.backends.pyclaw import PyClawBackend
 
         return PyClawBackend("classic", verbose=verbose)

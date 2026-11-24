@@ -1,3 +1,6 @@
+"""Type aliases shared across the package: scalar and array annotations, and
+`FilterSpec`."""
+
 from collections.abc import Callable
 from typing import Any, TypeAlias
 

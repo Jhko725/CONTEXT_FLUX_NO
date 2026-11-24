@@ -35,6 +35,8 @@ def _model(seed=0):
 
 
 def test_loop_logs_evaluates_and_force_checkpoints_final(tmp_path):
+    """`Trainer.train` logs training and validation metrics at the evaluation steps,
+    checkpoints the final step despite the save policy, and lowers the training loss."""
     trainer = _trainer()
     log = ListLogger()
     ckpt = OrbaxCheckpointer(tmp_path / "ckpt", save_every=100, metric="valid_loss")
@@ -62,6 +64,8 @@ def test_loop_logs_evaluates_and_force_checkpoints_final(tmp_path):
 
 
 def test_same_seed_same_state_and_resume_continues(tmp_path):
+    """Two runs from the same key reach the same state, and a run resumed from a state
+    continues its step count."""
     trainer = _trainer()
     a = trainer.train(_model(), _loader(10), num_steps=10, key=jax.random.key(0))
     b = trainer.train(_model(), _loader(10), num_steps=10, key=jax.random.key(0))
@@ -71,6 +75,8 @@ def test_same_seed_same_state_and_resume_continues(tmp_path):
 
 
 def test_loader_ending_early_warns(tmp_path):
+    """A loader that ends before `num_steps` stops the run with a warning after the
+    steps it gave."""
     trainer = _trainer()
     with pytest.warns(UserWarning, match="ended after 3 of 10"):
         state = trainer.train(_model(), _loader(3), num_steps=10, key=jax.random.key(0))
@@ -78,6 +84,8 @@ def test_loader_ending_early_warns(tmp_path):
 
 
 def test_nonfinite_validation_stops_before_checkpointing(tmp_path):
+    """A non-finite validation metric raises `FloatingPointError` before the state is
+    checkpointed."""
     trainer = _trainer()
     ckpt = OrbaxCheckpointer(tmp_path / "ckpt", save_every=1, metric="valid_loss")
 

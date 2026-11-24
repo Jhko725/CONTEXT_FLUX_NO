@@ -17,6 +17,9 @@ from context_flux_no.simulations.initial_conditions.base import (
 
 
 class TruncatedFourier1D(InitialCondition):
+    """The truncated Fourier series `a0 + mean_n(an[n] cos(k_n x) + bn[n] sin(k_n x)) /
+    sqrt(2)` with `k_n = 2 pi n / L` for `n = 1, ..., K`."""
+
     def __init__(
         self,
         an: Float[Array, " K"],
@@ -34,13 +37,16 @@ class TruncatedFourier1D(InitialCondition):
 
     @property
     def num_modes(self) -> int:
+        """The number of modes `K`."""
         return len(self.an)
 
     @property
     def wavenumbers(self) -> Float[np.ndarray, " K"]:
+        """The wavenumbers `k_n = 2 pi n / L` for `n = 1, ..., K`."""
         return np.arange(1, self.num_modes + 1) * 2 * np.pi / self.L
 
     def at_points(self, coords: Coords) -> Float[np.ndarray, "1 *shape"]:
+        """The series at the points `coords`."""
         (x,) = self.check_coords(coords)
         kx = x[..., None] * self.wavenumbers
         series = np.mean(self.an * np.cos(kx) + self.bn * np.sin(kx), axis=-1)
@@ -71,6 +77,9 @@ class RandomTruncatedFourier1D(InitialConditionSampler):
     def sample(
         self, key: PRNGKeyArray, x_spans: Sequence[Sequence[float]]
     ) -> TruncatedFourier1D:
+        """Draw `an` and `bn` uniformly in `coeff_range`, and `a0` in `offset_range` (0
+        when it is `None`), with the period set to the length of the domain
+        `x_spans`."""
         ((lo, hi),) = (tuple(s) for s in x_spans)
         key_coeff, key_offset = jax.random.split(key, 2)
         an, bn = np.asarray(

@@ -43,9 +43,12 @@ class Checkpointer(abc.ABC):
         metrics: Mapping[str, float],
         *,
         force: bool = False,
-    ) -> bool: ...
+    ) -> bool:
+        """Offer the state of `step` with its validation `metrics`; write it if the save
+        policy says so or `force` is set, and return whether it was written."""
 
     def close(self) -> None:
+        """Release what the checkpointer holds; a no-op unless a subclass overrides it."""
         pass
 
     def __enter__(self):
@@ -56,6 +59,8 @@ class Checkpointer(abc.ABC):
 
 
 class NullCheckpointer(Checkpointer):
+    """A checkpointer that writes nothing, for tests and notebooks."""
+
     def save(
         self,
         step: int,
@@ -64,6 +69,7 @@ class NullCheckpointer(Checkpointer):
         *,
         force: bool = False,
     ) -> bool:
+        """Write nothing and return `False`."""
         return False
 
 
@@ -140,6 +146,7 @@ class OrbaxCheckpointer(Checkpointer):
 
     @property
     def steps(self) -> list[int]:
+        """The saved steps in the directory, in increasing order."""
         return sorted(c.step for c in self._ckptr.checkpoints)
 
     @property
@@ -175,4 +182,5 @@ class OrbaxCheckpointer(Checkpointer):
         return dict(meta) if meta else {}
 
     def close(self) -> None:
+        """Close the underlying Orbax checkpointer."""
         self._ckptr.close()

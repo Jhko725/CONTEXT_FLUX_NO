@@ -1,10 +1,13 @@
+"""The Burgers families: inviscid `Burgers1D`, solved by PyClaw or Trixi, and
+`ViscousBurgers1D`, which has its own explicit stepper."""
+
 from typing import ClassVar
 
 import equinox as eqx
 import jax.numpy as jnp
 import numpy as np
 from clawpack import riemann
-from jaxtyping import Float
+from jaxtyping import Array, Float
 
 from context_flux_no.simulations.backends.pyclaw import PyClawSpec
 from context_flux_no.simulations.backends.trixi import TrixiSpec
@@ -22,10 +25,13 @@ class Burgers1D(AbstractPDEFamily):
 
     @property
     def parameters(self) -> dict[str, float]:
+        """The physical parameters by name, recorded as the Well `scalars` of a dataset."""
         return {"nu": self.nu}
 
     @property
     def pyclaw_spec(self) -> PyClawSpec:
+        """Clawpack's compiled `riemann.burgers_1D` with the entropy fix of
+        `entropy_fix` and the van Leer limiter."""
         return PyClawSpec(
             riemann_solver=riemann.burgers_1D,
             num_waves=1,
@@ -36,6 +42,7 @@ class Burgers1D(AbstractPDEFamily):
 
     @property
     def trixi_spec(self) -> TrixiSpec:
+        """Trixi's own `InviscidBurgersEquation1D`, which has no parameters."""
         return TrixiSpec(
             "InviscidBurgersEquation1D"
         )  # Trixi's own; `nu` unused, as in PyClaw
@@ -71,12 +78,14 @@ class ViscousBurgers1D(AbstractPDEFamily):
 
     @property
     def parameters(self) -> dict[str, float]:
+        """The physical parameters by name, recorded as the Well `scalars` of a dataset."""
         return {"a": self.a, "b": self.b}
 
     def flux(
         self,
         u: Float[np.ndarray, " Nx"],
     ) -> Float[np.ndarray, " Nx"]:
+        """The flux `f(u) = a u**2`."""
         return self.a * u**2
 
     def solve(
@@ -135,6 +144,49 @@ class ViscousBurgers1D(AbstractPDEFamily):
                 f"initial condition must have shape (1, Nx), got {u.shape}."
             )
 
+        u_save = self._march_to_save_times(u, dx, t0, t_save, cfl, max_steps)
+        return u_save, t_save, (x_grid,)
+
+    def _stable_time_step(
+        self, u: Float[Array, " Nx"], dx: float, cfl: float
+    ) -> float | np.floating:
+        """The explicit step size: `cfl` times the smaller of the advective limit
+        `dx / max|f'(u)|`, with `f'(u) = 2 a u`, and the diffusive limit
+        `0.5 dx**2 / b`. A limit whose speed or coefficient is below `1e-14` is
+        infinite."""
+        # Characteristic speed for f(u) = a u^2:
+        # f'(u) = 2 a u
+        max_adv_speed = np.max(np.abs(2.0 * self.a * u))
+
+        if max_adv_speed > 1e-14:
+            dt_adv = dx / max_adv_speed
+        else:
+            dt_adv = np.inf
+
+        if self.b > 1e-14:
+            dt_diff = 0.5 * dx**2 / self.b
+        else:
+            dt_diff = np.inf
+
+        return cfl * min(dt_adv, dt_diff)
+
+    def _march_to_save_times(
+        self,
+        u: Float[Array, " Nx"],
+        dx: float,
+        t0: float,
+        t_save: Float[np.ndarray, " time"],
+        cfl: float,
+        max_steps: int,
+    ) -> Float[np.ndarray, "time 1 Nx"]:
+        """The solution at every time of `t_save`, stepped from `u` at `t0`, which is
+        `t_save[0]`. A step that would pass the next save time is shortened to land on
+        it.
+
+        Raises `RuntimeError` after more than `max_steps` steps.
+        """
+        Nx = u.shape[0]
+        Nt = t_save.shape[0] - 1
         u_save = np.zeros((Nt + 1, 1, Nx), dtype=float)
         u_save[0, 0, :] = u
 
@@ -153,21 +205,7 @@ class ViscousBurgers1D(AbstractPDEFamily):
                     "Try increasing b, decreasing Nx, or increasing cfl carefully."
                 )
 
-            # Characteristic speed for f(u) = a u^2:
-            # f'(u) = 2 a u
-            max_adv_speed = np.max(np.abs(2.0 * self.a * u))
-
-            if max_adv_speed > 1e-14:
-                dt_adv = dx / max_adv_speed
-            else:
-                dt_adv = np.inf
-
-            if self.b > 1e-14:
-                dt_diff = 0.5 * dx**2 / self.b
-            else:
-                dt_diff = np.inf
-
-            dt = cfl * min(dt_adv, dt_diff)
+            dt = self._stable_time_step(u, dx, cfl)
 
             next_save_t = t_save[save_idx]
             if t + dt > next_save_t:
@@ -187,7 +225,7 @@ class ViscousBurgers1D(AbstractPDEFamily):
                 u_save[save_idx, 0, :] = u
                 save_idx += 1
 
-        return u_save, t_save, (x_grid,)
+        return u_save
 
     def _step_periodic(
         self,

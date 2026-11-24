@@ -67,6 +67,10 @@ def _bc_enum(name: str) -> int:
 
 
 class PyClawBackend(SolverBackend):
+    """Solve a family through PyClaw, with the Classic (`"classic"`) or the SharpClaw
+    (`"sharpclaw"`) scheme and the family's `pyclaw_spec`. PyClaw's own failures
+    become `SolverFailure`."""
+
     name = "pyclaw"
 
     def __init__(
@@ -87,6 +91,10 @@ class PyClawBackend(SolverBackend):
 
     # ------------------------------------------------------------------ setup ----
     def build_solver(self, pde: Any, n_spatial_dims: int) -> Any:
+        """Build the PyClaw solver of `pde.pyclaw_spec` for the scheme, with the spec's
+        options of that scheme and then `solver_overrides` set on it. Raises
+        `ValueError` for a grid PyClaw cannot solve: more than three dimensions, a
+        Python kernel above one dimension, or SharpClaw in three dimensions."""
         from clawpack import pyclaw
 
         spec: PyClawSpec = pde.pyclaw_spec
@@ -132,6 +140,9 @@ class PyClawBackend(SolverBackend):
         t_out: np.ndarray,
         bcs: BCs,
     ) -> np.ndarray:
+        """Run PyClaw from the point values of `ic` at the cell centers to the last time
+        of `t_out`, keeping a frame at every time of `t_out`. Raises `SolverFailure`
+        when PyClaw raises or the last frame is not finite."""
         from clawpack import pyclaw
 
         t_out = self.check_inputs(pde, ic, grid, t_out)
@@ -181,6 +192,8 @@ class PyClawBackend(SolverBackend):
         return u
 
     def describe(self) -> dict[str, Any]:
+        """The scheme, the clawpack version and the solver overrides, which
+        `DatasetRecord.backend` stores."""
         import clawpack
 
         return {

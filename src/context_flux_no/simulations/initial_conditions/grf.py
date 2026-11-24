@@ -36,6 +36,8 @@ class GaussianRandomFieldCondition(InitialCondition):
         self.scales = np.asarray(scales, dtype=float)
 
     def at_points(self, coords: Coords) -> Float[np.ndarray, "n_eqn *shape"]:
+        """Each channel's drawn field at `coords`, scaled by `scales` and shifted by
+        `means`."""
         arrays = self.check_coords(coords)
         shape = arrays[0].shape
         pos = tuple(a.ravel() for a in arrays)
@@ -92,6 +94,9 @@ class GaussianRandomField(InitialConditionSampler):
     def sample(
         self, key: PRNGKeyArray, x_spans: Sequence[Sequence[float]]
     ) -> GaussianRandomFieldCondition:
+        """Draw one gstools seed per channel from `key`, on the CPU. Raises `ValueError`
+        unless the domain has the sampler's dimension and every axis has length
+        `period`."""
         if len(x_spans) != self.n_spatial_dims:
             raise ValueError(
                 f"sampler is {self.n_spatial_dims}-D, domain has {len(x_spans)} axes"

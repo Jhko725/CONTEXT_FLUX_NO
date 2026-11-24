@@ -26,4 +26,5 @@ def _module_names() -> list[str]:
 
 @pytest.mark.parametrize("module", _module_names())
 def test_module_imports(module: str):
+    """The module imports."""
     importlib.import_module(module)

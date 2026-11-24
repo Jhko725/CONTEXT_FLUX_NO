@@ -30,6 +30,8 @@ HORIZON = {
 
 
 def l1_classic_vs_sharpclaw(pde, ic, x_spans, N, T, **kwargs) -> float:
+    """The mean absolute difference between the final states of Classic and SharpClaw on
+    an `N`-cell grid per axis after one output interval of length `T`."""
     u_classic, *_ = pde.solve(
         ic, x_spans, [N] * len(x_spans), (0, T), 1, "periodic", **kwargs
     )
@@ -48,6 +50,8 @@ def l1_classic_vs_sharpclaw(pde, ic, x_spans, N, T, **kwargs) -> float:
 
 @pytest.mark.parametrize("name", sorted(HORIZON))
 def test_classic_and_sharpclaw_converge_to_each_other(name):
+    """The difference between Classic and SharpClaw falls by at least `MIN_RATIO` with
+    every doubling of the grid."""
     pde, ic, x_spans, *_ = CASES[name]
     d = [
         l1_classic_vs_sharpclaw(pde, ic, x_spans, N, HORIZON[name])

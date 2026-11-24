@@ -190,3 +190,11 @@ end of the branch.
 | `tests/unit/test_generate_dataset.py` — uses `make_dataset_record` from `tests/helpers.py` in place of its local `_record` | | |
 | `tests/unit/test_cost.py` — new: the rebuttal branch's FLOP-count and measurement tests on a matrix product | | |
 | `tests/unit/test_evaluate.py` — new: trains a tiny FNO on a synthetic store and checks the result file and record of `scripts/evaluate.py` | | |
+| `pyproject.toml` — ruff selects `W605`, `D100` to `D103` and `C901` at complexity 8, as UFR's does, and exempts every path outside the clean list from the `D` rules | | |
+| `src/context_flux_no/` — a docstring on every public module, class, method and function of the clean paths; `runs/run.py` and `training/trainer.py` name `scripts/train.py` in place of the deleted training script | | |
+| `src/context_flux_no/runs/record.py` — `index_from_config` reads the config through the new module-level `_config_value` and `_peak_learning_rate` | | |
+| `src/context_flux_no/simulations/pde/burgers.py` — `ViscousBurgers1D.solve` steps through the new `_march_to_save_times`, which takes its step size from the new `_stable_time_step` | | |
+| `src/context_flux_no/simulations/writer.py` — `WellWriter.create` writes its groups through the new `_write_dimensions`, `_write_boundary_conditions` and `_create_field_arrays` | | |
+| `src/context_flux_no/training/trainer.py` — `Trainer.train` uses the new `_initial_state`, `_check_loop_lengths`, `_first_batches` and `_logged_validation_metrics` | | |
+| `tests/` — a docstring on every test function and on the test modules and script that lacked one, each stating what it checks | | |
+| `scripts/` — a docstring on every `main`; `training/configs/training/the_well.yaml` names `experiment.state_template` | | |

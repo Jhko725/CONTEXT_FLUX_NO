@@ -35,6 +35,7 @@ _flat = st.dictionaries(st.text(min_size=1, max_size=10), _scalar, max_size=6)
     status=st.sampled_from(["running", "finished", "failed"]),
 )
 def test_json_round_trip(index, model_config, best_step, best_metric, status):
+    """A `RunRecord` survives a JSON round trip."""
     rec = copy.replace(
         RunRecord.create(index=index, model_config=model_config),
         status=status,
@@ -47,6 +48,7 @@ def test_json_round_trip(index, model_config, best_step, best_metric, status):
 
 @pytest.mark.parametrize("status", ["legacy", "unknown", None])
 def test_read_raises_on_an_unknown_status(tmp_path, status):
+    """Reading a record with a status outside `Status` raises `ValueError`."""
     rec = RunRecord.create(index={}, model_config={})
     path = tmp_path / "metadata.json"
     path.write_text(dumps(dataclasses.asdict(rec) | {"status": status}))
@@ -55,6 +57,7 @@ def test_read_raises_on_an_unknown_status(tmp_path, status):
 
 
 def test_unknown_fields_survive_as_extra():
+    """Keys that are not fields survive reading under `extra["_unknown"]`."""
     rec = RunRecord.create(index={}, model_config={})
     d = dataclasses.asdict(rec) | {"future_field": 1}
     back = RunRecord.from_dict(d)
@@ -63,6 +66,8 @@ def test_unknown_fields_survive_as_extra():
 
 
 def test_create_records_provenance_and_ids_are_unique():
+    """`RunRecord.create` gives every record a new id, the git state, status `"running"`
+    and the schema version."""
     a, b = (
         RunRecord.create(index={}, model_config={}),
         RunRecord.create(index={}, model_config={}),
@@ -74,6 +79,7 @@ def test_create_records_provenance_and_ids_are_unique():
 
 
 def test_index_from_config_reads_the_training_config_layout():
+    """`index_from_config` reads every index column from the training config layout."""
     cfg = OmegaConf.create(
         {
             "model": {
@@ -106,12 +112,15 @@ def test_index_from_config_reads_the_training_config_layout():
 
 
 def test_index_from_config_tolerates_missing_sections():
+    """`index_from_config` returns `None` for every column whose config section is
+    missing."""
     idx = index_from_config({"training": {"optimizer": {"learning_rate": 1e-3}}})
     assert idx["peak_lr"] == 1e-3
     assert all(idx[k] is None for k in INDEX_COLUMNS if k != "peak_lr")
 
 
 def test_row_is_flat_json():
+    """`RunRecord.row` is one flat row of JSON values."""
     rec = RunRecord.create(index={"model": "M"}, model_config={})
     row = rec.row()
     assert row["model"] == "M" and row["run_id"] == rec.run_id

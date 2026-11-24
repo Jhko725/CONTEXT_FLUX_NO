@@ -1,3 +1,8 @@
+"""Random-access data sources over Well-schema stores, for grain: each item is one
+window of `window_size` consecutive frames of one trajectory, as `[time, channel,
+*grid]`. `ZarrWellDatasetSource` reads the zarr stores that `simulations.WellWriter`
+writes, and `TheWellDataSource` reads The Well's HDF5 files."""
+
 import abc
 import contextlib
 import os
@@ -77,6 +82,19 @@ def filter_paths(
 
 
 class WellDatasetSourceBase(grain.sources.RandomAccessDataSource):
+    """The windows of every trajectory in the files of one dataset split, read through
+    `open_datapath`.
+
+    The constructor lists the files with `get_datapaths`, keeps those that pass
+    `include_filters` and `exclude_filters`, checks that they agree on fields and
+    shapes, and counts `window_size`-frame windows per trajectory. With
+    `use_normalization`, it reads the mean and standard deviation from the dataset's
+    `stats.yaml` and z-scores every window. With `preload_into_ram`, it reads every file
+    into memory once. Raises `ValueError` when no file passes the filters.
+
+    Subclasses implement `get_datapaths` and `open_datapath`.
+    """
+
     well_base_path: Path
     well_dataset_name: str
     well_split_name: Literal["train", "valid", "test"]
@@ -173,11 +191,13 @@ class WellDatasetSourceBase(grain.sources.RandomAccessDataSource):
         self.preload_cache = self._preload_into_ram() if preload_into_ram else None
 
     @abc.abstractmethod
-    def get_datapaths(self) -> list[str | Path]: ...
+    def get_datapaths(self) -> list[str | Path]:
+        """The paths of the dataset split's files, before filtering."""
 
     @contextlib.contextmanager
     @abc.abstractmethod
-    def open_datapath(self, filepath: str | Path) -> Iterator[HierarchicalStorage]: ...
+    def open_datapath(self, filepath: str | Path) -> Iterator[HierarchicalStorage]:
+        """Open the file at `filepath` for reading, as a context manager."""
 
     def _check_consistency_and_build_metadata(self):
         """For the individual files in .hdf5, make sure that they have matching fields,
@@ -366,6 +386,7 @@ class WellDatasetSourceBase(grain.sources.RandomAccessDataSource):
 
     @cached_property
     def valid_field_names(self) -> tuple[tuple[str, ...], ...]:
+        """The field names of each rank, without those in `exclude_field_names`."""
         valid_names = []
         for names in self.metadata_common["field_names"]:
             valid_names.append(
@@ -385,6 +406,9 @@ class WellDatasetSourceBase(grain.sources.RandomAccessDataSource):
 
 
 class ZarrWellDatasetSource(WellDatasetSourceBase):
+    """The zarr stores (`*.zarr` or `*.zarr.zip`) of one split, under
+    `<base>/<dataset>/data/<split>/`, read without normalization."""
+
     def __init__(
         self,
         well_base_path: Path | str,
@@ -411,6 +435,7 @@ class ZarrWellDatasetSource(WellDatasetSourceBase):
         )
 
     def get_datapaths(self) -> list[str | Path]:  # TODO: fix type annotation
+        """The `*.zarr` and `*.zarr.zip` stores of the split, sorted."""
         dataset_dir = (
             self.well_base_path / self.well_dataset_name / "data" / self.well_split_name
         )
@@ -422,12 +447,17 @@ class ZarrWellDatasetSource(WellDatasetSourceBase):
 
     @contextlib.contextmanager
     def open_datapath(self, filepath: str | Path) -> Iterator[HierarchicalStorage]:
+        """Open the zarr store at `filepath` read-only."""
         root = zarr.open_group(filepath, mode="r")
         yield root  # TODO: fix protocol
         del root
 
 
 class TheWellDataSource(WellDatasetSourceBase):
+    """The HDF5 files of one split of a dataset of The Well, under
+    `<base>/<dataset>/data/<split>/`, z-scored by default with the dataset's `stats.yaml`.
+    `downsample_spatial` multiplies the spatial resolution of the metadata."""
+
     # TODO: inherit from WellDatasetSourceBase and only implement the abstractmethods
     well_base_path: Path
     well_dataset_name: str
@@ -532,6 +562,8 @@ class TheWellDataSource(WellDatasetSourceBase):
             )
 
     def get_datapaths(self) -> list[str | Path]:  # TODO: fix type annotation
+        """The `*.h5` and `*.hdf5` files of the split on the source's filesystem,
+        sorted."""
         dataset_dir = os.path.join(
             self.well_base_path, self.well_dataset_name, "data", self.well_split_name
         )
@@ -543,6 +575,8 @@ class TheWellDataSource(WellDatasetSourceBase):
 
     @contextlib.contextmanager
     def open_datapath(self, filepath: str | Path) -> Iterator[HierarchicalStorage]:
+        """Open the HDF5 file at `filepath` read-only, through fsspec with The Well's
+        I/O parameters."""
         _f = self.filesystem.open(filepath, "rb", **IO_PARAMS["fsspec_params"])
         root = h5py.File(_f, "r", **IO_PARAMS["h5py_params"])
         yield root  # TODO: fix protocol

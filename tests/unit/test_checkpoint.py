@@ -1,3 +1,6 @@
+"""Laws of `NullCheckpointer` and `OrbaxCheckpointer`: the save policy, `force`, the
+kept checkpoints and the restore round trip."""
+
 import equinox as eqx
 import jax
 import optax
@@ -16,10 +19,13 @@ def _state(seed=0):
 
 
 def test_null_checkpointer_never_saves():
+    """`NullCheckpointer.save` never writes."""
     assert NullCheckpointer().save(1, _state(), {"valid_loss": 1.0}) is False
 
 
 def test_save_restore_roundtrip(tmp_path):
+    """A forced save restores the saved array leaves into a template with other values,
+    and the directory keeps its `custom_metadata`."""
     state = _state()
     with OrbaxCheckpointer(
         tmp_path / "ckpt", metric="valid_loss", custom_metadata={"k": "v"}
@@ -34,6 +40,8 @@ def test_save_restore_roundtrip(tmp_path):
 
 
 def test_policy_every_and_force(tmp_path):
+    """With `save_every=5`, a save off the policy is skipped, one on it is written, and
+    `force` writes a step off the policy."""
     state = _state()
     with OrbaxCheckpointer(tmp_path / "ckpt", save_every=5, metric=None) as c:
         assert c.save(1, state, {}) is False  # off policy
@@ -45,6 +53,8 @@ def test_policy_every_and_force(tmp_path):
 
 
 def test_best_and_latest_kept(tmp_path):
+    """With `keep_best=1`, the best checkpoint by the metric and the latest one are
+    kept, and the others are deleted."""
     s = _state()
     with OrbaxCheckpointer(
         tmp_path / "ckpt", save_every=1, metric="valid_loss", keep_best=1
@@ -57,6 +67,7 @@ def test_best_and_latest_kept(tmp_path):
 
 
 def test_missing_metric_raises(tmp_path):
+    """A save that lacks the checkpointer's metric raises `KeyError` naming the metric."""
     with OrbaxCheckpointer(tmp_path / "ckpt", metric="valid_loss") as c:
         with pytest.raises(KeyError, match="valid_loss"):
             c.save(1, _state(), {"train_loss": 1.0})

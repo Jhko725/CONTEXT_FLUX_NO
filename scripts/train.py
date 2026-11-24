@@ -18,6 +18,7 @@ from omegaconf import DictConfig
 
 @hydra.main(config_path="training/configs", config_name="config", version_base=None)
 def main(cfg: DictConfig) -> None:
+    """Train the model of `cfg` on the train and valid splits of its data config."""
     experiment.select_device(cfg)
 
     model = hydra.utils.instantiate(cfg.model)

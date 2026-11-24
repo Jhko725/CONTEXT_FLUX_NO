@@ -5,7 +5,7 @@ PRNG key — and is what gets checkpointed. `Trainer(optimizer, loss_fn)` owns t
 `train_step` and `valid_step` and the loop; it has **no side effects of its own**: logging,
 checkpointing and evaluation are injected (`training.loggers`, `training.checkpoint`), so a
 test runs the loop with `ListLogger()` and a temporary `OrbaxCheckpointer`, and a notebook
-can run it with anything. The experiment script (`scripts/training/train_multiphysics.py`)
+can run it with anything. The experiment script (`scripts/train.py`)
 assembles the run directory (`runs.Run`), the wandb run (`experiment.build_wandb_run`) and
 the loaders around it.
 
@@ -24,10 +24,9 @@ Design, inspired by Levanter's `TrainerState` and `deep_isochron.training.traine
 from __future__ import annotations
 
 import copy
-import itertools
 import math
 import warnings
-from collections.abc import Callable, Iterable, Mapping
+from collections.abc import Callable, Iterable, Iterator, Mapping
 from functools import cached_property
 from typing import Any, Self, TypeVar
 
@@ -49,6 +48,10 @@ M = TypeVar("M", bound=eqx.Module)
 
 
 class TrainerState[M: eqx.Module](eqx.Module):
+    """Everything a run needs to continue: the model, the optimizer state, the step and
+    the PRNG key, with the optimizer and the filter of the trainable leaves as static
+    fields. It is what gets checkpointed."""
+
     step: IntScalar
     model: M
     opt_state: optax.OptState
@@ -66,6 +69,8 @@ class TrainerState[M: eqx.Module](eqx.Module):
         *,
         key: PRNGKeyArray,
     ):
+        """The state at step 0: the optimizer initialized on the trainable leaves of
+        `model`, and `key` as the training key."""
         # Making this the __init__ would clash with the use of replace()
         opt_state = optimizer.init(
             eqx.filter(model, is_trainable)  # ty: ignore[invalid-argument-type]
@@ -124,6 +129,8 @@ class Trainer:
 
     # ------------------------------------------------------------------ state ----
     def init(self, model: M, *, key: PRNGKeyArray) -> TrainerState[M]:
+        """The state at step 0 of `model` with this trainer's optimizer and filter of
+        the trainable leaves."""
         return TrainerState[M].init(model, self.optimizer, self.is_trainable, key=key)
 
     # ------------------------------------------------------------------ steps ----
@@ -131,6 +138,9 @@ class Trainer:
     def train_step(
         self,
     ) -> Callable[[TrainerState[M], Batch], tuple[TrainerState[M], Metrics]]:
+        """`train_step(state, batch)`, JIT-compiled: one optimizer step on the loss of
+        `batch` in training mode. Returns the next state and the metrics,
+        `train_loss` among them."""
         return eqx.filter_jit(self._train_step)
 
     def _train_step(
@@ -145,6 +155,8 @@ class Trainer:
 
     @cached_property
     def valid_step(self) -> Callable[[TrainerState[M], Batch], Metrics]:
+        """`valid_step(state, batch)`, JIT-compiled: the loss of `batch` in inference
+        mode, as the metrics with `valid_loss` among them."""
         return eqx.filter_jit(self._valid_step)
 
     def _valid_step(self, state: TrainerState[M], batch: Batch) -> Metrics:
@@ -166,6 +178,17 @@ class Trainer:
         return evaluate
 
     # ------------------------------------------------------------------ loop -----
+    def _initial_state(
+        self, model_or_state: M | TrainerState[M], key: PRNGKeyArray | None
+    ) -> TrainerState[M]:
+        """The state to train from: `model_or_state` itself when it is a
+        `TrainerState`, else a fresh state of the model, which needs `key`."""
+        if isinstance(model_or_state, TrainerState):
+            return model_or_state
+        if key is None:
+            raise ValueError("key is required when starting from a model.")
+        return self.init(model_or_state, key=key)
+
     def train(
         self,
         model_or_state: M | TrainerState[M],
@@ -188,16 +211,8 @@ class Trainer:
         last checkpoint on disk is finite. The logger and checkpointer are entered as
         context managers, so they close — and the `DelayedLogger` flushes — even if a step
         raises."""
-        if isinstance(model_or_state, TrainerState):
-            state = model_or_state
-        else:
-            if key is None:
-                raise ValueError("key is required when starting from a model.")
-            state = self.init(model_or_state, key=key)
-        if eval_every < 1:
-            raise ValueError("eval_every must be a positive integer.")
-        if num_steps < 0:
-            raise ValueError("num_steps must be non-negative.")
+        state = self._initial_state(model_or_state, key)
+        _check_loop_lengths(num_steps, eval_every)
         log: Logger = NullLogger() if logger is None else logger
         ckpt: Checkpointer = (
             NullCheckpointer() if checkpointer is None else checkpointer
@@ -209,32 +224,21 @@ class Trainer:
         def evaluate_and_save(step: int, *, force: bool = False) -> None:
             nonlocal saved_step, last_eval
             assert evaluate is not None
-            val_metrics = {k: float(v) for k, v in evaluate(state).items()}
+            val_metrics = _logged_validation_metrics(
+                evaluate(state),
+                step,
+                log,
+                stop_on_nonfinite=stop_on_nonfinite,
+                saved_step=saved_step,
+            )
             last_eval = (step, val_metrics)
-            log.log(val_metrics, step)
-            bad = sorted(k for k, v in val_metrics.items() if not math.isfinite(v))
-            if stop_on_nonfinite and bad:
-                raise FloatingPointError(
-                    f"non-finite validation metrics at step {step}: {bad}; the state was "
-                    f"not checkpointed (last checkpoint: step {saved_step})."
-                )
             if ckpt.save(step, state, val_metrics, force=force):
                 saved_step = step
 
         batches = iter(train_loader)
         step = int(state.step)  # Python-side counter: the device value is never read
         with log, ckpt:
-            for i in itertools.count():
-                if i >= num_steps:
-                    break
-                try:
-                    batch = next(batches)
-                except StopIteration:
-                    warnings.warn(
-                        f"the loader ended after {i} of {num_steps} steps.",
-                        stacklevel=2,
-                    )
-                    break
+            for batch in _first_batches(batches, num_steps):
                 state, metrics = self.train_step(state, batch)
                 step += 1
                 log.log(metrics, step)
@@ -252,3 +256,50 @@ class Trainer:
                 else:
                     evaluate_and_save(step, force=True)
         return state
+
+
+def _logged_validation_metrics(
+    metrics: Metrics,
+    step: int,
+    log: Logger,
+    *,
+    stop_on_nonfinite: bool,
+    saved_step: int,
+) -> dict[str, float]:
+    """Convert validation `metrics` to floats and log them at `step`.
+
+    With `stop_on_nonfinite`, raises `FloatingPointError` naming the non-finite metrics
+    and `saved_step`, the step of the last checkpoint.
+    """
+    val_metrics = {k: float(v) for k, v in metrics.items()}
+    log.log(val_metrics, step)
+    bad = sorted(k for k, v in val_metrics.items() if not math.isfinite(v))
+    if stop_on_nonfinite and bad:
+        raise FloatingPointError(
+            f"non-finite validation metrics at step {step}: {bad}; the state was "
+            f"not checkpointed (last checkpoint: step {saved_step})."
+        )
+    return val_metrics
+
+
+def _check_loop_lengths(num_steps: int, eval_every: int) -> None:
+    """Raise `ValueError` unless `eval_every` is positive and `num_steps` non-negative."""
+    if eval_every < 1:
+        raise ValueError("eval_every must be a positive integer.")
+    if num_steps < 0:
+        raise ValueError("num_steps must be non-negative.")
+
+
+def _first_batches(batches: Iterator[Batch], num_steps: int) -> Iterator[Batch]:
+    """The first `num_steps` batches of `batches`, with a warning when the loader ends
+    before them."""
+    for i in range(num_steps):
+        try:
+            batch = next(batches)
+        except StopIteration:
+            warnings.warn(
+                f"the loader ended after {i} of {num_steps} steps.",
+                stacklevel=3,
+            )
+            return
+        yield batch

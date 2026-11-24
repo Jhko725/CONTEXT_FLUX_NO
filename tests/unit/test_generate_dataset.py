@@ -44,6 +44,8 @@ _flat = st.dictionaries(st.text(min_size=1, max_size=8), _scalar, max_size=5)
 @settings(max_examples=30, deadline=None)
 @given(extra=_flat, n_failed=st.integers(0, 100))
 def test_record_round_trip(extra, n_failed):
+    """A `DatasetRecord` survives a JSON round trip, and its id starts with the dataset
+    name and split."""
     rec = copy.replace(
         make_dataset_record(extra=extra), n_failed=n_failed, status="complete"
     )
@@ -52,11 +54,15 @@ def test_record_round_trip(extra, n_failed):
 
 
 def test_record_sidecar_path(tmp_path):
+    """`sidecar_path` drops the `.zarr` or `.zarr.zip` suffix and adds `.dataset.json`."""
     assert sidecar_path(tmp_path / "a_seed=0.zarr").name == "a_seed=0.dataset.json"
     assert sidecar_path(tmp_path / "a.zarr.zip").name == "a.dataset.json"
 
 
 def test_writer_layout_and_boundary_conditions(tmp_path):
+    """`WellWriter` writes the boundary-condition groups and masks of periodic and of
+    non-periodic axes, and `finalize` shrinks the store to the trajectories written
+    and records the failures."""
     pde = CubicFlux1D(1.0, 0.0, 0.0)
     grid = Grid(((0.0, 1.0),), (8,))
     t_out = np.linspace(0, 0.1, 3)
@@ -141,6 +147,8 @@ def _write_and_read_back(
 
 
 def test_store_channel_order_of_euler_2d_matches_the_store(tmp_path):
+    """`store_channel_order` of `Euler2D` is the permutation between the family's
+    channel order and the order that a store reads back in."""
     pde = Euler2D()
     u_family, u_store = _write_and_read_back(
         tmp_path, pde, Grid(((0, 1), (0, 1)), (4, 3))
@@ -154,6 +162,7 @@ def test_store_channel_order_of_euler_2d_matches_the_store(tmp_path):
 
 
 def test_store_channel_order_of_a_scalar_family_is_the_identity(tmp_path):
+    """A family with one scalar field reads back in its own order."""
     pde = CubicFlux1D(1.0, 0.0, 0.0)
     u_family, u_store = _write_and_read_back(tmp_path, pde, Grid(((0, 1),), (8,)))
     assert store_channel_order(pde.field_rank_names, pde.n_spatial_dims) == (0,)
@@ -161,6 +170,8 @@ def test_store_channel_order_of_a_scalar_family_is_the_identity(tmp_path):
 
 
 def test_generate_dataset_end_to_end(tmp_path):
+    """`generate_dataset` writes a complete store whose record holds the backend, the
+    family, the parameter ranges and the initial-condition description."""
     pytest.importorskip("clawpack")
 
     class SinePhase(InitialConditionSampler):
