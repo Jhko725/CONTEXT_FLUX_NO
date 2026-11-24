@@ -9,5 +9,3 @@ source:
   well_dataset_name: "cubic_1d"
   restrict_trajectory_lengths_to: 80
   preload_into_ram: true
-
-worker_count: 0

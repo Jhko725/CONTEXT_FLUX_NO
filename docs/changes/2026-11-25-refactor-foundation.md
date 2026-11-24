@@ -146,3 +146,13 @@ end of the branch.
 | `src/context_flux_no/data/sources.py` — new property `WellDatasetSourceBase.loss_args`, `(dt, *dxs)` from `metadata_common` | | |
 | `scripts/training/README.md` — names `scripts/train.py`, the `source:` node and the census test | | |
 | `README.md` — names `scripts/train.py` and the two tests that replace the census and import scripts | | |
+| `src/context_flux_no/data/loader.py` — new: `make_loader`, the one loader pipeline, and `gc_paused`, which no driver uses yet | | |
+| `src/context_flux_no/data/__init__.py` — exports `make_loader` and `gc_paused` | | |
+| `src/context_flux_no/data/sources.py` — `WellDatasetSourceBase.__getitem__` names its argument `index` as the base protocol does; its `ty: ignore` removed | | |
+| `src/context_flux_no/experiment.py` — module docstring names `scripts/train.py` instead of the deleted scripts | | |
+| `scripts/train.py` — its local `make_loader` removed; the loaders come from `data.make_loader` | | |
+| `scripts/bench_loader.py` — new: prints the host and device batches per second of `make_loader` on a named data config | | |
+| `scripts/training/configs/data/` — `worker_count` removed: nothing read it | | |
+| `scripts/training/configs/training/the_well.yaml` — the opening comment no longer names `train_the_well.py` | | |
+| `tests/unit/test_loader.py` — new: the laws of `make_loader` and `gc_paused` on an in-memory source | | |
+| `scripts/training/train_multiphysics.py` — deleted: replaced by `scripts/train.py`; git no longer reads the pair as a rename once the local `make_loader` is gone | | |

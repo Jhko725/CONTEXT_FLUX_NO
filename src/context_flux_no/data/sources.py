@@ -320,9 +320,11 @@ class WellDatasetSourceBase(grain.sources.RandomAccessDataSource):
     def __len__(self) -> int:
         return self.file_index_offsets[-1]
 
-    def __getitem__(self, idx: int) -> Float[Array, "time *spatial_dims channel"]:  # ty: ignore[invalid-method-override]
-        file_idx = int(np.searchsorted(self.file_index_offsets, idx, side="right")) - 1
-        idx_local = idx - self.file_index_offsets[file_idx]
+    def __getitem__(self, index: int) -> Float[Array, "time *spatial_dims channel"]:
+        file_idx = (
+            int(np.searchsorted(self.file_index_offsets, index, side="right")) - 1
+        )
+        idx_local = index - self.file_index_offsets[file_idx]
         idx_window, idx_traj = divmod(
             idx_local, self.metadata_varying["n_trajectories"][file_idx]
         )

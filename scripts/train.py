@@ -10,30 +10,10 @@ The run lives in Hydra's output directory (`runs/<date>/<time>`): `config.yaml`,
 `metadata.json`, `checkpoints/`, `.hydra/` and (if enabled) `wandb/`. See `runs.run`.
 """
 
-import grain
 import hydra
-import jax
 from context_flux_no import experiment
-from context_flux_no.data import WellDatasetSourceBase
+from context_flux_no.data import make_loader, WellDatasetSourceBase
 from omegaconf import DictConfig
-
-
-def make_loader(source: WellDatasetSourceBase, *, batch_size: int, seed: int):
-    loader = (
-        grain.MapDataset.source(source)
-        .seed(seed)
-        .shuffle()
-        .repeat()
-        .batch(batch_size=batch_size, drop_remainder=True)
-        .to_iter_dataset(
-            read_options=grain.ReadOptions(prefetch_buffer_size=20)
-        )  # batches buffered on host
-        .map(lambda x: jax.device_put(x, jax.extend.backend.get_default_device()))
-    )
-    return grain.experimental.ThreadPrefetchIterDataset(
-        loader,
-        prefetch_buffer_size=10,  # batches buffered on device
-    )
 
 
 @hydra.main(config_path="training/configs", config_name="config", version_base=None)

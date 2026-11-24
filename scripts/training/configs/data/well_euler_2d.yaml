@@ -9,5 +9,3 @@ source:
   well_dataset_name: "euler_multi_quadrants_periodicBC"
   downsample_spatial: 8
   use_normalization: true
-
-worker_count: 6

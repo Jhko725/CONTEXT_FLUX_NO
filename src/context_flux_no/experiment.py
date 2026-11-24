@@ -1,7 +1,6 @@
-"""Config → objects (ADR-0010). What the training scripts (`scripts/training/`) share: assembling a `Run`, its loggers and checkpointer around
-the `Trainer`, and the resume / warm-start handling of `cfg.resume` / `cfg.warm_start`
-(ADR-0010). The scripts keep only what differs between them — the data source and the
-loaders."""
+"""Config to objects (ADR-0010) for `scripts/train.py`: assembling a `Run`, its loggers and
+checkpointer around the `Trainer`, and the resume and warm-start handling of `cfg.resume`
+and `cfg.warm_start`. The script builds the data sources and their loaders."""
 
 from __future__ import annotations
 
