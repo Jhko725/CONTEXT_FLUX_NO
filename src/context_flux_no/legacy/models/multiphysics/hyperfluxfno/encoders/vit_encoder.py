@@ -7,9 +7,9 @@ import jax.numpy as jnp
 from einops import rearrange
 from jaxtyping import Array, Float, PRNGKeyArray
 
-from context_flux_no.nn import PatchEmbedding, TransformerEncoderBlock
-from context_flux_no.nn.misc import maybe_split
-from context_flux_no.nn.position_encoding import SineCosinePosEncoding2D
+from context_flux_no.legacy.nn import PatchEmbedding, TransformerEncoderBlock
+from context_flux_no.legacy.nn.misc import maybe_split
+from context_flux_no.legacy.nn.position_encoding import SineCosinePosEncoding2D
 
 from .base import AbstractEncoder
 

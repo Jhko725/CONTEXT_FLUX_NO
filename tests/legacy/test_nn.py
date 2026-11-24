@@ -1,8 +1,8 @@
 import jax
 import jax.numpy as jnp
 import pytest
-from context_flux_no.nn.embedding import PatchEmbedding
-from context_flux_no.nn.misc import apply_componentwise
+from context_flux_no.legacy.nn.embedding import PatchEmbedding
+from context_flux_no.legacy.nn.misc import apply_componentwise
 
 
 def test_patchembedding_init():

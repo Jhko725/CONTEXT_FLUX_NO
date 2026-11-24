@@ -1,7 +1,7 @@
 import equinox as eqx
 import jax
 import jax.numpy as jnp
-from context_flux_no.nn.misc import apply_along_axis, atleast_nd, maybe_split
+from context_flux_no.legacy.nn.misc import apply_along_axis, atleast_nd, maybe_split
 from jaxtyping import Array, Key
 
 

@@ -123,7 +123,13 @@ end of the branch.
 | `.gitmodules` — deleted: it held only the ICON submodule |  |  |
 | `prek.toml` — `exclude` loses `notebooks/` and `third_party/` |  |  |
 | `scripts/checks/check_spelling.py` — `SKIP_PARTS` loses `third_party`, `icon` and `notebooks` |  |  |
-| `src/context_flux_no/models/multiphysics/disco/operatornet.py` — the second bottleneck convolution takes `keys_bot[1]` instead of reusing `keys_bot[0]`; the four comment lines about F15 removed | | |
-| `tests/unit/test_key_hygiene.py` — the DISCO case is a plain tuple again, without the strict `xfail` | | |
+| `src/context_flux_no/legacy/models/multiphysics/disco/operatornet.py` — the second bottleneck convolution takes `keys_bot[1]` instead of reusing `keys_bot[0]`; the four comment lines about F15 removed | | |
+| `tests/legacy/test_key_hygiene.py` — the DISCO case is a plain tuple again, without the strict `xfail` | | |
 | `src/context_flux_no/simulations/initial_conditions/step.py` — `PeriodicRandomStepFunction1D` defaults `num_jumps_min` to 2 and raises `ValueError` below 2: one periodic jump is a constant state |  |  |
 | `tests/unit/test_initial_conditions.py` — the multichannel case passes 2 instead of 1; new test that `PeriodicRandomStepFunction1D(1, 3)` raises |  |  |
+| `src/context_flux_no/legacy/` — `models/`, `nn/` and `plotting/` moved here with `git mv`; the absolute imports of `context_flux_no.models` and `.nn` inside them name `legacy`; new `__init__.py` states rule R7 | | |
+| `src/context_flux_no/metrics.py` — deleted: nothing imported it | | |
+| `scripts/training/configs/model/` — every `_target_` names `context_flux_no.legacy.models.multiphysics.<Name>` | | |
+| `tests/legacy/` — the tests of legacy code moved here from `tests/` and `tests/unit/test_key_hygiene.py`; imports name `legacy` | | |
+| `tests/unit/test_run_record.py` — the `_target_` string names `legacy.models` | | |
+| `pyproject.toml` — new `[tool.context_flux_no] clean` list; ruff `extend-exclude` and `force-exclude` and codespell `skip` cover `legacy/` and `tests/legacy/` | | |

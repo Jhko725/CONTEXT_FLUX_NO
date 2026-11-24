@@ -9,11 +9,11 @@ import jax.numpy as jnp
 from einops import rearrange
 from jaxtyping import Array, Float, PRNGKeyArray
 
-from context_flux_no.nn.embedding import PatchEmbedding
-from context_flux_no.nn.misc import maybe_split, to_ntuple
-from context_flux_no.nn.position_encoding import LearnedPositionEncoding
-from context_flux_no.nn.ssm import RG_LRU
-from context_flux_no.nn.transformer import TransformerEncoderBlock
+from context_flux_no.legacy.nn.embedding import PatchEmbedding
+from context_flux_no.legacy.nn.misc import maybe_split, to_ntuple
+from context_flux_no.legacy.nn.position_encoding import LearnedPositionEncoding
+from context_flux_no.legacy.nn.ssm import RG_LRU
+from context_flux_no.legacy.nn.transformer import TransformerEncoderBlock
 
 from .base import AbstractEncoder
 

@@ -1,7 +1,7 @@
 import equinox as eqx
 import jax
 import pytest
-from context_flux_no.nn.hypernetwork import HypernetworkHead
+from context_flux_no.legacy.nn.hypernetwork import HypernetworkHead
 
 
 def _target():

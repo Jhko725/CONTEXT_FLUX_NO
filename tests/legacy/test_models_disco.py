@@ -2,16 +2,16 @@ import equinox as eqx
 import jax
 import jax.numpy as jnp
 import pytest
-from context_flux_no.models.multiphysics.disco.attention_blocks import (
+from context_flux_no.legacy.models.multiphysics.disco.attention_blocks import (
     AttentionBlock1D,
     SpatialAxialAttention,
     TemporalAttention,
 )
-from context_flux_no.models.multiphysics.disco.hypernet import (
+from context_flux_no.legacy.models.multiphysics.disco.hypernet import (
     HyperNetwork,
     SpaceTimeBlock,
 )
-from context_flux_no.models.multiphysics.disco.operatornet import (
+from context_flux_no.legacy.models.multiphysics.disco.operatornet import (
     DownsamplingBlock,
     OperatorNetwork,
     UpSamplingBlock,

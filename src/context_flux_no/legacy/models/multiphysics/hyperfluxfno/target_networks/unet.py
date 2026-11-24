@@ -6,8 +6,8 @@ import jax
 import jax.numpy as jnp
 from jaxtyping import Array, Float, PRNGKeyArray
 
-from context_flux_no.nn.convtranspose import ConvTranspose
-from context_flux_no.nn.operators.fourier_utils import append_grid_channels
+from context_flux_no.legacy.nn.convtranspose import ConvTranspose
+from context_flux_no.legacy.nn.operators.fourier_utils import append_grid_channels
 
 from .base import AbstractTargetNetwork
 

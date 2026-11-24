@@ -6,12 +6,12 @@ import jax.numpy as jnp
 from einops import rearrange
 from jaxtyping import Array, Float, PRNGKeyArray
 
-from context_flux_no.models.multiphysics.hyperfluxfno.target_networks import (
+from context_flux_no.legacy.models.multiphysics.hyperfluxfno.target_networks import (
     AbstractTargetNetwork,
 )
-from context_flux_no.nn.channelwise import ChannelwiseMLP
-from context_flux_no.nn.misc import apply_along_axis
-from context_flux_no.nn.operators.fourier_utils import append_grid_channels
+from context_flux_no.legacy.nn.channelwise import ChannelwiseMLP
+from context_flux_no.legacy.nn.misc import apply_along_axis
+from context_flux_no.legacy.nn.operators.fourier_utils import append_grid_channels
 
 
 class GlobalResponseNorm(eqx.Module):

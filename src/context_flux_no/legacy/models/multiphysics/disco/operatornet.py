@@ -6,7 +6,7 @@ import jax
 import jax.numpy as jnp
 from jaxtyping import Array, Float, PRNGKeyArray
 
-from context_flux_no.nn.convtranspose import ConvTranspose
+from context_flux_no.legacy.nn.convtranspose import ConvTranspose
 
 
 class DownsamplingBlock(eqx.Module):

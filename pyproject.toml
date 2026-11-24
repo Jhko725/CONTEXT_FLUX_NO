@@ -49,6 +49,10 @@ build-backend = "hatchling.build"
 src = []
 fix = true
 line-length = 88
+# legacy/ awaits its rewrite (rule R7). force-exclude makes the exclusion hold for the
+# files that a git hook passes explicitly.
+extend-exclude = ["src/context_flux_no/legacy", "tests/legacy"]
+force-exclude = true
 
 [tool.ruff.format]
 docstring-code-format = true
@@ -83,6 +87,25 @@ dev = [
     "juliapkg>=0.1.28",
 ]
 
+[tool.context_flux_no]
+# Rule R7: the strict checks apply to these paths. A path that does not exist yet is
+# skipped by its readers.
+clean = [
+    "src/context_flux_no/simulations",
+    "src/context_flux_no/runs",
+    "src/context_flux_no/utils",
+    "src/context_flux_no/data",
+    "src/context_flux_no/training",
+    "src/context_flux_no/evaluation",
+    "src/context_flux_no/experiment.py",
+    "src/context_flux_no/custom_types.py",
+    "tests/unit",
+    "tests/verification",
+    "tests/helpers.py",
+    "tests/conftest.py",
+    "scripts",
+]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]
@@ -98,5 +121,5 @@ addopts = "-m 'not slow'"
 # covers both. docs/coding-standards.md says why docs/changes is out of scope; the Julia
 # Manifest.toml holds Julia package names that are not words.
 builtin = "clear,en-GB_to_en-US"
-skip = "*.lock,.git,*.npz,*.h5,Manifest.toml,./docs/changes,docs/changes/*"
+skip = "*.lock,.git,*.npz,*.h5,Manifest.toml,./docs/changes,docs/changes/*,./src/context_flux_no/legacy,src/context_flux_no/legacy/*,./tests/legacy,tests/legacy/*"
 ignore-words-list = "Numer,DATAS,IST,nd"

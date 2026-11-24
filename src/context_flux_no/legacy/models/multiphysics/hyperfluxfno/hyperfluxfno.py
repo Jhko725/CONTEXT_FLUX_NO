@@ -9,9 +9,9 @@ from einops import pack, rearrange, reduce, unpack
 from equinox.nn._misc import default_init
 from jaxtyping import Array, Float, PRNGKeyArray
 
-from context_flux_no.nn.channelwise import ChannelwiseMLP
-from context_flux_no.nn.hypernetwork import HypernetworkHead
-from context_flux_no.nn.operators.fourier_utils import append_grid_channels
+from context_flux_no.legacy.nn.channelwise import ChannelwiseMLP
+from context_flux_no.legacy.nn.hypernetwork import HypernetworkHead
+from context_flux_no.legacy.nn.operators.fourier_utils import append_grid_channels
 
 from ..abstract import AbstractMultiphysicsOperator
 from .encoders import AbstractEncoder

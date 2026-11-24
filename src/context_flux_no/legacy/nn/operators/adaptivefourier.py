@@ -7,7 +7,7 @@ from einops import rearrange
 from equinox._misc import default_floating_dtype
 from jaxtyping import Array, Complex, Float, PRNGKeyArray
 
-from ...custom_types import FloatArray
+from context_flux_no.custom_types import FloatArray
 from ..misc import apply_componentwise, to_complex_dtype, to_ntuple
 from .fourier_utils import valid_frequency_inds
 

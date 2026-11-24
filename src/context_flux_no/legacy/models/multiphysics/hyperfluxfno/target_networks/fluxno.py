@@ -6,8 +6,8 @@ import jax.numpy as jnp
 from einops import pack, rearrange, unpack
 from jaxtyping import Array, Float, PRNGKeyArray
 
-from context_flux_no.nn.channelwise import ChannelwiseMLP
-from context_flux_no.nn.operators.fourier_utils import append_grid_channels
+from context_flux_no.legacy.nn.channelwise import ChannelwiseMLP
+from context_flux_no.legacy.nn.operators.fourier_utils import append_grid_channels
 
 from .base import AbstractTargetNetwork
 

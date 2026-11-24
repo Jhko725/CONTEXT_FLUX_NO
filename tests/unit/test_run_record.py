@@ -77,7 +77,7 @@ def test_index_from_config_reads_the_training_config_layout():
     cfg = OmegaConf.create(
         {
             "model": {
-                "_target_": "context_flux_no.models.multiphysics.HyperFluxFNOLocal",
+                "_target_": "context_flux_no.legacy.models.multiphysics.HyperFluxFNOLocal",
                 "encoder_type": "TRecViT",
                 "key": {"_target_": "jax.random.PRNGKey", "seed": 3},
             },

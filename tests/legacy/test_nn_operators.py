@@ -1,7 +1,7 @@
 import jax
 import jax.numpy as jnp
-from context_flux_no.nn.operators.adaptivefourier import AdaptiveFourier
-from context_flux_no.nn.operators.fourier_utils import valid_frequency_inds
+from context_flux_no.legacy.nn.operators.adaptivefourier import AdaptiveFourier
+from context_flux_no.legacy.nn.operators.fourier_utils import valid_frequency_inds
 
 
 def test_valid_frequency_inds():

@@ -4,7 +4,7 @@ import equinox as eqx
 import jax
 from jaxtyping import Array, Float, PRNGKeyArray
 
-from context_flux_no.models.fno import FNO
+from context_flux_no.legacy.models.fno import FNO
 
 from .base import AbstractTargetNetwork
 

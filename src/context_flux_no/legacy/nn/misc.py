@@ -9,7 +9,7 @@ import jax.numpy as jnp
 from einops import pack, unpack
 from jaxtyping import Array, Float, Key, Shaped
 
-from ..custom_types import ComplexArray, FloatArray
+from context_flux_no.custom_types import ComplexArray, FloatArray
 
 
 def to_complex_dtype(dtype):
