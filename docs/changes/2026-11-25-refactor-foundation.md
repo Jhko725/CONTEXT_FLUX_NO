@@ -58,6 +58,11 @@ end of the branch.
 - **`worker_count` is removed from the data configs** (unit 9): the one loader factory has no workers, and nothing read the key once the `grain.DataLoader` path of the Well script was gone. A Well run therefore reads on the host without worker processes. [unconfirmed]
 - **The loss arguments of a Well run now come from the store's metadata** (unit 8): `dt` from the time grid, and each spacing as the native spacing times `downsample_spatial`. They equal the old constant `(0.015, 1 / 64, 1 / 64)` only if the store's time step is 0.015 and its native spacing is 1/512. No Well store is in the session, so this was not checked. [unconfirmed]
 
+- **`scripts/evaluate.py` passes no positive quantities** (unit 13). A store's `DatasetRecord` names the family's class only, the family's parameters vary per trajectory (`Euler2D.pressure` needs `gamma`), and a source with `use_normalization` returns z-scored frames. `evaluate_rollouts` accepts the callable, and `positive_quantities` and `store_channel_order` exist and are tested, but the command does not join them. A per-trajectory form of the callable is a design choice for Joon. [unconfirmed]
+- **Choices of `scripts/evaluate.py` that the handoff did not make** (unit 13). A run id is looked up under `runs/` relative to the working directory. The source is built twice, first with a window of 1 to read the trajectory length, so that a record is one whole trajectory. The loader drops an incomplete last batch, and the script prints how many trajectories that leaves out. The record is written beside `eval.h5` as `eval.json`, and the script refuses to overwrite either file. `EvaluationRecord.read` raises on an unknown key. [unconfirmed]
+- **`valid_horizon` checks `l2` for non-finite values and not `l2_identity`** (found in unit 10, ported unchanged). A NaN in the baseline makes the comparison false, so the horizon runs past that step. No test pins either behavior.
+- **`ATOL` and `RTOL` of `tests/unit/test_metrics.py` are module constants**, as on the rebuttal branch, where the working rules put named tolerances in `tests/helpers.py`.
+
 ## Review notes
 
 ### Round 1: from `450f31d`
