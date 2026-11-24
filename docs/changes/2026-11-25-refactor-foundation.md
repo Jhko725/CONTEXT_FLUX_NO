@@ -5,7 +5,7 @@ updated: 2026-11-25
 branch: refactor-foundation
 roadmap: Phase 1b (foundation); closes 4.5, 6.1 and the entry-point half of 7.1
 sources:
-  - "Project document claude/refactor-foundation-handoff-2026-11-25.md (the handoff)"
+  - "docs/plans/2026-11-25-refactor-foundation.md (the handoff)"
 ---
 
 # 2026-11-25 — `refactor-foundation`
@@ -101,3 +101,4 @@ end of the branch.
 | `scripts/checks/check_changes.py` — new, adapted from `UniversalForceReconstruction`: each round's rows cover exactly the files changed in it (rule T1); base `origin/main`; skips `PRE_FORMAT_CHANGES` |  |  |
 | `prek.toml` — registers `check-changes`, which runs on every commit |  |  |
 | `CLAUDE.md` — rewritten after `UniversalForceReconstruction`'s: reading list for planning sessions, rules T1 and T2, repository facts; the *Files* rule, notebook filter, submodule and regression tier removed |  |  |
+| `docs/plans/2026-11-25-refactor-foundation.md` — new: the handoff document of this branch, verbatim under a frontmatter block |  |  |

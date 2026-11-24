@@ -79,6 +79,12 @@ None.
 | `conventions-docs` | landed (recreated from `main` 2026-10-26: spelling checks wired, sweep applied) | [`2026-10-25-conventions-docs.md`](changes/2026-10-25-conventions-docs.md) |
 | `refactor-foundation` | in-progress (carries `workflow-bootstrap`; workflow, `legacy/`, entry point, loader, evaluation) | [`2026-11-25-refactor-foundation.md`](changes/2026-11-25-refactor-foundation.md) |
 
+## Plans (`plans/`) — handoff documents, one per implementation round
+
+| Plan | Status | Document |
+|---|---|---|
+| `refactor-foundation` | planned | [`2026-11-25-refactor-foundation.md`](plans/2026-11-25-refactor-foundation.md) |
+
 ## Historical
 
 | Document | What |
