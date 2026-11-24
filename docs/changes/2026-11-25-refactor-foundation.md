@@ -170,3 +170,9 @@ end of the branch.
 | `tests/helpers.py` — new tolerance `PRESSURE_ROUND_TRIP_RTOL` | | |
 | `tests/unit/test_admissible.py` — new: the laws of `admissible` and `Euler2D.pressure` | | |
 | `tests/unit/test_generate_dataset.py` — `store_channel_order` checked against an `Euler2D` and a `CubicFlux1D` store written with `WellWriter` and read through `ZarrWellDatasetSource` | | |
+| `src/context_flux_no/evaluation/rollout.py` — new: the `Operator` protocol and the rebuttal branch's rollout and segment drivers, with `positive_quantities` in place of `minima_fn` and `coefficients` | | |
+| `src/context_flux_no/evaluation/summary.py` — new: the rebuttal branch's `summarize_rollouts`, `summarize_conservation_drift`, `match_trajectories` and `mean_by_bin` | | |
+| `src/context_flux_no/evaluation/__init__.py` — exports the public names of `rollout` and `summary` | | |
+| `tests/helpers.py` — new stub operators `HoldLastFrame` and `ShiftByOneCell`, and the tolerance `ROLLOUT_ATOL` | | |
+| `tests/unit/test_rollout.py` — new: the rebuttal branch's segment tests on the stubs, and closed-form checks of `evaluate_rollouts` and `evaluate_references` | | |
+| `tests/unit/test_summary.py` — new: the rebuttal branch's matching, binning and summary tests, and a check of `fraction_nonpositive` | | |

@@ -1,5 +1,6 @@
 """Evaluation of trained models: the error metrics and rollout diagnostics of
-`metrics`."""
+`metrics`, the rollouts of `rollout` on the accelerator, and their host-side reductions in
+`summary`."""
 
 from .metrics import (
     conservation_drift as conservation_drift,
@@ -24,4 +25,20 @@ from .metrics import (
     spatial_mean_field as spatial_mean_field,
     total_variation as total_variation,
     valid_horizon as valid_horizon,
+)
+from .rollout import (
+    evaluate_references as evaluate_references,
+    evaluate_rollouts as evaluate_rollouts,
+    evaluate_segment_baselines as evaluate_segment_baselines,
+    evaluate_segments as evaluate_segments,
+    Operator as Operator,
+    PositiveQuantities as PositiveQuantities,
+    RolloutEvaluation as RolloutEvaluation,
+    SegmentBaselines as SegmentBaselines,
+)
+from .summary import (
+    match_trajectories as match_trajectories,
+    mean_by_bin as mean_by_bin,
+    summarize_conservation_drift as summarize_conservation_drift,
+    summarize_rollouts as summarize_rollouts,
 )
