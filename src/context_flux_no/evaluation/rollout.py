@@ -203,7 +203,8 @@ def evaluate_rollouts(
         )
 
     diagnostics_chunks, minima_chunks = [], []
-    spectrum_sum, spectrum_count = 0.0, 0.0
+    # Zero-dimensional zeros, which broadcast against the first chunk's sums.
+    spectrum_sum, spectrum_count = np.zeros(()), np.zeros(())
     for start in range(0, num_trajectories, chunk_size):
         diagnostics, minima, spectrum = evaluate_chunk(
             model, jnp.asarray(trajectories[start : start + chunk_size])

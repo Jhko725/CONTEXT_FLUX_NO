@@ -23,7 +23,18 @@ class AbstractTrainLoss[M: eqx.Module, B: PyTree[Array]](Protocol):
         pass
 
 
-class OneStepLoss[M: eqx.Module, B: PyTree[Array]](eqx.Module):
+class OneStepPredictor(Protocol):
+    """What the one-step losses call a model: `model(u, args, key=key)` predicts the
+    frame that follows the window `u`."""
+
+    def __call__(
+        self, u: Float[Array, "time dim ..."], args: Any, *, key: PRNGKeyArray
+    ) -> tuple[Float[Array, "dim ..."], Any]:
+        """Return the predicted frame and the model's auxiliary output."""
+        ...
+
+
+class OneStepLoss[M: OneStepPredictor, B: PyTree[Array]](eqx.Module):
     """The mean squared error of the model's prediction of the last frame of each window
     from the frames before it."""
 
@@ -42,7 +53,7 @@ class OneStepLoss[M: eqx.Module, B: PyTree[Array]](eqx.Module):
         return jnp.mean((u1 - u1_pred) ** 2), dict()
 
 
-class DenoisingOneStepLoss[M: eqx.Module, B: PyTree[Array]](eqx.Module):
+class DenoisingOneStepLoss[M: OneStepPredictor, B: PyTree[Array]](eqx.Module):
     """`OneStepLoss` with Gaussian noise added to the input frames. The noise of each
     frame and channel has standard deviation `noise_scale` times the frame's norm
     over the spatial axes."""
@@ -68,7 +79,7 @@ class DenoisingOneStepLoss[M: eqx.Module, B: PyTree[Array]](eqx.Module):
         return jnp.mean((u1 - u1_pred) ** 2), dict()
 
 
-class PushforwardOneStepLoss[M: eqx.Module, B: PyTree[Array]](eqx.Module):
+class PushforwardOneStepLoss[M: OneStepPredictor, B: PyTree[Array]](eqx.Module):
     """`OneStepLoss` on an input whose last frame is the model's own prediction. The
     model first predicts the second-to-last frame from the frames before it, without
     gradient; the loss is then the error on the last frame from the input shifted by

@@ -28,7 +28,7 @@ import math
 import warnings
 from collections.abc import Callable, Iterable, Iterator, Mapping
 from functools import cached_property
-from typing import Any, Self, TypeVar
+from typing import Any, cast, Self, TypeVar
 
 import equinox as eqx
 import jax
@@ -72,9 +72,7 @@ class TrainerState[M: eqx.Module](eqx.Module):
         """The state at step 0: the optimizer initialized on the trainable leaves of
         `model`, and `key` as the training key."""
         # Making this the __init__ would clash with the use of replace()
-        opt_state = optimizer.init(
-            eqx.filter(model, is_trainable)  # ty: ignore[invalid-argument-type]
-        )
+        opt_state = optimizer.init(eqx.filter(model, is_trainable))
         return cls(
             step=jnp.asarray(0, dtype=int),
             model=model,
@@ -88,10 +86,12 @@ class TrainerState[M: eqx.Module](eqx.Module):
         """Given a pytree of model gradients, update model parameters using the
         appropriate optimizer update function."""
         grads = self.filter_trainable(grads)
+        # Type-level only: optax's `Params` union does not name `eqx.Module`, which is a
+        # pytree of arrays like the members it does name.
         updates, opt_state_next = self.optimizer.update(
-            grads,  # ty: ignore[invalid-argument-type]
+            cast(optax.Params, grads),
             self.opt_state,
-            self.filter_trainable(self.model),  # ty: ignore[invalid-argument-type]
+            cast(optax.Params, self.filter_trainable(self.model)),
         )
         model_next = eqx.apply_updates(self.model, updates)
         return copy.replace(
@@ -146,6 +146,7 @@ class Trainer:
     def _train_step(
         self, state: TrainerState[M], batch: Batch
     ) -> tuple[TrainerState[M], Metrics]:
+        """The uncompiled body of `train_step`."""
         model = eqx.nn.inference_mode(state.model, False)
         loss_grad_fn = eqx.filter_value_and_grad(self.loss_fn, has_aux=True)
         (loss, metrics), grads = loss_grad_fn(
@@ -160,6 +161,7 @@ class Trainer:
         return eqx.filter_jit(self._valid_step)
 
     def _valid_step(self, state: TrainerState[M], batch: Batch) -> Metrics:
+        """The uncompiled body of `valid_step`."""
         model = eqx.nn.inference_mode(state.model, True)
         loss, metrics = self.loss_fn(model, batch, self.loss_args, state.training_key)
         return {"valid_loss": loss, **metrics}

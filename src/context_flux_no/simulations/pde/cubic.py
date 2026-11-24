@@ -1,8 +1,9 @@
 """The cubic-flux families `u_t + (a u**3 + b u**2 + c u)_x = 0`: `CubicFlux1D`, solved
 by PyClaw or Trixi, and `CubicFlux2D`, which has its own Rusanov stepper."""
 
+from collections.abc import Sequence
 from math import ceil
-from typing import ClassVar
+from typing import Any, ClassVar
 
 import equinox as eqx
 import jax
@@ -131,6 +132,8 @@ class CubicFlux2D(AbstractPDEFamily):
         return (3 * self.a * u + 2 * self.b) * u + self.c
 
     def _step_rusanov_2d(self, u, dxs, dt):
+        """One first-order Rusanov step of size `dt` on the periodic grid with cell
+        sizes `dxs`."""
         # Spatial dimension order is x, y
         dx, dy = dxs
 
@@ -171,11 +174,11 @@ class CubicFlux2D(AbstractPDEFamily):
     def solve(
         self,
         ic,
-        x_spans: tuple[tuple[float, float], tuple[float, float]],
-        Nxs: tuple[int, int],
+        x_spans: Sequence[Sequence[float]],
+        Nxs: Sequence[int],
         t_span: tuple[float, float],
         Nt: int,
-        bc: str = "periodic",
+        bc: str | Sequence[Any] = "periodic",
         *,
         cfl: float = 0.4,
         **kwargs,
@@ -225,6 +228,7 @@ class CubicFlux2D(AbstractPDEFamily):
         dt = dt_out / n_sub
 
         def _frame(u, _):
+            """The state one output interval, `n_sub` substeps, after `u`."""
             u_next = jax.lax.fori_loop(
                 0, n_sub, lambda _, v: self._step_rusanov_2d(v, (dx, dy), dt), u
             )

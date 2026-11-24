@@ -31,8 +31,8 @@ class AbstractPDEFamily(eqx.Module):
     family solved by PyClaw provides `pyclaw_spec` (by Trixi, `trixi_spec`); the default `solve()` then runs the given
     backend (Classic PyClaw by default). A family with its own stepper overrides `solve()`."""
 
-    n_spatial_dims: eqx.AbstractVar[int]
-    field_rank_names: eqx.AbstractVar[tuple[tuple[int, str], ...]]
+    n_spatial_dims: eqx.AbstractClassVar[int]
+    field_rank_names: eqx.AbstractClassVar[tuple[tuple[int, str], ...]]
 
     @property
     @abc.abstractmethod

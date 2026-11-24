@@ -17,18 +17,20 @@ from __future__ import annotations
 
 import copy
 import dataclasses
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from itertools import accumulate
 from pathlib import Path
 from typing import Any, Literal
 
 import numpy as np
 import zarr
+import zarr.codecs
 from jaxtyping import Float
+from zarr.core.common import JSON
 
 from context_flux_no.simulations.backends.base import BCs
 from context_flux_no.simulations.grid import Grid
-from context_flux_no.simulations.record import DatasetRecord
+from context_flux_no.simulations.record import DatasetRecord, Status
 
 
 def sidecar_path(store_path: str | Path) -> Path:
@@ -161,6 +163,50 @@ def _create_field_arrays(
             arr.attrs["time_varying"] = True
 
 
+def _int_attr(attrs: Mapping[str, JSON], key: str) -> int:
+    """Read the integer attribute `key`; raise `TypeError` when the store holds another
+    kind of value there."""
+    value = attrs[key]
+    if not isinstance(value, int):
+        raise TypeError(f"store attribute {key!r} is {value!r}, not an integer")
+    return value
+
+
+def _sequence_attr(attrs: Mapping[str, JSON], key: str) -> Sequence[JSON]:
+    """Read the list attribute `key`; raise `TypeError` when the store holds another
+    kind of value there."""
+    value = attrs[key]
+    if isinstance(value, str) or not isinstance(value, Sequence):
+        raise TypeError(f"store attribute {key!r} is {value!r}, not a list")
+    return value
+
+
+def _names_attr(attrs: Mapping[str, JSON], key: str) -> list[str]:
+    """Read the attribute `key` as a list of names; raise `TypeError` when an entry is
+    not a string."""
+    entries = _sequence_attr(attrs, key)
+    names = [entry for entry in entries if isinstance(entry, str)]
+    if len(names) != len(entries):
+        raise TypeError(f"store attribute {key!r} is {entries!r}, not a list of names")
+    return names
+
+
+def _field_rank_names_attr(attrs: Mapping[str, JSON]) -> tuple[tuple[int, str], ...]:
+    """Read the `field_rank_names` attribute as `(rank, name)` pairs; raise `TypeError`
+    when an entry is not a pair of an integer and a string."""
+    pairs = []
+    for entry in _sequence_attr(attrs, "field_rank_names"):
+        match entry:
+            case [int() as rank, str() as name]:
+                pairs.append((rank, name))
+            case _:
+                raise TypeError(
+                    f"store attribute 'field_rank_names' has the entry {entry!r},"
+                    " not a (rank, name) pair"
+                )
+    return tuple(pairs)
+
+
 class WellWriter:
     """Create with `WellWriter.create(...)`, fill with `write_trajectory(idx, u, scalars)`,
     close with `finalize(n_written)`. Reading a store back is `data.ZarrWellDatasetSource`'s
@@ -170,8 +216,8 @@ class WellWriter:
         self.root = root
         self.path = path
         self.record = record
-        self.field_rank_names: tuple[tuple[int, str], ...] = tuple(
-            (int(r), str(n)) for r, n in root.attrs["field_rank_names"]
+        self.field_rank_names: tuple[tuple[int, str], ...] = _field_rank_names_attr(
+            root.attrs
         )
 
     # ------------------------------------------------------------ construction ---
@@ -247,7 +293,7 @@ class WellWriter:
     @property
     def n_trajectories(self) -> int:
         """The number of trajectories the store was created for."""
-        return int(self.root.attrs["n_trajectories"])
+        return _int_attr(self.root.attrs, "n_trajectories")
 
     def write_trajectory(
         self, idx: int, u: np.ndarray, scalars: Mapping[str, float]
@@ -255,14 +301,14 @@ class WellWriter:
         """`u[time, n_eqn, *N]` in state order and the family's `parameters` for one sample.
         Component block `r` of rank `r` goes to `t{r}_fields/<name>` as `[time, *N]` (rank 0)
         or `[time, *N, n_spatial_dims**r]`."""
-        n_dims = int(self.root.attrs["n_spatial_dims"])
+        n_dims = _int_attr(self.root.attrs, "n_spatial_dims")
         start = 0
         for rank, name in self.field_rank_names:
             stop = start + n_dims**rank
             block = np.moveaxis(u[:, start:stop], 1, -1)  # [time, *N, components]
             if rank == 0:
                 block = block[..., 0]
-            self.root.get_group(f"t{rank}_fields")[name][idx] = block
+            self.root.get_group(f"t{rank}_fields").get_array(name)[idx] = block
             start = stop
         if stop != u.shape[1]:
             raise ValueError(
@@ -270,16 +316,16 @@ class WellWriter:
                 f"covers {stop}"
             )
         scalars_grp = self.root.get_group("scalars")
-        for name in scalars_grp.attrs["field_names"]:
-            scalars_grp[name][idx] = scalars[name]
+        for name in _names_attr(scalars_grp.attrs, "field_names"):
+            scalars_grp.get_array(name)[idx] = scalars[name]
 
     def finalize(
-        self, n_written: int, *, n_failed: int = 0, status: str = "complete"
+        self, n_written: int, *, n_failed: int = 0, status: Status = "complete"
     ) -> None:
         """Shrink the sample axis to what was written and close the record."""
         for grp_name in ("scalars", "t0_fields", "t1_fields", "t2_fields"):
             grp = self.root.get_group(grp_name)
-            for f_name in grp.attrs["field_names"]:
+            for f_name in _names_attr(grp.attrs, "field_names"):
                 arr = grp.get_array(f_name)
                 if arr.attrs["sample_varying"]:
                     arr.resize((n_written,) + arr.shape[1:])

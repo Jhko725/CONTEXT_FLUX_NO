@@ -152,11 +152,14 @@ def wandb_group(cfg: DictConfig) -> str | None:
 def build_wandb_run(cfg: DictConfig, run: Run) -> Any | None:
     """Start the wandb run for `run` and stamp its id/url into the record; `None` when
     `cfg.wandb.mode` is `disabled` (or `cfg.wandb` is absent). The wandb files live under
-    the run directory (`dir=`), so a run directory is self-contained."""
+    the run directory (`dir=`), so a run directory is self-contained. Any other mode than
+    `online`, `offline`, `shared` and `disabled` raises `ValueError`."""
     wcfg = cfg.get("wandb")
     mode = "disabled" if wcfg is None else str(wcfg.get("mode", "disabled"))
     if mode == "disabled":
         return None
+    if mode not in ("online", "offline", "shared"):
+        raise ValueError(f"unknown wandb mode {mode!r}")
     import wandb
 
     record = run.record

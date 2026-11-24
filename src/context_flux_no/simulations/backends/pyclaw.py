@@ -28,7 +28,7 @@ from __future__ import annotations
 import logging
 from collections.abc import Mapping
 from dataclasses import dataclass, field
-from typing import Any, Literal
+from typing import Any, cast, Literal
 
 import numpy as np
 
@@ -57,6 +57,7 @@ _LIMITERS = {"minmod": 1, "superbee": 2, "vanleer": 3, "MC": 4, "none": 0}
 
 
 def _bc_enum(name: str) -> int:
+    """PyClaw's code of the boundary condition `name`."""
     from clawpack import pyclaw
 
     return {
@@ -172,9 +173,11 @@ class PyClawBackend(SolverBackend):
         controller.solver = solver
         controller.tfinal = float(t_out[-1])
         controller.output_style = 2  # explicit output times
-        controller.out_times = [float(t) for t in t_out]
+        controller.out_times = np.asarray(t_out, dtype=np.float64)
         controller.keep_copy = True
-        controller.output_format = None
+        # Type-level only: clawpack infers `str` from its default `'ascii'`, and `None` is
+        # its documented value for writing no output files.
+        controller.output_format = cast("str", None)
         controller.verbosity = 0
         try:
             controller.run()
@@ -207,4 +210,5 @@ class PyClawBackend(SolverBackend):
 
 
 def _jsonable(v: Any) -> Any:
+    """`v` itself when JSON holds it as it is, else its string."""
     return v if isinstance(v, (str, int, float, bool, type(None))) else str(v)

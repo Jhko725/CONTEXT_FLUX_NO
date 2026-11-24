@@ -113,8 +113,8 @@ def summarize_rollouts(
     l2 = l2[..., keep, :horizon]
     nonfinite = nonfinite[..., keep, :horizon]
     area_fraction = area_fraction[..., keep, :, :]
-    l2_identity = references.l2_identity[keep, :horizon]
-    l2_spatial_mean = references.l2_spatial_mean[keep, :horizon]
+    l2_identity = np.asarray(references.l2_identity)[keep, :horizon]
+    l2_spatial_mean = np.asarray(references.l2_spatial_mean)[keep, :horizon]
 
     horizons = valid_horizon(l2, l2_identity, nonfinite)
     with np.errstate(invalid="ignore", divide="ignore"):

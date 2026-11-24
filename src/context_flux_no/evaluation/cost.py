@@ -59,6 +59,8 @@ def _compile(
 def _flops_of(compiled: jax.stages.Compiled) -> float:
     """Return the FLOPs of the cost analysis of `compiled`, or NaN if it has none."""
     analysis = compiled.cost_analysis()
+    if analysis is None:
+        return np.nan
     # Older JAX versions return one dictionary per device.
     if isinstance(analysis, list):
         analysis = analysis[0]
@@ -105,12 +107,15 @@ def measure(
 
     **Raises:**
 
-    `ValueError` if `repeats < 1` or `warmup < 0`.
+    `ValueError` if `repeats < 1` or `warmup < 0`, and `RuntimeError` if the backend
+    gives no memory analysis of the program.
     """
     if repeats < 1 or warmup < 0:
         raise ValueError(f"Need repeats >= 1 and warmup >= 0, got {repeats}, {warmup}.")
     compiled, dynamic = _compile(fn, *args)
     memory = compiled.memory_analysis()
+    if memory is None:
+        raise RuntimeError("The backend gives no memory analysis of the program.")
     for _ in range(warmup):
         jax.block_until_ready(compiled(dynamic))
     seconds = np.empty(repeats)

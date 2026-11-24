@@ -4,6 +4,11 @@
 
 set shell := ["bash", "-euo", "pipefail", "-c"]
 
+# The clean scope of rule R7, from `clean` in pyproject.toml, and its part under src/; a
+# path that does not exist yet is skipped.
+clean := `uv run python -c 'import os, tomllib; print(*(p for p in tomllib.load(open("pyproject.toml", "rb"))["tool"]["context_flux_no"]["clean"] if os.path.exists(p)))'`
+clean_src := `uv run python -c 'import os, tomllib; print(*(p for p in tomllib.load(open("pyproject.toml", "rb"))["tool"]["context_flux_no"]["clean"] if p.startswith("src/") and os.path.exists(p)))'`
+
 # Show the recipes
 default:
     @just --list
@@ -13,9 +18,18 @@ setup:
     uv sync
     uv run prek install
 
-# Lint, format, spelling and document checks; `prek` sees tracked files only
-check:
+# `check` ends with a grep because ty honors ignore comments, so a clean run does not
+# prove there are none. ty covers the clean paths under src/; the grep covers every clean
+# path. `burgers.py` is excluded from ty until `ViscousBurgers1D.solve`, which returns
+# the cell centers as a tuple, and `AbstractPDEFamily.solve`, which declares a list,
+# agree on that type.
+
+# Lint, format, spelling, document, docstring, container and import checks, then ty;
+# `prek` sees tracked files only
+check ty="uv run ty":
     uv run prek run --all-files
+    {{ty}} check {{clean_src}} --exclude src/context_flux_no/simulations/pde/burgers.py
+    ! grep -rn 'ty: ignore' {{clean}}
 
 # Examples: `just test` (dev profile), `just test ci`, `just test dev tests/test_x.py`,
 # `just test dev tests/test_x.py -k "a or b"`. Positional arguments, so that a quoted

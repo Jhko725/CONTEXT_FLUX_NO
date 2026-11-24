@@ -26,6 +26,8 @@ Coords = Sequence[Float[np.ndarray, "*shape"]]  # one array per spatial axis, sa
 
 
 def _check_dims(cls_name: str, n_eqn: int, n_spatial_dims: int) -> tuple[int, int]:
+    """`(n_eqn, n_spatial_dims)` as integers; raise `ValueError` unless both are at
+    least 1."""
     if int(n_eqn) < 1 or int(n_spatial_dims) < 1:
         raise ValueError(f"{cls_name}: n_eqn and n_spatial_dims must be >= 1")
     return int(n_eqn), int(n_spatial_dims)

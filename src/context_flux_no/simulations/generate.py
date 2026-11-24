@@ -63,11 +63,13 @@ def sample_coefficients(
     if strategy == "uniform":
 
         def _sample(key_, rng):
+            """`n_coeffs` values drawn uniformly from the range `rng`."""
             return jax.random.uniform(key_, (n_coeffs,), minval=rng[0], maxval=rng[1])
 
     elif strategy == "linspace":
 
         def _sample(key_, rng):
+            """`n_coeffs` evenly spaced values over the range `rng`, ends included."""
             return jnp.linspace(rng[0], rng[1], n_coeffs)
 
     else:
@@ -230,4 +232,5 @@ def generate_dataset(
 
 
 def _jsonable(v: Any) -> Any:
+    """`v` itself when JSON holds it as it is, else its string."""
     return v if isinstance(v, (str, int, float, bool, type(None))) else str(v)

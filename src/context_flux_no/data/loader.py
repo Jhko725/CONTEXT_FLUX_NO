@@ -6,6 +6,7 @@ from contextlib import contextmanager
 
 import grain
 import jax
+import jax.extend
 
 
 def make_loader(

@@ -13,6 +13,9 @@ from typing import Any
 
 
 def _default(o: Any) -> Any:
+    """The JSON form of `o`, which `json` cannot encode itself: a list for an array or
+    a NumPy scalar's value, a string for a path, a sorted list for a set, else the
+    string of `o`."""
     if hasattr(o, "tolist"):  # numpy arrays and scalars
         return o.tolist()
     if isinstance(o, Path):

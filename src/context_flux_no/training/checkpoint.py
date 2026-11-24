@@ -161,11 +161,18 @@ class OrbaxCheckpointer(Checkpointer):
         there is no metric or no checkpoint carries it."""
         if self.metric is None:
             return None
-        scored = [
-            (int(c.step), float(c.metrics[self.metric]))
-            for c in self._ckptr.checkpoints
-            if c.metrics and self.metric in c.metrics
-        ]
+        scored = []
+        for c in self._ckptr.checkpoints:
+            if not isinstance(c.metrics, dict) or self.metric not in c.metrics:
+                continue
+            # `save` writes every metric as a Python float.
+            value = c.metrics[self.metric]
+            if not isinstance(value, int | float):
+                raise TypeError(
+                    f"checkpoint {c.step} has the metric {self.metric}={value!r},"
+                    " not a number"
+                )
+            scored.append((int(c.step), float(value)))
         if not scored:
             return None
         return (

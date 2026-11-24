@@ -46,6 +46,8 @@ DEFAULT_LAYOUT = RunLayout()
 
 
 def _flatten(d: Any, prefix: str = "") -> dict[str, Any]:
+    """The leaves of the nested dictionary `d` by their dotted path, each path after
+    `prefix`."""
     out: dict[str, Any] = {}
     if isinstance(d, dict):
         for k, v in d.items():
@@ -146,10 +148,13 @@ class Run:
             )
         else:
             directory.mkdir(parents=True, exist_ok=True)
-            model_config = OmegaConf.to_container(cfg.model, resolve=True)
+            model_container = OmegaConf.to_container(cfg.model, resolve=True)
+            if not isinstance(model_container, dict):
+                raise TypeError(f"cfg.model is {model_container!r}, not a mapping")
+            model_config = {str(k): v for k, v in model_container.items()}
             record = RunRecord.create(
                 index=index_from_config(cfg, dataset_id=dataset_id),
-                model_config=model_config,  # ty: ignore[invalid-argument-type]
+                model_config=model_config,
                 x64=x64,
                 metric_name=metric_name,
                 extra=extra,
@@ -173,7 +178,9 @@ class Run:
         config = (
             OmegaConf.load(config_path) if config_path.exists() else OmegaConf.create()
         )
-        return cls(directory, record, config, layout=layout)  # ty: ignore[invalid-argument-type]
+        if not isinstance(config, DictConfig):
+            raise TypeError(f"{config_path} holds a list, not a mapping")
+        return cls(directory, record, config, layout=layout)
 
     # ------------------------------------------------------------ record ---------
     def update(self, **changes: Any) -> RunRecord:

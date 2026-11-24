@@ -127,9 +127,12 @@ def _julia() -> Any:
 
     faulthandler.disable()  # see the module docstring: collides with Julia's GC signals
     try:
-        from juliacall import Main as jl
+        import juliacall
     except ImportError as e:
         raise TrixiUnavailable("juliacall is not installed (dev group)") from e
+    # PythonCall adds `Main` to the module while it loads, so the module's source, which
+    # the type checker reads, does not define it; the lookup is by name at runtime.
+    jl = getattr(juliacall, "Main")
     jl.seval("using ContextFluxTrixi")
     return jl.ContextFluxTrixi
 

@@ -20,7 +20,7 @@ import numpy as np
 import yaml
 import zarr
 from einops import pack, rearrange
-from jaxtyping import Array, Float
+from jaxtyping import Float
 
 
 # Taken from the_well: https://github.com/PolymathicAI/the_well/blob/master/the_well/data/utils.py#L33
@@ -44,17 +44,22 @@ class HierarchicalStorage(Protocol):
 
     Examples are: h5py.File, zarr.Group."""
 
-    attrs: Any
+    @property
+    def attrs(self) -> Any:
+        """The attributes of the root, as the storage library gives them."""
+        ...
 
     def __getitem__(self, key: str, /) -> Any: ...
 
     def __contains__(self, key: str, /) -> bool: ...
 
 
-P = TypeVar("P", str, Path)
+P = TypeVar("P", bound=str | os.PathLike[str])
 
 
 def _as_filter_list(filters: str | Sequence[str] | None) -> list[str]:
+    """The filters as a list of strings: none for `None`, one for a single string or
+    path."""
     if filters is None:
         return []
     if isinstance(filters, (str, os.PathLike)):  # a single string, not a list of chars
@@ -72,7 +77,7 @@ def filter_paths(
     include = _as_filter_list(include_filters)
     exclude = _as_filter_list(exclude_filters)
 
-    def keep(path: P) -> bool:
+    def keep(path: str | os.PathLike[str]) -> bool:
         name = os.path.basename(os.fspath(path))
         if include and not any(s in name for s in include):
             return False
@@ -138,7 +143,7 @@ class WellDatasetSourceBase(grain.sources.RandomAccessDataSource):
             filter_paths(
                 self.get_datapaths(), self.include_filters, self.exclude_filters
             ),
-            key=os.fspath,
+            key=str,  # os.fspath's text of a str or a Path
         )
         if not datapaths:
             raise ValueError(
@@ -268,6 +273,7 @@ class WellDatasetSourceBase(grain.sources.RandomAccessDataSource):
         return metadata_common, metadata_varying
 
     def _preload_into_ram(self) -> list[np.ndarray]:
+        """Read every field of every file into memory, one packed array per file."""
         cache = []
         for datapath in self.datapaths:
             with self.open_datapath(datapath) as file:
@@ -340,7 +346,9 @@ class WellDatasetSourceBase(grain.sources.RandomAccessDataSource):
     def __len__(self) -> int:
         return self.file_index_offsets[-1]
 
-    def __getitem__(self, index: int) -> Float[Array, "time *spatial_dims channel"]:
+    def __getitem__(
+        self, index: int
+    ) -> Float[np.ndarray, "time channel *spatial_dims"]:
         file_idx = (
             int(np.searchsorted(self.file_index_offsets, index, side="right")) - 1
         )
@@ -396,6 +404,8 @@ class WellDatasetSourceBase(grain.sources.RandomAccessDataSource):
 
     @cached_property
     def _pack_pattern(self) -> str:
+        """The einops pattern `t x0 ... *` that packs the fields of one window along a
+        last channel axis."""
         return " ".join(
             [
                 "t",
@@ -440,7 +450,7 @@ class ZarrWellDatasetSource(WellDatasetSourceBase):
             self.well_base_path / self.well_dataset_name / "data" / self.well_split_name
         )
         dataset_dir = dataset_dir.resolve()
-        datapaths = sorted(
+        datapaths: list[str | Path] = sorted(
             list(dataset_dir.glob("*.zarr")) + list(dataset_dir.glob("*.zarr.zip"))
         )
         return datapaths
@@ -461,7 +471,7 @@ class TheWellDataSource(WellDatasetSourceBase):
     # TODO: inherit from WellDatasetSourceBase and only implement the abstractmethods
     well_base_path: Path
     well_dataset_name: str
-    well_split_name: Literal["train", "valid", "test", None]
+    well_split_name: Literal["train", "valid", "test"]
     include_filters: list[str]
     exclude_filters: list[str]
     filesystem: fsspec.AbstractFileSystem

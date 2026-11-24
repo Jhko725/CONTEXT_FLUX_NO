@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import abc
 from collections.abc import Sequence
-from typing import Any, ClassVar, get_args, Literal
+from typing import Any, ClassVar, get_args, Literal, TypeIs
 
 import numpy as np
 
@@ -27,6 +27,11 @@ BC_NAMES: tuple[str, ...] = get_args(BCName)
 BCs = tuple[tuple[BCName, BCName], ...]
 
 
+def _is_bc_name(name: object) -> TypeIs[BCName]:
+    """Whether `name` is one of `BC_NAMES`, the values of `BCName`."""
+    return name in BC_NAMES
+
+
 def normalize_bcs(bc: str | Sequence[Any], n_spatial_dims: int) -> BCs:
     """`"periodic"` → periodic on every axis and side; `[("extrap", "wall"), ...]` as given.
     Periodic must be paired (a periodic lower face needs a periodic upper face)."""
@@ -38,19 +43,19 @@ def normalize_bcs(bc: str | Sequence[Any], n_spatial_dims: int) -> BCs:
         raise ValueError(
             f"expected {n_spatial_dims} boundary-condition pairs, got {len(pairs)}"
         )
-    out = []
+    out: list[tuple[BCName, BCName]] = []
     for lo, hi in pairs:
-        for name in (lo, hi):
-            if name not in BC_NAMES:
-                raise ValueError(
-                    f"unknown boundary condition {name!r}; one of {BC_NAMES}"
-                )
+        if not (_is_bc_name(lo) and _is_bc_name(hi)):
+            unknown = hi if _is_bc_name(lo) else lo
+            raise ValueError(
+                f"unknown boundary condition {unknown!r}; one of {BC_NAMES}"
+            )
         if (lo == "periodic") != (hi == "periodic"):
             raise ValueError(
                 "periodic boundaries must be periodic on both sides of an axis"
             )
         out.append((lo, hi))
-    return tuple(out)  # ty: ignore[invalid-return-type]
+    return tuple(out)
 
 
 class SolverFailure(RuntimeError):

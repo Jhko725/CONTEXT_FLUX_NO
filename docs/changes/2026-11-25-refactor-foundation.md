@@ -198,3 +198,30 @@ end of the branch.
 | `src/context_flux_no/training/trainer.py` — `Trainer.train` uses the new `_initial_state`, `_check_loop_lengths`, `_first_batches` and `_logged_validation_metrics` | | |
 | `tests/` — a docstring on every test function and on the test modules and script that lacked one, each stating what it checks | | |
 | `scripts/` — a docstring on every `main`; `training/configs/training/the_well.yaml` names `experiment.state_template` | | |
+| `src/context_flux_no/simulations/pde/base.py` — `n_spatial_dims` and `field_rank_names` are `eqx.AbstractClassVar`, the class variables that every family defines | | |
+| `src/context_flux_no/simulations/pde/burgers.py` — `ViscousBurgers1D` annotates its flux and step on JAX arrays, `bc` in the base's type and the returned centers as the tuple they are; its private step function has a docstring | | |
+| `src/context_flux_no/simulations/pde/cubic.py` — `CubicFlux2D.solve` takes `x_spans`, `Nxs` and `bc` in the base's types; its private step functions have docstrings | | |
+| `src/context_flux_no/simulations/backends/base.py` — `normalize_bcs` narrows each boundary-condition name with the new `_is_bc_name` | | |
+| `src/context_flux_no/simulations/backends/pyclaw.py` — the output times go to PyClaw as an array and `output_format=None` through a type-level `cast`; private functions have docstrings | | |
+| `src/context_flux_no/simulations/backends/trixi.py` — reads `juliacall.Main`, which PythonCall adds at load time, by name | | |
+| `src/context_flux_no/simulations/writer.py` — `WellWriter` reads store attributes through the new `_int_attr`, `_sequence_attr`, `_names_attr` and `_field_rank_names_attr`, and `finalize` takes a `Status` | | |
+| `src/context_flux_no/simulations/generate.py` — its private functions have docstrings | | |
+| `src/context_flux_no/simulations/initial_conditions/base.py` — `_check_dims` has a docstring | | |
+| `src/context_flux_no/data/loader.py` — imports `jax.extend`, which it uses | | |
+| `src/context_flux_no/data/sources.py` — the storage protocol's `attrs` is read-only, `filter_paths` takes any path type, `__getitem__` declares the NumPy array it returns; private functions have docstrings | | |
+| `src/context_flux_no/evaluation/cost.py` — a missing cost analysis gives NaN FLOPs and a missing memory analysis raises `RuntimeError` | | |
+| `src/context_flux_no/evaluation/metrics.py` — `total_variation` sums without an integer start, and the three result constructors return through a type-level `cast` | | |
+| `src/context_flux_no/evaluation/rollout.py` — the spectrum sums start from zero-dimensional arrays | | |
+| `src/context_flux_no/evaluation/summary.py` — reads the reference errors as NumPy arrays | | |
+| `src/context_flux_no/experiment.py` — `build_wandb_run` raises `ValueError` on an unknown wandb mode | | |
+| `src/context_flux_no/runs/run.py` — `Run.create` and `Run.open` check the container types of the model config and the loaded config; `_flatten` has a docstring | | |
+| `src/context_flux_no/runs/record.py` — `_tail` has a docstring | | |
+| `src/context_flux_no/training/checkpoint.py` — `OrbaxCheckpointer.best` checks that each stored metric is a number | | |
+| `src/context_flux_no/training/loss.py` — the one-step losses bound their model type by the new `OneStepPredictor` protocol | | |
+| `src/context_flux_no/training/trainer.py` — no `ty: ignore`; the optimizer update takes the model through a type-level `cast` to optax's `Params`; private steps have docstrings | | |
+| `src/context_flux_no/utils/serialization.py` — `_default` has a docstring | | |
+| `scripts/checks/check_containers.py` — new, from UFR: no `jax.Array` in a frozen dataclass or a static field of the clean paths under `src` | | |
+| `scripts/checks/check_dependencies.py` — new, from UFR without its unit-library rule: declared packages, R12, no clean path imports from `legacy/`, `src` imports no scripts or tests | | |
+| `scripts/checks/check_docstrings.py` — new, from UFR: header form, private docstrings, module length and plan labels on the clean paths | | |
+| `prek.toml` — registers `check-docstrings`, `check-containers` and `check-dependencies` | | |
+| `justfile` — `check` runs `ty` on the clean paths under `src` except `burgers.py`, then greps every clean path for `ty: ignore` | | |

@@ -1,7 +1,8 @@
 """The Burgers families: inviscid `Burgers1D`, solved by PyClaw or Trixi, and
 `ViscousBurgers1D`, which has its own explicit stepper."""
 
-from typing import ClassVar
+from collections.abc import Sequence
+from typing import Any, ClassVar
 
 import equinox as eqx
 import jax.numpy as jnp
@@ -83,8 +84,8 @@ class ViscousBurgers1D(AbstractPDEFamily):
 
     def flux(
         self,
-        u: Float[np.ndarray, " Nx"],
-    ) -> Float[np.ndarray, " Nx"]:
+        u: Float[Array, " Nx"],
+    ) -> Float[Array, " Nx"]:
         """The flux `f(u) = a u**2`."""
         return self.a * u**2
 
@@ -95,14 +96,14 @@ class ViscousBurgers1D(AbstractPDEFamily):
         Nxs,
         t_span: tuple[float, float],
         Nt: int,
-        bc: str = "periodic",
+        bc: str | Sequence[Any] = "periodic",
         cfl: float = 0.4,
         max_steps: int = 10_000_000,
         **kwargs,
     ) -> tuple[
         Float[np.ndarray, "time dim x_grid"],
         Float[np.ndarray, " time"],
-        Float[np.ndarray, " x_grid"],
+        tuple[Float[np.ndarray, " x_grid"]],
     ]:
         """
         Solves
@@ -196,6 +197,7 @@ class ViscousBurgers1D(AbstractPDEFamily):
 
         @eqx.filter_jit
         def _step_fn(u, dt):
+            """One compiled step of size `dt` on the grid of spacing `dx`."""
             return self._step_periodic(u, dx, dt)
 
         while save_idx <= Nt:  # F8: `< Nt` never wrote the last frame
@@ -229,10 +231,10 @@ class ViscousBurgers1D(AbstractPDEFamily):
 
     def _step_periodic(
         self,
-        u: Float[np.ndarray, " Nx"],
+        u: Float[Array, " Nx"],
         dx: float,
         dt: float,
-    ) -> Float[np.ndarray, " Nx"]:
+    ) -> Float[Array, " Nx"]:
         """
         One explicit finite-volume / finite-difference step.
 

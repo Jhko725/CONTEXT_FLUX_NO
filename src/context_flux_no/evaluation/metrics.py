@@ -5,7 +5,10 @@ so that the caller chooses where to vmap and jit. The two functions on NumPy arr
 `first_true_step` and `valid_horizon`, run on the host on arrays that rollouts produced.
 """
 
+import functools
+import operator
 from math import prod, sqrt
+from typing import cast
 
 import equinox as eqx
 import jax
@@ -173,7 +176,7 @@ def total_variation(u: Float[Array, " *spatial_dims"]) -> Float[Array, ""]:
     The total variation, a scalar.
     """
     differences = [jnp.abs(jnp.roll(u, -1, axis=axis) - u) for axis in range(u.ndim)]
-    return sum(jnp.sum(d) for d in differences)
+    return functools.reduce(operator.add, (jnp.sum(d) for d in differences))
 
 
 def num_wavenumber_bins(spatial_shape: tuple[int, ...]) -> int:
@@ -308,7 +311,7 @@ def rollout_references(
     """
     identity = jnp.broadcast_to(u_context_last, u_data.shape)
     spatial_mean = jnp.broadcast_to(spatial_mean_field(u_context_last), u_data.shape)
-    return RolloutReferences(
+    references = RolloutReferences(
         l2_identity=jax.vmap(relative_l2_error)(identity, u_data),
         l2_spatial_mean=jax.vmap(relative_l2_error)(spatial_mean, u_data),
         total_variation=jax.vmap(total_variation)(u_data[:, 0]),
@@ -316,6 +319,9 @@ def rollout_references(
             u_data, u_context_last
         ),
     )
+    # Type-level only: ty 0.0.84 types an instance built through equinox's unannotated
+    # `_ModuleMeta.__call__` as `eqx.Module`, not as the class that was called.
+    return cast(RolloutReferences, references)
 
 
 class RolloutDiagnostics(eqx.Module):
@@ -365,7 +371,7 @@ def rollout_diagnostics(
 
     The `RolloutDiagnostics` of the rollout, one entry per step.
     """
-    return RolloutDiagnostics(
+    diagnostics = RolloutDiagnostics(
         l2=jax.vmap(relative_l2_error)(u_pred, u_data),
         l_inf=jax.vmap(relative_l_infty_error)(u_pred, u_data),
         l2_per_channel=jax.vmap(relative_l2_error_per_channel)(u_pred, u_data),
@@ -378,6 +384,9 @@ def rollout_diagnostics(
             u_pred, u_context_last
         ),
     )
+    return cast(
+        RolloutDiagnostics, diagnostics
+    )  # type-level only: see rollout_references
 
 
 def first_true_step(
@@ -464,12 +473,13 @@ def segment_errors(
 
     The `SegmentErrors` of the segment.
     """
-    return SegmentErrors(
+    errors = SegmentErrors(
         l2_onestep=relative_l2_error(u_pred[0], u_data[0]),
         l_inf_onestep=relative_l_infty_error(u_pred[0], u_data[0]),
         l2_rollout=relative_l2_error(u_pred, u_data),
         l_inf_rollout=relative_l_infty_error(u_pred, u_data),
     )
+    return cast(SegmentErrors, errors)  # type-level only: see rollout_references
 
 
 def largest_jump(u: Float[Array, " x"]) -> Float[Array, ""]:

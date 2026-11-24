@@ -48,6 +48,7 @@ def new_run_id() -> str:
 
 
 def _tail(target: str | None) -> str | None:
+    """The last component of the dotted name `target`, or `None` for `None`."""
     return None if target is None else str(target).rsplit(".", 1)[-1]
 
 
