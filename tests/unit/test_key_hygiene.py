@@ -25,15 +25,7 @@ MODELS = [
     ("hyperno_fno", "cubic_1d"),
     ("hyperno_unet", "cubic_1d"),
     ("hyperfluxno_2d_euler_v2", "euler_2d"),
-    pytest.param(
-        "disco",
-        "cubic_1d",
-        marks=pytest.mark.xfail(
-            strict=True,
-            reason="F15: the ICLR DISCO checkpoints need the operatornet's original "
-            "(key-reusing) initialization; fixed with checkpointed operatornet_scale",
-        ),
-    ),
+    ("disco", "cubic_1d"),
     ("dpot", "cubic_1d"),
 ]
 

@@ -123,3 +123,5 @@ end of the branch.
 | `.gitmodules` — deleted: it held only the ICON submodule |  |  |
 | `prek.toml` — `exclude` loses `notebooks/` and `third_party/` |  |  |
 | `scripts/checks/check_spelling.py` — `SKIP_PARTS` loses `third_party`, `icon` and `notebooks` |  |  |
+| `src/context_flux_no/models/multiphysics/disco/operatornet.py` — the second bottleneck convolution takes `keys_bot[1]` instead of reusing `keys_bot[0]`; the four comment lines about F15 removed | | |
+| `tests/unit/test_key_hygiene.py` — the DISCO case is a plain tuple again, without the strict `xfail` | | |
