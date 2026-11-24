@@ -29,7 +29,7 @@ uv run just setup                   # syncs the environment and installs the git
 uv run python scripts/data/generate_dataset.py pde=cubic_1d initial_condition=grf seed=0
 
 # train (Hydra; see scripts/training/README.md); --multirun submits to slurm via submitit
-uv run python scripts/training/train_multiphysics.py model=hyperfluxno_2d_euler_v2 data=euler_2d
+uv run python scripts/train.py model=hyperfluxno_2d_euler_v2 data=euler_2d
 
 # evaluate: currently notebooks under notebooks/evaluation/; scripts/evaluate.py arrives in Phase 6
 ```
@@ -46,8 +46,9 @@ Checkpoints are written under `./checkpoints/<data>/<Model>/<Loss>/seed=<n>/<tim
 | regression (ICLR goldens) | `JAX_PLATFORMS=cpu uv run pytest tests/regression -m regression --checkpoints-root ./checkpoints` | checkpoints |
 | verification (numerics) | `uv run pytest -m slow` | x64; slow |
 
-`uv run python scripts/checks/check_docs.py` checks the documentation bookkeeping; `uv run python
-scripts/check_configs.py` instantiates every model × data config pairing (Phase 0.6e).
+`uv run python scripts/checks/check_docs.py` checks the documentation bookkeeping;
+`tests/unit/test_configs.py` instantiates every model × data config pairing, and
+`tests/unit/test_imports.py` imports every module of the package.
 
 ## Layout
 

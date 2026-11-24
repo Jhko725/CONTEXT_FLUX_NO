@@ -2,9 +2,12 @@ name: well_euler_2d
 num_spatial_dims: 2
 channels: 5
 
-well_base_path: "./data/datasets"
-well_dataset_name: "euler_multi_quadrants_periodicBC"
-downsample_spatial: 8
-use_normalization: true
+# Keyword arguments of the source class; scripts/train.py adds the split and the window.
+source:
+  _target_: context_flux_no.data.TheWellDataSource
+  well_base_path: "./data/datasets"
+  well_dataset_name: "euler_multi_quadrants_periodicBC"
+  downsample_spatial: 8
+  use_normalization: true
 
 worker_count: 6

@@ -347,6 +347,21 @@ class WellDatasetSourceBase(grain.sources.RandomAccessDataSource):
             item = (item - self.metadata_common["mean"]) / self.metadata_common["std"]
         return rearrange(item, "t ... c -> t c ...")
 
+    @property
+    def loss_args(self) -> tuple[float, ...]:
+        """The time step and the grid spacings that a loss takes as its positional
+        arguments.
+
+        **Returns:**
+
+        `(dt, dx_1, ..., dx_d)`: `dt` is `metadata_common["temporal_resolution"]` and the
+        spacings are `metadata_common["spatial_resolution"]`, which `TheWellDataSource`
+        multiplies by its `downsample_spatial`.
+        """
+        dt = self.metadata_common["temporal_resolution"]
+        dxs = self.metadata_common["spatial_resolution"]
+        return (dt, *dxs)
+
     @cached_property
     def valid_field_names(self) -> tuple[tuple[str, ...], ...]:
         valid_names = []

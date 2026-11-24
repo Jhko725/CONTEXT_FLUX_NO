@@ -135,3 +135,14 @@ end of the branch.
 | `tests/legacy/` — the tests of legacy code moved here from `tests/` and `tests/unit/test_key_hygiene.py`; imports name `legacy` | | |
 | `tests/unit/test_run_record.py` — the `_target_` string names `legacy.models` | | |
 | `pyproject.toml` — new `[tool.context_flux_no] clean` list; ruff `extend-exclude` and `force-exclude` and codespell `skip` cover `legacy/` and `tests/legacy/` | | |
+| `scripts/train.py` — new: the one training entry point, built from `train_multiphysics.py`; the source comes from `hydra.utils.instantiate(cfg.data.source, ...)` and the loss arguments from `source.loss_args` | | |
+| `scripts/training/train_the_well.py` — deleted: replaced by `scripts/train.py` with `data=well_euler_2d training=the_well` | | |
+| `scripts/training/configs/config_the_well.yaml` — deleted: `data=well_euler_2d training=the_well` composes the same config | | |
+| `scripts/training/configs/data/` — each data config gains a `source:` node naming the source class and holding its keyword arguments | | |
+| `scripts/check_configs.py` — deleted: the census is `tests/unit/test_configs.py` (rule R10) | | |
+| `scripts/import_all.py` — deleted: the import sweep is `tests/unit/test_imports.py` (rule R10) | | |
+| `tests/unit/test_configs.py` — new: the config census, skipping `*_base` and pairing the five dimension-specific model configs only with data of their dimension | | |
+| `tests/unit/test_imports.py` — new: every module of the package imports, `legacy/` included | | |
+| `src/context_flux_no/data/sources.py` — new property `WellDatasetSourceBase.loss_args`, `(dt, *dxs)` from `metadata_common` | | |
+| `scripts/training/README.md` — names `scripts/train.py`, the `source:` node and the census test | | |
+| `README.md` — names `scripts/train.py` and the two tests that replace the census and import scripts | | |

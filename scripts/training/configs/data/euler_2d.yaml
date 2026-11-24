@@ -1,9 +1,13 @@
 name: euler_2d
 num_spatial_dims: 2
 channels: 4
-well_base_path: "./data/datasets"
-well_dataset_name: "euler_2d"
-restrict_trajectory_lengths_to: 80
-preload_into_ram: true
+
+# Keyword arguments of the source class; scripts/train.py adds the split and the window.
+source:
+  _target_: context_flux_no.data.ZarrWellDatasetSource
+  well_base_path: "./data/datasets"
+  well_dataset_name: "euler_2d"
+  restrict_trajectory_lengths_to: 80
+  preload_into_ram: true
 
 worker_count: 0
