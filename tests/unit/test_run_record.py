@@ -4,6 +4,7 @@ import copy
 import dataclasses
 import json
 
+import pytest
 from context_flux_no.runs.record import (
     INDEX_COLUMNS,
     index_from_config,
@@ -31,7 +32,7 @@ _flat = st.dictionaries(st.text(min_size=1, max_size=10), _scalar, max_size=6)
     model_config=_flat,
     best_step=st.none() | st.integers(min_value=0, max_value=10**7),
     best_metric=st.none() | st.floats(allow_nan=False, allow_infinity=False),
-    status=st.sampled_from(["running", "finished", "failed", "legacy"]),
+    status=st.sampled_from(["running", "finished", "failed"]),
 )
 def test_json_round_trip(index, model_config, best_step, best_metric, status):
     rec = copy.replace(
@@ -42,6 +43,15 @@ def test_json_round_trip(index, model_config, best_step, best_metric, status):
     )
     back = RunRecord.from_dict(json.loads(dumps(dataclasses.asdict(rec))))
     assert back == rec
+
+
+@pytest.mark.parametrize("status", ["legacy", "unknown", None])
+def test_read_raises_on_an_unknown_status(tmp_path, status):
+    rec = RunRecord.create(index={}, model_config={})
+    path = tmp_path / "metadata.json"
+    path.write_text(dumps(dataclasses.asdict(rec) | {"status": status}))
+    with pytest.raises(ValueError, match="unknown run status"):
+        RunRecord.read(path)
 
 
 def test_unknown_fields_survive_as_extra():

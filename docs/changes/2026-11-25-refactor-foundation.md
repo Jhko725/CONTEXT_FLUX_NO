@@ -102,3 +102,14 @@ end of the branch.
 | `prek.toml` — registers `check-changes`, which runs on every commit |  |  |
 | `CLAUDE.md` — rewritten after `UniversalForceReconstruction`'s: reading list for planning sessions, rules T1 and T2, repository facts; the *Files* rule, notebook filter, submodule and regression tier removed |  |  |
 | `docs/plans/2026-11-25-refactor-foundation.md` — new: the handoff document of this branch, verbatim under a frontmatter block |  |  |
+| `src/context_flux_no/training/io.py` — deleted with its test `tests/test_training_io.py`: it loaded the ICLR checkpoints (`load_model`, `translate_legacy_config`) |  |  |
+| `tests/test_training_io.py` — deleted with `training/io.py` |  |  |
+| `tests/regression/` — deleted: the regression tier compared the ICLR checkpoints with goldens and has no replacement |  |  |
+| `scripts/diff_checkpoint_leaves.py` — deleted: it compared ICLR checkpoint leaves |  |  |
+| `scripts/audit_bias_hyperinit.py` — deleted: it audited the ICLR checkpoints |  |  |
+| `scripts/backfill_run_records.py` — deleted: it wrote records for ICLR checkpoint directories |  |  |
+| `tests/unit/test_backfill_run_records.py` — deleted with the script it tested |  |  |
+| `src/context_flux_no/runs/index.py` — the two `legacy` branches of `load_state` and `load_run` and their docstring sentences removed |  |  |
+| `src/context_flux_no/runs/record.py` — `Status` loses `"legacy"`; `RunRecord.from_dict` (so `read`) raises `ValueError` on an unknown status; legacy docstring lines reworded |  |  |
+| `tests/unit/test_run_record.py` — the round trip no longer draws `legacy`; new test that `read` raises on an unknown status |  |  |
+| `pyproject.toml` — `regression` marker removed; `addopts = "-m 'not slow'"` |  |  |

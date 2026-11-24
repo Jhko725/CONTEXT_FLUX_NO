@@ -3,9 +3,7 @@
 `index(root)` walks a runs root and returns one `pandas.DataFrame` row per run — the
 `RunRecord.row()` columns, from `metadata.json` only (no checkpoint is opened), so it is
 fast and works offline. `select` filters it with keyword equalities; `load_run` gives back
-the trained model and its record for one run directory. Legacy ICLR checkpoint directories
-(backfilled by `scripts/backfill_run_records.py`, `status == "legacy"`) load through
-`training.io.load_model`.
+the trained model and its record for one run directory.
 
 `from_wandb` builds the same table from a wandb project, for runs trained elsewhere; the
 local `metadata.json` is the primary source and wandb a mirror, never the other way round.
@@ -87,11 +85,6 @@ def load_state(
     structure to restore into is `template`, or `experiment.state_template(run.config)`
     (the run's own config rebuilds model and optimizer) when not given."""
     run = Run.open(run_dir)
-    if run.record.status == "legacy":
-        raise ValueError(
-            f"{run_dir} is a legacy ICLR checkpoint: it holds model weights only, "
-            "use load_run (or training.io.load_model)."
-        )
     if template is None:
         from context_flux_no.experiment import state_template  # config → objects
 
@@ -102,15 +95,7 @@ def load_state(
 def load_run(
     run_dir: str | Path, step: int | None = None
 ) -> tuple[eqx.Module, RunRecord]:
-    """The trained model at `step` (latest if `None`) and the run's record. Legacy ICLR
-    checkpoints (model weights only, model config in orbax `custom_metadata`) are loaded
-    with `training.io.load_model`."""
-    run = Run.open(run_dir)
-    if run.record.status == "legacy":
-        from context_flux_no.training.io import load_model
-
-        ckpt_dir = run.directory / run.record.extra.get("checkpoint_dir", ".")
-        return load_model(ckpt_dir, step), run.record
+    """The trained model at `step` (latest if `None`) and the run's record."""
     state, run = load_state(run_dir, step)
     return state.model, run.record
 

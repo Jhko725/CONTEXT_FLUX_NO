@@ -5,10 +5,7 @@ checkpoints, orbax `custom_metadata`, and wandb (`config` = `index` only, the re
 saved file) — so that a run can be found from any of them. The **full resolved config** is
 not duplicated here: it lives in the run directory's `config.yaml`, which is the latest
 truth (a resume may change it). `index` is the flat set of columns that distinguish runs in
-`training.runs.index()` and in the wandb table; keep it small on purpose (P10).
-
-Legacy ICLR checkpoints get a record with `status="legacy"` from
-`scripts/backfill_run_records.py`."""
+`training.runs.index()` and in the wandb table; keep it small on purpose (P10)."""
 
 from __future__ import annotations
 
@@ -18,14 +15,14 @@ import json
 import uuid
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any, get_args, Literal
 
 from context_flux_no.utils.provenance import git_state, package_version
 from context_flux_no.utils.serialization import dumps
 
 
 SCHEMA_VERSION = 1
-Status = Literal["running", "finished", "failed", "legacy"]
+Status = Literal["running", "finished", "failed"]
 
 INDEX_COLUMNS = (
     "model",
@@ -56,7 +53,7 @@ def _tail(target: str | None) -> str | None:
 
 def index_from_config(cfg: Any, *, dataset_id: str | None = None) -> dict[str, Any]:
     """The index columns read off a resolved config (a plain dict or an OmegaConf
-    `DictConfig`). Missing pieces become `None` rather than raising, because legacy
+    `DictConfig`). Missing pieces become `None` rather than raising, because older
     configs lack some of them."""
 
     def get(*path: str, default: Any = None) -> Any:
@@ -163,6 +160,11 @@ class RunRecord:
         known = {f.name for f in dataclasses.fields(cls)}
         unknown = {k: v for k, v in d.items() if k not in known}
         kwargs = {k: v for k, v in d.items() if k in known}
+        if kwargs.get("status") not in get_args(Status):
+            raise ValueError(
+                f"unknown run status {kwargs.get('status')!r}; "
+                f"expected one of {get_args(Status)}."
+            )
         if unknown:  # forward compatibility: keep what we do not understand
             kwargs["extra"] = {**kwargs.get("extra", {}), "_unknown": unknown}
         return cls(**kwargs)

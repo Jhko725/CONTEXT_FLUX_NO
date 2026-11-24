@@ -93,10 +93,9 @@ dev = [
 testpaths = ["tests"]
 pythonpath = ["."]
 markers = [
-    "regression: needs the ICLR checkpoints; run on CPU (JAX_PLATFORMS=cpu) with --checkpoints-root",
     "slow: verification suite (x64, oracle-based); excluded from the fast tiers",
 ]
-addopts = "-m 'not regression and not slow'"
+addopts = "-m 'not slow'"
 
 [tool.codespell]
 # The irregular British spellings and typos; scripts/checks/check_spelling.py covers the
