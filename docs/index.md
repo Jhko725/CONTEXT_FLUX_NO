@@ -1,19 +1,16 @@
 ---
 type: index
 status: current
-updated: 2026-10-25
+updated: 2026-11-25
 ---
 
 # `context_flux_no` documentation — index
 
 Progressive disclosure: start here, read only what the task needs. Every document carries a
-frontmatter block (`type`, `status`, `updated`, plus `verified_by` / `sources` / `id` / `branch`
-where relevant) so its standing is machine-readable. `scripts/checks/check_docs.py` enforces that every
-document is listed here and has frontmatter.
-
-`status` values — `current` (kept true at all times) · `planned` / `in-progress` / `landed` /
-`merged` (change documents) · `agreed` (design settled with Joon) · `accepted` / `amended`
-(decisions) · `tentative` (written by Claude, not yet checked by Joon) · `historical` (frozen).
+frontmatter block, so its standing is machine-readable. The types, the statuses each type
+allows and the form of each document are in
+[`document-conventions.md`](document-conventions.md); `scripts/checks/check_docs.py`
+enforces them and that every document is listed here.
 
 ## Read first
 
@@ -22,6 +19,7 @@ document is listed here and has frontmatter.
 | [`architecture.md`](architecture.md) | architecture | what the code is now, module by module; what it becomes; where each decision is recorded |
 | [`roadmap.md`](roadmap.md) | roadmap | the single current plan: tracks, phase tables with *Done when*, Parked, the Done ledger |
 | [`../CLAUDE.md`](../CLAUDE.md) | conventions | how Claude works here: session protocol, change documents, review notes, repo facts |
+| [`document-conventions.md`](document-conventions.md) | reference | the form of every document type: frontmatter and statuses, required sections, change documents, plans, ADRs, design documents, the checks |
 | [`coding-standards.md`](coding-standards.md) | reference | where each convention is enforced here: tiers, goldens and tolerances, scope, the checks that replace prose |
 | [`glossary.md`](glossary.md) | glossary | the vocabulary the other documents use |
 
@@ -45,23 +43,29 @@ document is listed here and has frontmatter.
 
 ## Decision records (`decisions/`)
 
+Smaller decisions without an ADR (D1 drop `DPOTEncoder`/LSK; D2 ICLR shim through Phase 3; D4
+`icon/` submodule; D15 `bias-hyperinit` default; D16 extensibility interfaces reserved) are
+recorded in the roadmap tables and the change documents that implement them.
+
+### In force
+
 | ADR | Status | Decision |
 |---|---|---|
 | [0001](decisions/0001-tiered-pde-coupling.md) | amended 2026-10-25 | PDE ↔ solver coupling is tiered; fluxes declare `requires` |
 | [0002](decisions/0002-nd-stepping.md) | accepted | no per-dimension solver hierarchy; FD-WENO, unsplit dimension-by-dimension |
 | [0003](decisions/0003-boundary-conditions-as-objects.md) | accepted | boundary conditions are objects applied by ghost-cell padding |
-| [0004](decisions/0004-weno5-and-reference-backends.md) | accepted | own WENO5, time-boxed; PyClaw/SharpClaw and Trixi.jl as reference backends |
+| [0004](decisions/0004-weno5-and-reference-backends.md) | amended 2026-10-25 | own WENO5, time-boxed; PyClaw/SharpClaw and Trixi.jl as reference backends |
 | [0005](decisions/0005-three-part-numerical-flux.md) | accepted | numerical flux = reconstruction ∘ (base − dissipation) |
 | [0006](decisions/0006-operator-hierarchy-and-scale.md) | accepted | `InContextOperator` ⊃ `InContextFluxOperator`; scale wraps the conditioned module |
 | [0007](decisions/0007-dataclass-configs.md) | accepted | dataclass component configs in Hydra `ConfigStore` |
 | [0008](decisions/0008-four-tier-testing.md) | accepted | unit / property / regression / verification tiers |
 | [0009](decisions/0009-tracks.md) | accepted | work organized as Common → MVP → Rest |
 | [0010](decisions/0010-run-identity.md) | accepted | a run is a directory (`metadata.json` + whole-state checkpoints, Hydra output dir); trainer has no side effects; wandb is a mirror |
-| [0011](decisions/0011-solver-backends-and-dataset-provenance.md) | accepted | reference solvers behind one `SolverBackend` (PyClaw Classic bit-identical, SharpClaw); minimal PDE interface until 4.1; agreement by mutual convergence; every store carries a `DatasetRecord` |
+| [0011](decisions/0011-solver-backends-and-dataset-provenance.md) | amended 2026-10-25 | reference solvers behind one `SolverBackend` (PyClaw Classic bit-identical, SharpClaw); minimal PDE interface until 4.1; agreement by mutual convergence; every store carries a `DatasetRecord` |
 
-Smaller decisions without an ADR (D1 drop `DPOTEncoder`/LSK; D2 ICLR shim through Phase 3; D4
-`icon/` submodule; D15 `bias-hyperinit` default; D16 extensibility interfaces reserved) are
-recorded in the roadmap tables and the change documents that implement them.
+### Superseded
+
+None.
 
 ## Change documents (`changes/`) — one per branch, the reviewer's map and the branch plan
 

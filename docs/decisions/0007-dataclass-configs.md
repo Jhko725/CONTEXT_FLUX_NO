@@ -2,7 +2,7 @@
 type: decision
 id: ADR-0007
 status: accepted
-updated: 2026-09-26
+updated: 2026-11-25
 verified_by: joon (discussed 2026-09-26/27)
 ---
 
@@ -12,10 +12,16 @@ verified_by: joon (discussed 2026-09-26/27)
 
 ## Context
 
+### Motivation
+
 Models were built from `encoder_type: str` + `encoder_kwargs: dict` string dispatch; sub-model
 signatures were invisible until `__init__`; a yaml typo (`bias_hyperinit`) silently selected the
 wrong initialization (assessment §3). Checkpoints re-instantiate via the stored Hydra dict, so a
 renamed class makes them unloadable. Two data-config schemas coexisted.
+
+### Forces
+
+*[not recorded]*
 
 ## Decision
 
@@ -27,13 +33,17 @@ conditioner, target | flux + integrator)`; registered in `ConfigStore`, validate
 ModelConfig.from_yaml(header).build(...)` + weights. `hydra.utils.instantiate` is no longer used
 for models.
 
-## Rejected alternatives
+## Consequences
+
+Every (encoder × conditioner × target) combination is constructible by a property test. The
+`bias_hyperinit` class of bug becomes impossible.
+
+## Alternatives rejected
 
 - *pydantic*: stronger validation and coercion, but an extra dependency and manual Hydra interop;
   Joon: only with a strong, irreplaceable reason.
 - *Keep Hydra dicts + instantiate*: the status quo that produced the bugs.
 
-## Consequences
+## History
 
-Every (encoder × conditioner × target) combination is constructible by a property test. The
-`bias_hyperinit` class of bug becomes impossible.
+- 2026-09-26: accepted.

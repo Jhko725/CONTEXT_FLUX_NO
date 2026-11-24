@@ -1,9 +1,17 @@
 ---
 type: design
+kind: note
 status: agreed
-updated: 2026-10-25
-verified_by: joon (interview 2026-10-25: juliacall in-process, Julia ~1.12, committed Manifest; §Decided)
-sources: [juliapkg 0.1.28 source (deps.py, state.py, find_julia.py) and PyPI README; JuliaCall docs (stable; Multi-threading, Configuration, Managing dependencies); PythonCall.jl README and FAQ 0.9.19; PySR (julia_import.py, sr.py, __init__.py) and SymbolicRegression.jl (parallelism); Julia Pkg docs; Trixi.jl docs; ADR-0004]
+updated: 2026-11-25
+verified_by: "joon (interview 2026-10-25: juliacall in-process, Julia ~1.12, committed Manifest; §Decided)"
+sources:
+  - "juliapkg 0.1.28 source (deps.py, state.py, find_julia.py) and PyPI README"
+  - "JuliaCall docs (stable; Multi-threading, Configuration, Managing dependencies)"
+  - "PythonCall.jl README and FAQ 0.9.19"
+  - "PySR (julia_import.py, sr.py, __init__.py) and SymbolicRegression.jl (parallelism)"
+  - "Julia Pkg docs"
+  - "Trixi.jl docs"
+  - "ADR-0004"
 ---
 
 # Maintaining Julia (Trixi.jl) inside a `uv`-managed Python repository

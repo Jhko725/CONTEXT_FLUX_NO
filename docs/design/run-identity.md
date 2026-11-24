@@ -1,9 +1,12 @@
 ---
 type: design
+kind: note
 status: agreed
-updated: 2026-10-24
+updated: 2026-11-25
 verified_by: joon (Phase 5 ledger, 2026-10-24)
-sources: ADR-0010; code on phase5-run-identity
+sources:
+  - "ADR-0010"
+  - "code on phase5-run-identity"
 ---
 
 # Run identity — layout, records, how to find and load a run

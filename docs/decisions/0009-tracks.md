@@ -2,7 +2,7 @@
 type: decision
 id: ADR-0009
 status: accepted
-updated: 2026-09-27
+updated: 2026-11-25
 verified_by: joon (discussed 2026-09-26/27)
 ---
 
@@ -12,9 +12,15 @@ verified_by: joon (discussed 2026-09-26/27)
 
 ## Context
 
+### Motivation
+
 The full plan is 6–7 focused weeks, realistically 10–12 calendar weeks alongside research. Joon
 wants post-submission experiments (FiLM, reconstruction prototypes) to start on clean
 infrastructure as early as possible, with a defensible minimum.
+
+### Forces
+
+*[not recorded]*
 
 ## Decision
 
@@ -24,12 +30,16 @@ ICs, `DatasetRecord`, regen via reference backends, delete `SegmentLoaderBackgro
 (rollout, metrics, run selection). **[R] Rest**: WENO5 + full verification, `JaxBackend`, figures,
 P7. [R] is not started while [C]/[M] items are open, except WENO5 in its time-box alongside P3.
 
-## Rejected alternatives
-
-- *Strictly phase-ordered execution*: research waits ~10 weeks.
-- *MVP first, infrastructure later*: rebuilds on the copy-pasted core; the point of the cleanup is lost.
-
 ## Consequences
 
 MVP datasets are Trixi/Clawpack-generated; a later `JaxBackend` regen gets its own
 `DatasetRecord` version, and `RunRecord` carries `dataset_id` so results across the two are comparable.
+
+## Alternatives rejected
+
+- *Strictly phase-ordered execution*: research waits ~10 weeks.
+- *MVP first, infrastructure later*: rebuilds on the copy-pasted core; the point of the cleanup is lost.
+
+## History
+
+- 2026-09-27: accepted.

@@ -1,9 +1,21 @@
 ---
 type: design
+kind: note
 status: tentative
-updated: 2026-10-25
+updated: 2026-11-25
 verified_by: — (written by Claude for Joon to implement Phase 2b/2c; becomes `agreed` once Joon has read and amended it)
-sources: [LeVeque 2002; Shu 1998 (ICASE 97-65); Shu 2009; Gottlieb, Shu & Tadmor 2001; Shu & Osher 1988; Ketcheson 2008; Hesthaven 2018; Clawpack docs; Ketcheson, LeVeque & del Razo 2020; JAX docs; Hypothesis docs]
+sources:
+  - "LeVeque 2002"
+  - "Shu 1998 (ICASE 97-65)"
+  - "Shu 2009"
+  - "Gottlieb, Shu & Tadmor 2001"
+  - "Shu & Osher 1988"
+  - "Ketcheson 2008"
+  - "Hesthaven 2018"
+  - "Clawpack docs"
+  - "Ketcheson, LeVeque & del Razo 2020"
+  - "JAX docs"
+  - "Hypothesis docs"
 ---
 
 # Phase 2b/2c — the `fv/` core: what to read, what to build, what proves it

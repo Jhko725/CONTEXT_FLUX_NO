@@ -1,8 +1,11 @@
 ---
 type: findings
 status: current
-updated: 2026-10-25
-sources: [code, claude, joon]
+updated: 2026-11-25
+sources:
+  - "code"
+  - "claude"
+  - "joon"
 ---
 
 # Findings ledger

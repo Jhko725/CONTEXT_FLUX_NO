@@ -2,7 +2,7 @@
 type: decision
 id: ADR-0001
 status: amended
-updated: 2026-10-25
+updated: 2026-11-25
 verified_by: joon (discussed 2026-09-26/27)
 ---
 
@@ -12,12 +12,18 @@ verified_by: joon (discussed 2026-09-26/27)
 
 ## Context
 
+### Motivation
+
 The finite-volume update was written eight times across model classes and target networks, each
 embedding its own assumptions about the PDE (assessment §4d). A clean separation needs a statement
 of *how much* a solver may depend on the PDE. In classical FV codes the stepping, component-wise
 reconstruction and time integration are PDE-agnostic; only the numerical flux couples, and how
 much it couples depends on the flux family [cited: Clawpack's design puts all physics in a per-PDE
 Riemann solver; Shu's FD-WENO with Lax–Friedrichs splitting needs only `f(u)` and `max|f'|`].
+
+### Forces
+
+*[not recorded]*
 
 ## Decision
 
@@ -28,19 +34,6 @@ parameter ranges, flags `has_source`, `has_nonconservative_terms`. Tier 1 (optio
 terms). Every `FluxPredictor` declares `requires: frozenset[str]`; the pairing is checked at build
 time against the family's capabilities. Learned fluxes have `requires = ∅`. Phase 2 implements
 tier-0 fluxes only (Rusanov, Lax–Friedrichs, Godunov-scalar via Osher's formula, FD-WENO5-LF).
-
-## Rejected alternatives
-
-- *Per-PDE Riemann solver as the only interface* (Clawpack's model): maximal coupling; would make the
-  learned flux a special case of something it is not, and would require tier-2 for every family.
-- *Fully PDE-agnostic fluxes only*: loses HLLC/Roe quality for Euler where it matters; the tiers keep
-  that door open without imposing it.
-
-## Consequences
-
-The "PDE-family-agnostic Flux NO" claim of the paper becomes structural (`requires = ∅`). Invalid
-flux × PDE pairings fail at config composition. Nonconservative products and incompressible
-Navier–Stokes are declared out of `fv/` scope (see `design/fv-conventions.md` §Extensibility).
 
 ## Amendment (2026-10-25, review of `phase2a-pyclaw-backend`)
 
@@ -55,3 +48,21 @@ family pairing in the configs. Reason: the interim base written for 2a already c
 tier 0, and a separate 4.1 rewrite would have done that work twice. A backend-specific
 descriptor on the family (`pyclaw_spec`) is in the spirit of tier 2's `riemann_flux`: the family
 may describe itself to a solver; the solver never reaches into the family.
+
+## Consequences
+
+The "PDE-family-agnostic Flux NO" claim of the paper becomes structural (`requires = ∅`). Invalid
+flux × PDE pairings fail at config composition. Nonconservative products and incompressible
+Navier–Stokes are declared out of `fv/` scope (see `design/fv-conventions.md` §Extensibility).
+
+## Alternatives rejected
+
+- *Per-PDE Riemann solver as the only interface* (Clawpack's model): maximal coupling; would make the
+  learned flux a special case of something it is not, and would require tier-2 for every family.
+- *Fully PDE-agnostic fluxes only*: loses HLLC/Roe quality for Euler where it matters; the tiers keep
+  that door open without imposing it.
+
+## History
+
+- 2026-09-26: accepted.
+- 2026-10-25, `phase2a-pyclaw-backend`: amended; see *Amendment*.

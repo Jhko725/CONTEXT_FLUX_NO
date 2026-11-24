@@ -1,9 +1,14 @@
 ---
 type: design
+kind: note
 status: agreed
-updated: 2026-10-25
+updated: 2026-11-25
 verified_by: joon (Phase 2a ledger, 2026-10-25)
-sources: ADR-0004; ADR-0011; PyClaw 5.14.0 source; the_well/docs/data_format.md
+sources:
+  - "ADR-0004"
+  - "ADR-0011"
+  - "PyClaw 5.14.0 source"
+  - "the_well/docs/data_format.md"
 ---
 
 # Simulation backends — how to run, add and verify a reference solver

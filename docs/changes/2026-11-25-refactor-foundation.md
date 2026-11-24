@@ -78,3 +78,18 @@ end of the branch.
 | `scripts/training/configs/` — trailing whitespace and final newlines fixed by the new hooks, no other change |  |  |
 | `src/context_flux_no/` — trailing whitespace and final newlines fixed by the new hooks, no other change |  |  |
 | `tests/conftest.py` — new: the Hypothesis profiles `dev`, `default` and `ci` that `just test` selects |  |  |
+| `docs/document-conventions.md` — new: the form of every document type, adapted from `UniversalForceReconstruction`, with rules T1 and T2 |  |  |
+| `scripts/checks/check_docs.py` — replaced by `UniversalForceReconstruction`'s: closed vocabularies, required headings with `PRE_FORMAT_CHANGES`, index links, Done ledger, ADR agreement, unconfirmed markers, templates; keeps the `updated` and `branch` rules |  |  |
+| `scripts/checks/check_md_math.py` — new, copied from `UniversalForceReconstruction`: both Markdown previews and the frontmatter's form |  |  |
+| `scripts/checks/markdown.py` — new, copied from `UniversalForceReconstruction`: the section tree the two checks read |  |  |
+| `prek.toml` — registers `check-md-math`; `check-docs` runs on the documents and its own two modules |  |  |
+| `pyproject.toml` — dev group: `markdown-it-py` added |  |  |
+| `uv.lock` — relocked for `markdown-it-py` |  |  |
+| `docs/decisions/` — the eleven ADRs moved under the template's headings (*Motivation*, *Forces* marked *[not recorded]*, *Alternatives rejected*, *History*); no sentence changed; `updated` and `sources` in the frontmatter |  |  |
+| `docs/design/` — `kind` added (`fv-conventions.md` derivation, the other four note); `sources` as quoted block lists; `verified_by` of `python-julia-repo.md` quoted so the block parses |  |  |
+| `docs/architecture.md` — frontmatter only: `sources` as a quoted block list |  |  |
+| `docs/findings.md` — frontmatter only: `sources` as a quoted block list |  |  |
+| `docs/glossary.md` — frontmatter only: `sources` as a quoted block list |  |  |
+| `docs/roadmap.md` — frontmatter only: `sources` as a quoted block list |  |  |
+| `docs/verification.md` — frontmatter only: `sources` as a quoted block list |  |  |
+| `docs/index.md` — links `document-conventions.md`; ADRs under *In force* and *Superseded*; ADR-0004 and ADR-0011 shown as amended; the status list replaced by a pointer to the conventions |  |  |

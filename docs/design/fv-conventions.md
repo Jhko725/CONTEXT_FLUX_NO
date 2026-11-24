@@ -1,9 +1,17 @@
 ---
 type: design
+kind: derivation
 status: agreed
-updated: 2026-10-04
+updated: 2026-11-25
 verified_by: joon (discussions 2026-09-26/27)
-sources: [LeVeque 2002; Shu 1998/2009; Jiang & Shu 1996; Clawpack docs; Trixi.jl docs; Pareschi & Russo 2005; Audusse et al. 2004]
+sources:
+  - "LeVeque 2002"
+  - "Shu 1998/2009"
+  - "Jiang & Shu 1996"
+  - "Clawpack docs"
+  - "Trixi.jl docs"
+  - "Pareschi & Russo 2005"
+  - "Audusse et al. 2004"
 ---
 
 # Finite-volume conventions for `fv/`

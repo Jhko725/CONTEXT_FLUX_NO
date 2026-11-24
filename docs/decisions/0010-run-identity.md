@@ -2,9 +2,12 @@
 type: decision
 id: ADR-0010
 status: accepted
-updated: 2026-10-25
+updated: 2026-11-25
 verified_by: joon (ledger confirmed 2026-10-24, "Looks good. Go ahead")
-sources: deep_isochron training/checkpoint.py, loggers.py, experiment/run.py, ADR-0011 §6; orbax-checkpoint 0.11 v1 API docs; JAX training cookbook (RecordWriter)
+sources:
+  - "deep_isochron training/checkpoint.py, loggers.py, experiment/run.py, ADR-0011 §6"
+  - "orbax-checkpoint 0.11 v1 API docs"
+  - "JAX training cookbook (RecordWriter)"
 ---
 
 # ADR-0010 — A run is a directory; the trainer has no side effects
@@ -12,6 +15,8 @@ sources: deep_isochron training/checkpoint.py, loggers.py, experiment/run.py, AD
 **Status**: accepted (2026-10-24). Implemented on `phase5-run-identity`.
 
 ## Context
+
+### Motivation
 
 The ICLR trainer (`training/trainer.py` at `iclr2027-submission`) created its own wandb run
 and its own orbax directory (`checkpoints/<data>/<Model>/<Loss>/seed=<n>/<timestamp>/`) and
@@ -26,6 +31,10 @@ checkpointing, so it could not be tested without wandb.
 `deep_isochron` (Joon's other project) had already solved this: injected `Logger` /
 `Checkpointer` protocols, whole-`TrainerState` checkpoints, a `Run` directory object with
 explicit resume semantics. Joon asked to study it and adopt what fits.
+
+### Forces
+
+*[not recorded]*
 
 ## Decision
 
@@ -74,24 +83,6 @@ explicit resume semantics. Joon asked to study it and adopt what fits.
    the legacy loader `training/io.py::load_model`, which stays until the regression tier no
    longer needs it.
 
-## Rejected alternatives
-
-- **Checkpoint folder named by the wandb run id** (the Phase 5 ledger's first draft). Makes
-  the local artifact depend on a remote service and on `wandb=online`; a locally generated id
-  recorded alongside wandb's gives the same join without the dependency. [deduced]
-- **A local SQLite / Parquet database of runs** (Joon's own suggestion, "feels a bit like
-  overkill"). `runs.index(root)` reads the `metadata.json` files directly — fast enough for
-  hundreds of runs, no schema to migrate, `git`-free. Revisit if the count reaches thousands.
-- **Model-only checkpoints** (as before). Cheaper on disk but cannot resume; the optimizer
-  state of adamw is 2× the model, acceptable with `LatestN(1) + BestN(1)`.
-- **Trainer owns wandb and orbax** (as before). Untestable without network and disk; the
-  injected version runs the same loop in tests with `ListLogger` and a temporary
-  `OrbaxCheckpointer`.
-- **Exact data-stream continuation on resume.** grain's `.shuffle().repeat()` iterator state
-  is not restored; a resumed run restores the state exactly and *restarts* the stream with a
-  seed derived from the step. Honest version shipped; exact continuation via grain iterator
-  checkpoints is an open item (roadmap Phase 5).
-
 ## Where the code lives (review round 1)
 
 `training/` — building blocks (trainer, losses, loggers, checkpoint), importing nothing from the
@@ -110,3 +101,25 @@ assembly too). Dependency direction `training ← runs ← experiment`.
   `training.save_every=1` to recover the old selection exactly, at 3× the write volume.
 - Multi-device: `Trainer` carries an unused `mesh` argument and never reads device values,
   which is the one line of design Phase 5.5 asked for; sharding itself is parked.
+
+## Alternatives rejected
+
+- **Checkpoint folder named by the wandb run id** (the Phase 5 ledger's first draft). Makes
+  the local artifact depend on a remote service and on `wandb=online`; a locally generated id
+  recorded alongside wandb's gives the same join without the dependency. [deduced]
+- **A local SQLite / Parquet database of runs** (Joon's own suggestion, "feels a bit like
+  overkill"). `runs.index(root)` reads the `metadata.json` files directly — fast enough for
+  hundreds of runs, no schema to migrate, `git`-free. Revisit if the count reaches thousands.
+- **Model-only checkpoints** (as before). Cheaper on disk but cannot resume; the optimizer
+  state of adamw is 2× the model, acceptable with `LatestN(1) + BestN(1)`.
+- **Trainer owns wandb and orbax** (as before). Untestable without network and disk; the
+  injected version runs the same loop in tests with `ListLogger` and a temporary
+  `OrbaxCheckpointer`.
+- **Exact data-stream continuation on resume.** grain's `.shuffle().repeat()` iterator state
+  is not restored; a resumed run restores the state exactly and *restarts* the stream with a
+  seed derived from the step. Honest version shipped; exact continuation via grain iterator
+  checkpoints is an open item (roadmap Phase 5).
+
+## History
+
+- 2026-10-24, `phase5-run-identity`: accepted.

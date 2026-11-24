@@ -2,7 +2,7 @@
 type: decision
 id: ADR-0006
 status: accepted
-updated: 2026-09-27
+updated: 2026-11-25
 verified_by: joon (discussed 2026-09-26/27)
 ---
 
@@ -12,11 +12,17 @@ verified_by: joon (discussed 2026-09-26/27)
 
 ## Context
 
+### Motivation
+
 Conditioning was baked into four top-level classes, each re-implementing the FV update; target
 networks conflated flux prediction with time integration (P7). Plain neural-operator targets
 (UNet, FNO) and finite-volume targets need to share encoder and conditioner but differ in what is
 conditioned. RevIN-style scale normalization was a sibling field; applied around the stepper it
 would hand the integrator scaled states and break conservation of the physical `u`.
+
+### Forces
+
+*[not recorded]*
 
 ## Decision
 
@@ -27,13 +33,17 @@ subclasses it with `target = FluxStepper(flux: NumericalFlux, integrator, source
 in the base class, `Scaled(target.flux)` in the subclass (normalize input, denormalize output); the
 integrator always sees physical `u`.
 
-## Rejected alternatives
+## Consequences
+
+Hypernet/FiLM/ContextAppend are each written once. The ICLR checkpoints load through a shim
+mapping the four old classes onto the hierarchy; review gate at the end of Phase 3.
+
+## Alternatives rejected
 
 - *One class with `flux=None` branch*: uniform ablation code, but conflates the two kinds of target
   — the conflation that caused P7.
 - *Normaliser as a sibling slot around the whole operator*: breaks conservation; wrong by construction.
 
-## Consequences
+## History
 
-Hypernet/FiLM/ContextAppend are each written once. The ICLR checkpoints load through a shim
-mapping the four old classes onto the hierarchy; review gate at the end of Phase 3.
+- 2026-09-27: accepted.

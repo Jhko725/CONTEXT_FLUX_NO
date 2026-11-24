@@ -2,7 +2,7 @@
 type: decision
 id: ADR-0004
 status: amended
-updated: 2026-10-25
+updated: 2026-11-25
 verified_by: joon (discussed 2026-09-26/27)
 ---
 
@@ -12,10 +12,16 @@ verified_by: joon (discussed 2026-09-26/27)
 
 ## Context
 
+### Motivation
+
 No JAX WENO5 exists for the scalar families: exponax is spectral and explicitly excludes
 discontinuities [cited: its design notes]; JAX-Fluids has WENO5-Z/TENO6 but is Euler/NS-only
 [cited: arXiv 2402.05193]; Trixi.jl is Julia, DGSEM, no WENO [cited: Trixi API]. Joon wants to
 learn WENO by implementing it, and wants a fallback if it takes too long.
+
+### Forces
+
+*[not recorded]*
 
 ## Decision
 
@@ -25,21 +31,6 @@ Write WENO5 in-house (FD-WENO, LF splitting, JS weights, Z optional) as a classi
 SharpClaw) and `TrixiBackend` (`reference/trixi/`, Julia subprocess, DG projected to cell averages,
 Well-schema HDF5) — as reference oracles for three-way cross-code verification and as fallback
 data generators. The MVP data regeneration uses the reference backends, not the JAX WENO5.
-
-## Rejected alternatives
-
-- *Trixi as the only generator* (no own WENO): loses the learning goal and the shared-stepper
-  property between simulator and model.
-- *exponax*: cannot handle discontinuities.
-- *JAX-Fluids as generator*: cannot express the scalar flux families.
-
-## Consequences
-
-Julia enters the toolchain as a pinned dependency behind `SolverBackend` only (§Amendment for
-the transport). DG and FV solutions differ near
-shocks at the level of each scheme's dissipation; cross-code tolerance comes from a mutual
-convergence study, not a fixed number. If the time-box overruns, `TrixiBackend` generates the data
-and WENO5 continues as a background item.
 
 ## Amendment (2026-10-25) — in-process Julia, not a subprocess
 
@@ -54,3 +45,23 @@ juliapkg) and enters `src/` through `simulations/backends/trixi.py` alone. A fil
 transport is the fallback if the in-process path proves unworkable in practice (a Julia crash
 takes the Python process with it; a Slurm generation job may prefer isolation) — built then,
 not now.
+
+## Consequences
+
+Julia enters the toolchain as a pinned dependency behind `SolverBackend` only (§Amendment for
+the transport). DG and FV solutions differ near
+shocks at the level of each scheme's dissipation; cross-code tolerance comes from a mutual
+convergence study, not a fixed number. If the time-box overruns, `TrixiBackend` generates the data
+and WENO5 continues as a background item.
+
+## Alternatives rejected
+
+- *Trixi as the only generator* (no own WENO): loses the learning goal and the shared-stepper
+  property between simulator and model.
+- *exponax*: cannot handle discontinuities.
+- *JAX-Fluids as generator*: cannot express the scalar flux families.
+
+## History
+
+- 2026-09-27: accepted.
+- 2026-10-25, `phase2a-trixi-backend`: amended (in-process Julia); see *Amendment*.

@@ -2,9 +2,13 @@
 type: decision
 id: ADR-0011
 status: amended
-updated: 2026-10-25
+updated: 2026-11-25
 verified_by: joon (ledger confirmed 2026-10-25, "Go ahead with 2a"; initial-condition contract by interview 2026-10-25, "Looks good. Go ahead")
-sources: ADR-0004; Clawpack/PyClaw docs and source (5.14.0); The Well data format (the_well/docs/data_format.md); ADR-0010 for the record pattern
+sources:
+  - "ADR-0004"
+  - "Clawpack/PyClaw docs and source (5.14.0)"
+  - "The Well data format (the_well/docs/data_format.md)"
+  - "ADR-0010 for the record pattern"
 ---
 
 # ADR-0011 — Reference solvers behind one `SolverBackend`; every store carries a `DatasetRecord`
@@ -15,6 +19,8 @@ the Trixi backend's Python side).
 
 ## Context
 
+### Motivation
+
 ADR-0004 decided that two external codes — PyClaw (Classic and SharpClaw) and Trixi.jl — are
 built *before* the in-house WENO5, as oracles for cross-code verification and as fallback data
 generators. At `iclr2027-submission` each PDE class built its own PyClaw solver inside its
@@ -23,6 +29,10 @@ seven classes did not implement the abstract base the dataset writer required (s
 script only ran for two families), and a generated store recorded nothing about how it was
 made — not the solver, not the boundary conditions, not the parameter ranges, not the code
 version (pain point P9 on the data side; findings F7/F8).
+
+### Forces
+
+*[not recorded]*
 
 ## Decision
 
@@ -66,24 +76,6 @@ version (pain point P9 on the data side; findings F7/F8).
    {periodic, wall, open}`, `associated_dims`, `associated_fields`, `sample_varying`,
    `time_varying`, and a boolean `mask`), so The Well's own reader and ours agree.
 
-## Rejected alternatives
-
-- **Backend chosen inside each PDE class** (as before). Hides the solver from the record and
-  duplicates the controller setup seven times; a backend argument with a per-class default
-  keeps the old behavior as the default and makes the scheme a one-key config change.
-- **A throw-away interim base, replaced wholesale in 4.1** (the first draft of this ADR). Joon's
-  review preferred growing one class: the base already carried half of tier 0, so a 4.1 rewrite
-  would have done it twice. Hence `AbstractPDEFamily` now, numerics methods added as `fv/` needs
-  them (ADR-0001 amendment).
-- **BC objects now.** ADR-0003's objects belong with ghost-cell padding in `fv/`; strings are
-  what PyClaw and Trixi consume anyway, and the record stores strings regardless.
-- **A fixed tolerance for backend agreement.** Two schemes of different order and dissipation
-  do not agree to a fixed number near shocks; a convergence ratio is the honest criterion
-  (ADR-0004 §Consequences).
-- **Content hash as the dataset id.** A locally generated id plus the record's full
-  description is enough to tell datasets apart and does not require reading terabytes;
-  a content digest can be added to `extra` later if needed.
-
 ## Initial conditions (amendment, 2026-10-25)
 
 An initial condition is a **function of space**, not an array: `InitialCondition.at_points(
@@ -124,3 +116,26 @@ points).
   `docs/design/python-julia-repo.md` describes; nothing in this decision depends on it.
 - Phase 4.4 regeneration picks a backend per family in its config and the choice is in every
   `dataset.json`.
+
+## Alternatives rejected
+
+- **Backend chosen inside each PDE class** (as before). Hides the solver from the record and
+  duplicates the controller setup seven times; a backend argument with a per-class default
+  keeps the old behavior as the default and makes the scheme a one-key config change.
+- **A throw-away interim base, replaced wholesale in 4.1** (the first draft of this ADR). Joon's
+  review preferred growing one class: the base already carried half of tier 0, so a 4.1 rewrite
+  would have done it twice. Hence `AbstractPDEFamily` now, numerics methods added as `fv/` needs
+  them (ADR-0001 amendment).
+- **BC objects now.** ADR-0003's objects belong with ghost-cell padding in `fv/`; strings are
+  what PyClaw and Trixi consume anyway, and the record stores strings regardless.
+- **A fixed tolerance for backend agreement.** Two schemes of different order and dissipation
+  do not agree to a fixed number near shocks; a convergence ratio is the honest criterion
+  (ADR-0004 §Consequences).
+- **Content hash as the dataset id.** A locally generated id plus the record's full
+  description is enough to tell datasets apart and does not require reading terabytes;
+  a content digest can be added to `extra` later if needed.
+
+## History
+
+- 2026-10-25, `phase2a-pyclaw-backend`: accepted.
+- 2026-10-25, `phase2a-trixi-backend`: amended; see *Initial conditions*.
