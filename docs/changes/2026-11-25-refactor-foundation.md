@@ -54,6 +54,10 @@ end of the branch.
 
 - **`TheWellDataSource` scales its metadata by `downsample_spatial` and delivers the native grid** (found in unit 8). `data/sources.py:500-504` multiplies `spatial_resolution` by the factor, and no `__getitem__` slices the data; commit `41ac847` dropped the slice that `534503f` had added. `well_euler_2d` sets the factor to 8, so a Well run sees the native grid with spacings of the grid 8 times coarser, which is also what the constant `(0.015, 1 / 64, 1 / 64)` of the old script described. The branch does not fix this: restoring the slice or the spacings changes what every Well run trains on, and that is Joon's decision. `scripts/train.py` takes the loss arguments from the source's metadata for both classes, as the handoff says; the first attempt at unit 8 stopped on this and the retry proceeds on that reading. The orchestrator records it as a finding in the documents unit. [unconfirmed]
 
+- **`gc_paused` is built and tested, and no driver uses it** (unit 9, W4). No committed revision of the repository pauses the collector, so no period exists to keep, and `Trainer.train`, not `experiment.train`, owns the step loop; a per-step hook would change a signature in `training/`. The period and the place of the call are left to Joon. [unconfirmed]
+- **`worker_count` is removed from the data configs** (unit 9): the one loader factory has no workers, and nothing read the key once the `grain.DataLoader` path of the Well script was gone. A Well run therefore reads on the host without worker processes. [unconfirmed]
+- **The loss arguments of a Well run now come from the store's metadata** (unit 8): `dt` from the time grid, and each spacing as the native spacing times `downsample_spatial`. They equal the old constant `(0.015, 1 / 64, 1 / 64)` only if the store's time step is 0.015 and its native spacing is 1/512. No Well store is in the session, so this was not checked. [unconfirmed]
+
 ## Review notes
 
 ### Round 1: from `450f31d`
