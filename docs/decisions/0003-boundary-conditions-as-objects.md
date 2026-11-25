@@ -18,7 +18,7 @@ Periodicity was hard-coded (`wrap` padding everywhere; the only BC hook raised
 `NotImplementedError`). Joon intends non-periodic problems soon. [cited] The standard FV treatment
 is ghost cells filled per boundary type before every flux evaluation, with the interior scheme
 unchanged (LeVeque 2002, Ch. 7; Clawpack `bc_lower`/`bc_upper`). Zero-order extrapolation into
-ghost cells costs accuracy near the boundary; inverse Lax–Wendroff restores it (Tan & Shu, JCP 229, 2010).
+ghost cells costs accuracy near the boundary; inverse Lax–Wendroff restores it (Tan & Shu 2010).
 
 ### Forces
 

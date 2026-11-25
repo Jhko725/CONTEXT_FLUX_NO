@@ -242,3 +242,17 @@ end of the branch.
 | `tests/helpers.py` — `make_dataset_record` takes named arguments, and `SHARPCLAW_SSP33` is a `TypedDict` | | |
 | `tests/unit/` — passes `ty`: equinox instances through a type-level `cast`, zarr members and optional record fields narrowed by assertion; `test_summary.py` stacks per-rollout references; the two unknown-option tests accept the hook's `TypeCheckError`; `test_experiment.py` patches Hydra through `point_hydra_output_dir_at` | | |
 | `tests/verification/test_crosscode.py` — `CubicFlux2D` through a type-level `cast` | | |
+| `docs/references.bib` — new: the one bibliography, nineteen works with only the fields the repository states | | |
+| `docs/references.md` — new, generated from `references.bib` by `just references` | | |
+| `scripts/docs/generate_references.py` — new, from UFR: an author list ending in `and others` gives the `et al.` key, and a technical report shows its institution and number | | |
+| `scripts/checks/check_references.py` — new, from UFR: every citation key and relative link resolves and `references.md` is current; skips `legacy/` beside `changes/` and `plans/` | | |
+| `prek.toml` — registers `check-references` | | |
+| `justfile` — new recipe `references` | | |
+| `pyproject.toml` — `bibtexparser` in the dev group | | |
+| `uv.lock` — locks `bibtexparser` | | |
+| `docs/document-conventions.md` — writes § References: the key form, the generated page, what the check reads | | |
+| `docs/index.md` — lists `references.md`; the link to the never-committed assessment carries `references:ignore` | | |
+| `docs/design/fv-conventions.md` — citations in the key form; the *Sources* list names keys | | |
+| `docs/design/fv-core-plan.md` — citations in the key form, in the frontmatter, the reading path and the *Sources* list | | |
+| `docs/decisions/` — ADR-0002, 0003, 0005 and 0008: each citation token in the key form, the sentences unchanged | | |
+| `README.md` — `references:ignore` on the two lines whose year is not a citation (ICLR 2027, Oct 2026) | | |

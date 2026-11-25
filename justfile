@@ -42,6 +42,10 @@ test profile="dev" *paths="tests":
 test-slow profile="dev":
     uv run pytest -m slow --hypothesis-profile={{profile}}
 
+# Write docs/references.md from docs/references.bib
+references:
+    uv run python scripts/docs/generate_references.py
+
 # The conventions document is left out of `pending`: it defines the marker rather than
 # using it.
 

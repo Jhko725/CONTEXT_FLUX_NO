@@ -209,7 +209,11 @@ A decision that Claude takes without Joon is marked **[unconfirmed]** where it i
 
 ## References
 
-This section is written with the one bibliography, in unit 17 of the `refactor-foundation` handoff.
+The repository has one bibliography, `references.bib`, and one in-text form. The key is `Author Year` for one author, `Author & Author Year` for two, `Author et al. Year` for three or more, with a letter suffix on a collision. A locator follows the key after a comma: `LeVeque 2002, Ch. 7`, `Gottlieb et al. 2001, §2`. Every key resolves to an entry in `references.bib`. Documents carry no reference list of their own; their frontmatter `sources` lists keys. A `sources` item that is not a work, such as `"code"`, `"joon"`, a Project document or a library's documentation, is not in that form and has no entry.
+
+The page `references.md` is generated from `references.bib` by `scripts/docs/generate_references.py` (`just references`) and is not edited by hand. The generator derives each in-text key from the entry's `author` and `year` fields, and gives colliding keys their letter suffixes in the order of the entries' titles. An author list that ends in `and others` gives the `et al.` key whatever its length, for a work whose later authors the repository does not know. Names and titles are written in Unicode in the `.bib` file, since the generator removes braces and decodes no other LaTeX. An entry holds only fields that a document or a source in the repository states; a field nobody has checked is left out rather than filled from memory.
+
+`check_references.py` fails on a key that has no entry, on a relative link whose target does not exist, and when the page differs from the generator's output. It reads the documents, the package, the tests and the scripts, and skips `changes/`, `plans/`, `src/context_flux_no/legacy/` and `tests/legacy/`: the first two are records of what was said, and rule R7 leaves the last two untouched. A line that carries `references:ignore`, in Markdown inside an HTML comment, is not read; it is for a year that is not a citation, such as a conference name or a month.
 
 ## Markdown that renders in both previews
 

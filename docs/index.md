@@ -22,6 +22,7 @@ enforces them and that every document is listed here.
 | [`document-conventions.md`](document-conventions.md) | reference | the form of every document type: frontmatter and statuses, required sections, change documents, plans, ADRs, design documents, the checks |
 | [`coding-standards.md`](coding-standards.md) | reference | where each convention is enforced here: tiers, goldens and tolerances, scope, the checks that replace prose |
 | [`glossary.md`](glossary.md) | glossary | the vocabulary the other documents use |
+| [`references.md`](references.md) | reference | the bibliography, generated from `references.bib` |
 
 ## Ledgers
 
@@ -89,4 +90,4 @@ None.
 
 | Document | What |
 |---|---|
-| [`assessment-2026-09-26.md`](assessment-2026-09-26.md) | survey of the repository at `iclr2027-submission`, with Joon's pain points P1–P10; frozen |
+| [`assessment-2026-09-26.md`](assessment-2026-09-26.md) | survey of the repository at `iclr2027-submission`, with Joon's pain points P1–P10; frozen <!-- references:ignore: never committed to the repository --> |

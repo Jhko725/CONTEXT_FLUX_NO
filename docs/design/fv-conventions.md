@@ -6,7 +6,8 @@ updated: 2026-11-25
 verified_by: joon (discussions 2026-09-26/27)
 sources:
   - "LeVeque 2002"
-  - "Shu 1998/2009"
+  - "Shu 1998"
+  - "Shu 2009"
   - "Jiang & Shu 1996"
   - "Clawpack docs"
   - "Trixi.jl docs"
@@ -43,10 +44,10 @@ verified in the tree at `iclr2027-submission`, **[deduced]** inference.
   `Periodic` copies the opposite end; `Extrapolate(0)` repeats the boundary cell, `Extrapolate(1)`
   continues linearly; `Reflective` mirrors and applies `pde.reflect(u, axis)` (sign flip of the
   normal velocity/momentum, identity for scalars); `Dirichlet(value | fn(x, t))` sets the ghost
-  cells to the prescribed state (**[cited]** LeVeque Ch. 7 for the mirror and extrapolation rules);
+  cells to the prescribed state (**[cited]** LeVeque 2002, Ch. 7 for the mirror and extrapolation rules);
   `Inflow(primitive_state)` is `Dirichlet` after `pde.to_conserved`.
 - Near-boundary order: `Extrapolate(0)` is first order at the boundary; inverse Lax–Wendroff is a
-  later `fill_ghost` implementation (**[cited]** Tan & Shu, JCP 229, 2010).
+  later `fill_ghost` implementation (**[cited]** Tan & Shu 2010).
 
 ## 3. Dimensions (ADR-0002)
 
@@ -54,8 +55,7 @@ verified in the tree at `iclr2027-submission`, **[deduced]** inference.
   state and sums the divergences (unsplit, method of lines). Transverse axes are batch axes.
 - Formulation is finite-*difference* WENO (reconstruct the split *flux* along a line) because on
   uniform grids it keeps fifth order in multi-D with dimension-by-dimension application; FV-WENO
-  would need face quadrature for order > 2 (**[cited]** Shu, SIAM Review 51, 2009; Titarev & Toro,
-  JCP 201, 2004). Consequence: FD-WENO requires a *uniform* grid (not periodicity).
+  would need face quadrature for order > 2 (**[cited]** Shu 2009; Titarev & Toro 2004). Consequence: FD-WENO requires a *uniform* grid (not periodicity).
 - Systems with rotational invariance implement one normal-direction flux and `rotate_to_axis`
   (permute vector components); scalar laws implement `f` once or per axis.
 - Not in scope: sequential Strang/Godunov splitting; genuinely multidimensional schemes (CTU).
@@ -83,8 +83,8 @@ NumericalFlux(reconstruction, base, dissipation):   F̂ = base(rec(u)) − dissi
 ## 5. Time integration
 
 - `Integrator.step(rhs: RHS, u, dt)` with `RHS(hyperbolic, parabolic=None, source=None)` so that
-  split and IMEX integrators can treat the parts differently (**[cited]** LeVeque 2002 Ch. 17 for
-  fractional-step sources; Pareschi & Russo, J. Sci. Comput. 25, 2005 for IMEX-RK).
+  split and IMEX integrators can treat the parts differently (**[cited]** LeVeque 2002, Ch. 17 for
+  fractional-step sources; Pareschi & Russo 2005 for IMEX-RK).
 - `ForwardEuler`, `SSPRK2`, `SSPRK3` (Shu–Osher form). `CFLAdaptive(inner, cfl, max_substeps)`:
   `Δt ≤ CFL / Σ_axis α_axis/dx_axis`, bounded substeps under `lax.scan`/`while_loop`; implemented
   when first needed.
@@ -110,7 +110,7 @@ tier 3 (optional)  viscous_flux(u, grad_u, params, axis)
 - `AnalyticSolution(x, t, params)` serves as initial condition (`t = 0`), as Dirichlet/inflow
   boundary data, and as the error reference (**[cited]** Trixi's `initial_condition(x, t)` /
   `AnalysisCallback` pattern). MMS = an `AnalyticSolution` plus the source it implies
-  (**[cited]** Roache, J. Fluids Eng. 124, 2002).
+  (**[cited]** Roache 2002).
 - Verification claims and the tests that carry them are tabulated in `../verification.md`.
   Verification runs with `jax_enable_x64`: fifth-order EOC hits the fp32 floor after two refinements.
 
@@ -128,12 +128,9 @@ tier 3 (optional)  viscous_flux(u, grad_u, params, axis)
 
 ## Sources
 
-[cited] LeVeque, *Finite Volume Methods for Hyperbolic Problems*, CUP 2002 (Ch. 4, 7, 12, 15, 17) ·
-Shu, *Essentially non-oscillatory and weighted essentially non-oscillatory schemes for hyperbolic
-conservation laws*, ICASE 97-65 (1998) · Shu, SIAM Review 51(1) 2009 · Jiang & Shu, JCP 126 (1996) ·
-Titarev & Toro, JCP 201 (2004) · Tan & Shu, JCP 229 (2010) · Pareschi & Russo, J. Sci. Comput. 25
-(2005) · Audusse, Bouchut, Bristeau, Klein, Perthame, SIAM J. Sci. Comput. 25 (2004) · Parés, SIAM J.
-Numer. Anal. 44 (2006) · Roache, J. Fluids Eng. 124 (2002) · Clawpack Riemann-solver docs
-(clawpack.org/riemann.html) · Trixi.jl documentation (trixi-framework.org).
+[cited] LeVeque 2002, Ch. 4, 7, 12, 15, 17 · Shu 1998 · Shu 2009 · Jiang & Shu 1996 · Titarev & Toro
+2004 · Tan & Shu 2010 · Pareschi & Russo 2005 · Audusse et al. 2004 · Parés 2006 · Roache 2002 ·
+Clawpack Riemann-solver docs (clawpack.org/riemann.html) · Trixi.jl documentation
+(trixi-framework.org).
 [deduced] The three-part decomposition mapping of existing model classes; the tiering as the
 structural form of PDE-agnosticism; the `Scaled` placement argument.

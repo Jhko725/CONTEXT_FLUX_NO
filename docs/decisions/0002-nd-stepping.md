@@ -18,8 +18,8 @@ The code had separate 1D and 2D paths (`FluxNO` vs `NDFluxNO`, `GaussianRandomFi
 On Cartesian grids the method-of-lines semi-discretization is a sum over axes of 1D operators
 applied with the other axes as batch dimensions. [cited] Finite-*difference* WENO keeps full order
 in multi-D with plain dimension-by-dimension application on uniform grids, whereas finite-*volume*
-WENO needs face quadrature to exceed second order (Shu, SIAM Review 51, 2009; Titarev & Toro, JCP
-201, 2004).
+WENO needs face quadrature to exceed second order (Shu 2009; Titarev & Toro
+2004).
 
 ### Forces
 

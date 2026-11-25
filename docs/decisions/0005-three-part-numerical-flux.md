@@ -20,7 +20,7 @@ Three stencil-flux MLPs, three dimensional-split drivers and eight FV updates we
 research agenda includes learned dissipation on a classical base, learned reconstruction with a
 classical flux, and inspecting learned vs numerical flux — all of which are configurations of
 such a decomposition. Well-balanced schemes for balance laws modify the reconstruction (Audusse et
-al., SIAM J. Sci. Comput. 25, 2004), another reason to make it explicit.
+al. 2004), another reason to make it explicit.
 
 ### Forces
 

@@ -17,8 +17,8 @@ verified_by: joon (discussed 2026-09-26/27)
 Tests covered only the baselines. The bugs found in the assessment were invariant violations
 (key reuse, ignored flags, inconsistent face conventions, silent init fallthrough) that example
 tests miss. Numerics has an oracle problem: correctness needs analytic solutions and cross-code
-comparison [cited: Kanewala & Bieman, IST 56, 2014 on metamorphic testing of scientific software;
-Roache 2002 on code verification by manufactured solutions; MacIver et al., JOSS 2019 for Hypothesis].
+comparison [cited: Kanewala & Bieman 2014 on metamorphic testing of scientific software;
+Roache 2002 on code verification by manufactured solutions; MacIver et al. 2019 for Hypothesis].
 
 ### Forces
 

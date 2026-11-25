@@ -6,14 +6,14 @@ updated: 2026-11-25
 verified_by: — (written by Claude for Joon to implement Phase 2b/2c; becomes `agreed` once Joon has read and amended it)
 sources:
   - "LeVeque 2002"
-  - "Shu 1998 (ICASE 97-65)"
+  - "Shu 1998"
   - "Shu 2009"
-  - "Gottlieb, Shu & Tadmor 2001"
+  - "Gottlieb et al. 2001"
   - "Shu & Osher 1988"
   - "Ketcheson 2008"
   - "Hesthaven 2018"
   - "Clawpack docs"
-  - "Ketcheson, LeVeque & del Razo 2020"
+  - "Ketcheson et al. 2020"
   - "JAX docs"
   - "Hypothesis docs"
 ---
@@ -46,13 +46,13 @@ editions named in Sources.
 
 ### I.1 The finite-volume frame and ghost cells — for `divergence.py`, `boundary.py`
 
-1. **LeVeque, *Finite Volume Methods for Hyperbolic Problems* (2002), Ch. 4 (§4.1–4.4, 4.10–4.11)**
+1. **LeVeque 2002, Ch. 4 (§4.1–4.4, 4.10–4.11)**
    — the REA (reconstruct–evolve–average) view, the conservative update
    `Q_i^{n+1} = Q_i^n − (Δt/Δx)(F_{i+½} − F_{i−½})`, why conservation form matters (Lax–Wendroff
    theorem, §12.10), the CFL condition (§4.4). *Extract*: the face/cell indexing that §1 of
    `fv-conventions.md` fixes, and the statement of discrete conservation that V1/V2 test.
    **[cited]**
-2. **LeVeque Ch. 7 (Boundary Conditions and Ghost Cells), all of it** — periodic (§7.1),
+2. **LeVeque 2002, Ch. 7 (Boundary Conditions and Ghost Cells), all of it** — periodic (§7.1),
    outflow/extrapolation and why zero-order extrapolation is first order but usually fine (§7.3.1),
    solid walls by reflection with the normal-velocity sign flip (§7.3.3), inflow via prescribed
    ghost data (§7.2); the discussion of how many ghost cells a stencil needs. *Extract*: the exact
@@ -63,17 +63,15 @@ editions named in Sources.
    user callback, and that `num_ghost` is set by the *solver* (2 for Classic, 3 for SharpClaw).
    *Extract*: confirmation that "BC = function filling `num_ghost` cells per (axis, side)" is the
    standard shape, and the `aux` hook we do not need yet. **[cited]**
-4. **Hesthaven, *Numerical Methods for Conservation Laws: From Analysis to Algorithms* (SIAM
-   2018), Ch. 5–6** — the same material written for implementers, with MATLAB that maps almost
-   line-for-line onto `jnp` (the `extend`/ghost-cell helper in Ch. 5 is our `pad_ghost_cells`).
+4. **Hesthaven 2018, Ch. 5–6** — the same material written for implementers, with MATLAB that maps
+   almost line-for-line onto `jnp` (the `extend`/ghost-cell helper in Ch. 5 is our `pad_ghost_cells`).
    *Extract*: his `extend(u, h, m, BCl, ul, BCr, ur)` signature — compare with ours below. Code:
    <https://www.mathworks.com/academia/books/numerical-methods-for-conservation-laws-hesthaven.html>.
    **[cited]**
 
 ### I.2 Why FD-WENO and what a stencil window is — for `stencil.py`, `split.py`
 
-5. **Shu, *Essentially Non-Oscillatory and Weighted Essentially Non-Oscillatory Schemes for
-   Hyperbolic Conservation Laws*, ICASE 97-65 (1998), §2.1–2.3 and §4.1–4.2**
+5. **Shu 1998, §2.1–2.3 and §4.1–4.2**
    (<https://ntrs.nasa.gov/citations/19980007543>; mirror
    <https://www3.nd.edu/~zxu2/acms60790S13/Shu-WENO-notes.pdf>) — reconstruction from cell
    averages vs from point values (§2.1–2.2: the *finite-volume* and *finite-difference* frameworks
@@ -84,50 +82,48 @@ editions named in Sources.
    reconstructions at face `i+½` (`fv-conventions.md` §2 quotes (2, 3)/(3, 2) for WENO5);
    (ii) the identity `f+ + f− = f` and the monotonicity `∂f±/∂u ≷ 0` that `split.py` tests.
    **[cited]**
-6. **Shu, "High order weighted essentially nonoscillatory schemes for convection dominated
-   problems", SIAM Review 51(1), 2009, §2–3** — the multi-D argument: FD-WENO applies
+6. **Shu 2009, §2–3** — the multi-D argument: FD-WENO applies
    dimension by dimension on uniform grids at full order; FV-WENO needs face quadrature beyond
    second order. *Extract*: the reason ADR-0002 chose FD, and the uniform-grid caveat.
    **[cited]**
-7. **Jiang & Shu, JCP 126 (1996)** — only §2 for now (the WENO5 weights); the rest when 2e(R)
+7. **Jiang & Shu 1996** — only §2 for now (the WENO5 weights); the rest when 2e(R)
    starts. Skim so that `stencil_windows` returns what the weights need (a window of 5 values per
    face, per split flux). **[cited]**
 
 ### I.3 Time integration — for `integrate.py`
 
-8. **Gottlieb, Shu & Tadmor, "Strong stability-preserving high-order time discretization
-   methods", SIAM Review 43(1), 2001, §1–3** (<https://www.cfm.brown.edu/people/sg/SSPsiamreview.pdf>)
+8. **Gottlieb et al. 2001, §1–3** (<https://www.cfm.brown.edu/people/sg/SSPsiamreview.pdf>)
    — the SSP idea (a convex combination of forward-Euler steps inherits any convex-stable property
    of Euler, e.g. TVD), the optimal SSP(2,2) and SSP(3,3) Shu–Osher forms, the SSP coefficient and
    the resulting CFL restriction `Δt ≤ c·Δt_FE`, and why classical RK4 is *not* SSP. *Extract*:
    the exact Shu–Osher coefficients for `SSPRK2`/`SSPRK3`, and the TVD test idea (V-row below).
-   **[cited]** The original: Shu & Osher, JCP 77 (1988), §2. **[cited]**
-9. **Ketcheson, SIAM J. Sci. Comput. 30(4), 2008** ("Highly efficient SSP RK methods with
+   **[cited]** The original: Shu & Osher 1988, §2. **[cited]**
+9. **Ketcheson 2008** ("Highly efficient SSP RK methods with
    low-storage implementations") — SSP(10,4), PyClaw/SharpClaw's default `SSP104`. Optional now;
    relevant when matching SharpClaw's time accuracy in V19. **[cited]**
-10. **LeVeque Ch. 17 (§17.1–17.3)** — fractional-step/Strang splitting for source terms; why the
+10. **LeVeque 2002, Ch. 17 (§17.1–17.3)** — fractional-step/Strang splitting for source terms; why the
     `RHS(hyperbolic, parabolic, source)` split exists even though 2c only sums the parts.
-    **[cited]** Pareschi & Russo (2005) for IMEX is parked until a stiff source appears.
+    **[cited]** Pareschi & Russo 2005 for IMEX is parked until a stiff source appears.
 
 ### I.4 Analytic references — for `analytic.py`
 
-11. **LeVeque Ch. 11 (§11.1–11.3) and Hesthaven Ch. 2** — the method of characteristics for
+11. **LeVeque 2002, Ch. 11 (§11.1–11.3) and Hesthaven 2018, Ch. 2** — the method of characteristics for
     scalar laws; Burgers' pre-shock solution `u(x,t) = u₀(x − u t)` solved implicitly (Newton), the
     breaking time `t_b = −1/min u₀'`. *Extract*: the two or three closed forms `analytic.py` ships:
     advected sine, pre-shock Burgers from a sine, a translating step. **[cited]**
-12. **Ketcheson, LeVeque & del Razo, *Riemann Problems and Jupyter Solutions* (SIAM 2020)**,
+12. **Ketcheson et al. 2020**,
     free online (<https://nbviewer.org/github/clawpack/riemann_book/blob/master/Preface.ipynb>)
     — the Burgers and traffic chapters give exact Riemann solutions with runnable code; the
     nonconvex-flux chapter is the reference for cubic/sine (V15). Read for pleasure now, use in 2e.
     **[cited]**
-13. **Roache, J. Fluids Eng. 124 (2002)** — the method of manufactured solutions, for V13; one
+13. **Roache 2002** — the method of manufactured solutions, for V13; one
     reading, no code yet. **[cited]**
 
 ### I.5 Tooling — JAX and property tests
 
 14. `jax.numpy.pad` (per-axis `pad_width`, `mode="wrap" | "edge" | "reflect" | "symmetric"`;
     note `"reflect"` excludes the edge sample, `"symmetric"` includes it — `Reflective` for cell
-    averages wants **`symmetric`** [deduced from LeVeque §7.3.3: ghost cell `i=−1` mirrors cell
+    averages wants **`symmetric`** [deduced from LeVeque 2002, §7.3.3: ghost cell `i=−1` mirrors cell
     `i=0`]); `jax.lax.slice_in_dim` / `jax.lax.dynamic_slice_in_dim`; `jnp.moveaxis` for
     axis-generic code; `jax.vmap` with `in_axes` for the transverse batch axes.
     <https://docs.jax.dev/en/latest/jax.numpy.html>. **[cited]**
@@ -199,7 +195,7 @@ def pad_ghost_cells(u: Array, axis: int, stencil: Stencil, bcs: BCs, *, pde=None
     axis using that axis's bcs (0 unless the flux is genuinely multidimensional)."""
 ```
 
-Fill rules (LeVeque Ch. 7 **[cited]**; `x`, `t` only used by `Dirichlet`/`Inflow`):
+Fill rules (LeVeque 2002, Ch. 7 **[cited]**; `x`, `t` only used by `Dirichlet`/`Inflow`):
 - `Periodic`: lower ghosts = last `n` cells, upper ghosts = first `n` cells (`jnp.pad(mode="wrap")`).
 - `Extrapolate(0)`: repeat the boundary cell (`mode="edge"`); `Extrapolate(1)`: `u_0 + k (u_0 − u_1)`.
 - `Reflective`: `mode="symmetric"` then `pde.reflect(·, axis)` on the ghost block (identity for
@@ -236,21 +232,21 @@ Invariants (`tests/property/test_fv_core.py`, V1/V2):
   round-off: `atol 1e-12` x64 / `1e-6` fp32). With periodic BCs `F[0] == F[N]` so the sum is 0 (V1);
   otherwise it is `F_in − F_out` (V2).
 - Linear advection, upwind flux `F_{i+½} = a u_i` (a > 0), CFL = 1, forward Euler: the update is the
-  exact shift by one cell **[cited: LeVeque §4.9]** — a two-line integration test that exercises
+  exact shift by one cell **[cited: LeVeque 2002, §4.9]** — a two-line integration test that exercises
   `pad → windows → flux → divergence → step` end to end before any WENO exists.
 
 ### II.4 `fv/split.py`
 
 ```python
 def lax_friedrichs_split(f: Array, u: Array, alpha: Array | float) -> tuple[Array, Array]:
-    """f± = ½ (f ± α u), α ≥ max |f'(u)| over the relevant set (Shu 1998 §4.2)."""
+    """f± = ½ (f ± α u), α ≥ max |f'(u)| over the relevant set (Shu 1998, §4.2)."""
 def global_alpha(pde, u, params, axis) -> Array: ...   # max over the whole field
 def local_alpha(pde, windows, params, axis) -> Array: ...   # per-face max over the window (LLF)
 ```
 
 Invariants: `f+ + f− == f` (exact); for a scalar law with `α ≥ max|f'|`, `f+` is nondecreasing
 and `f−` nonincreasing in `u` on a sampled grid of `u` values (sign of finite differences; this is
-the monotonicity WENO's upwinding relies on **[cited: Shu 1998 §4.2]**).
+the monotonicity WENO's upwinding relies on **[cited: Shu 1998, §4.2]**).
 
 ### II.5 `fv/integrate.py`
 
@@ -271,7 +267,7 @@ class CFLAdaptive(Integrator):  # stub: raises NotImplementedError; signature fi
     inner: Integrator; cfl: float; max_substeps: int
 ```
 
-Coefficients from Gottlieb–Shu–Tadmor 2001, eqs. (2.8)–(2.9) / Shu–Osher 1988 **[cited]**. Stage
+Coefficients from Gottlieb et al. 2001, eqs. (2.8)–(2.9) / Shu & Osher 1988 **[cited]**. Stage
 times `t + c_k dt` are passed through for time-dependent sources/BCs (`c = (0, 1)` for SSPRK2,
 `(0, 1, ½)` for SSPRK3 **[cited]**).
 
@@ -283,7 +279,7 @@ Invariants (`tests/property/test_integrate.py`, V8/V11 precursor):
 - Temporal EOC on `u' = λu` over 4 halvings: 1, 2, 3 (`± 0.1`) — the cheap version of V11.
 - SSP/TVD: linear advection with upwind flux, step IC, `CFL ≤ 1`: total variation
   `Σ|u_{i+1} − u_i|` is non-increasing for every integrator (Euler is TVD here; SSP inherits it
-  **[cited: GST 2001 §2]**). Also check it *fails* for a non-SSP RK3 (e.g. classical Heun-3) at
+  **[cited: Gottlieb et al. 2001, §2]**). Also check it *fails* for a non-SSP RK3 (e.g. classical Heun-3) at
   CFL just above its SSP radius — optional but the most instructive test in the phase.
 - The integrator never sees `dx`, `α` or any flux object: discrete conservation is the
   divergence's job (`fv-conventions.md` §5).
@@ -302,7 +298,7 @@ manufactured(f, u_exact)        # source = ∂_t u_exact + ∂_x f(u_exact) via 
 ```
 
 The Newton solve for Burgers is a fixed small number of iterations under `lax.fori_loop`
-(converges fast before breaking) **[cited: Hesthaven Ch. 2 code]**.
+(converges fast before breaking) **[cited: Hesthaven 2018, Ch. 2 code]**.
 
 ---
 
@@ -343,16 +339,9 @@ nonuniform grids, and anything about models.
 
 ## Sources
 
-[cited] LeVeque, *Finite Volume Methods for Hyperbolic Problems*, CUP 2002 (Ch. 4, 7, 11, 12, 17;
-book page <https://faculty.washington.edu/rjl/book.html>) · Shu, ICASE 97-65 (1998),
-<https://ntrs.nasa.gov/citations/19980007543> · Shu, SIAM Review 51(1), 82–126 (2009) · Jiang & Shu,
-JCP 126, 202–228 (1996) · Gottlieb, Shu & Tadmor, SIAM Review 43(1), 89–112 (2001),
-<https://www.cfm.brown.edu/people/sg/SSPsiamreview.pdf> · Shu & Osher, JCP 77, 439–471 (1988) ·
-Ketcheson, SIAM J. Sci. Comput. 30(4), 2113–2136 (2008) · Hesthaven, *Numerical Methods for
-Conservation Laws: From Analysis to Algorithms*, SIAM 2018 (code via MathWorks book page) ·
-Ketcheson, LeVeque & del Razo, *Riemann Problems and Jupyter Solutions*, SIAM 2020
-(<https://nbviewer.org/github/clawpack/riemann_book/blob/master/Preface.ipynb>) · Roache, J. Fluids
-Eng. 124, 4–10 (2002) · Clawpack BC docs <https://www.clawpack.org/bc.html> · JAX docs
+[cited] LeVeque 2002, Ch. 4, 7, 11, 12, 17 · Shu 1998 · Shu 2009 · Jiang & Shu 1996 · Gottlieb et
+al. 2001 · Shu & Osher 1988 · Ketcheson 2008 · Hesthaven 2018 (code via MathWorks book page) ·
+Ketcheson et al. 2020 · Roache 2002 · Clawpack BC docs <https://www.clawpack.org/bc.html> · JAX docs
 <https://docs.jax.dev> · Hypothesis docs <https://hypothesis.readthedocs.io>.
 [code] the `InterfaceReconstructor` roll-based padding at `iclr2027-submission`.
 [deduced] window-axis-last layout; union-stencil slicing; `symmetric` vs `reflect` for cell
