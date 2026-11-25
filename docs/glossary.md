@@ -50,3 +50,7 @@ One line per term; `architecture.md` and the design documents use only these.
 - **tier (tests)** — unit · property · regression · verification (ADR-0008).
 - **track** — [C] Common · [M] MVP · [R] Rest (ADR-0009).
 - **Well schema** — The Well dataset layout (`t0_fields`, `t1_fields`, …, `boundary_conditions` metadata) used for all datasets.
+- **clean list** — the paths that the strict checks apply to, held once as `clean` under `[tool.context_flux_no]` of `pyproject.toml` (ADR-0012).
+- **legacy** — the code under `src/context_flux_no/legacy/` that awaits its rewrite: importable, otherwise untouched, outside the clean list.
+- **admissible** — a state whose positive quantities (depth; density and pressure) are positive in every cell; `AbstractPDEFamily.admissible`.
+- **evaluation record** — the JSON file written beside an evaluation result: run ids, `dataset_id`, split, arguments and provenance (`EvaluationRecord`).

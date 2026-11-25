@@ -1,7 +1,7 @@
 ---
 type: decision
 id: ADR-0010
-status: accepted
+status: amended
 updated: 2026-11-25
 verified_by: joon (ledger confirmed 2026-10-24, "Looks good. Go ahead")
 sources:
@@ -12,7 +12,7 @@ sources:
 
 # ADR-0010 — A run is a directory; the trainer has no side effects
 
-**Status**: accepted (2026-10-24). Implemented on `phase5-run-identity`.
+**Status**: accepted (2026-10-24), implemented on `phase5-run-identity`; amended 2026-11-25.
 
 ## Context
 
@@ -77,11 +77,10 @@ explicit resume semantics. Joon asked to study it and adopt what fits.
    `cfg.training.optimizer` (chains included) so `runs.state_template(cfg)` can rebuild the
    opt-state structure from `config.yaml` alone.
 
-6. **Legacy checkpoints join the index** [code]. `scripts/backfill_run_records.py` writes a
-   `status="legacy"` record (`run_id = legacy-<timestamp>`) into each ICLR timestamp
-   directory, matching wandb runs through the F1 audit CSV; `runs.load_run` routes those to
-   the legacy loader `training/io.py::load_model`, which stays until the regression tier no
-   longer needs it.
+6. **Only runs of this layout are in the index** [code]. A record's status is `running`,
+   `finished` or `failed`, and `RunRecord.read` raises on any other value. `runs.load_run`
+   always restores through `load_state`. The ICLR checkpoints are not backfilled with
+   records and are not loadable from this repository.
 
 ## Where the code lives (review round 1)
 
@@ -123,3 +122,5 @@ assembly too). Dependency direction `training ← runs ← experiment`.
 ## History
 
 - 2026-10-24, `phase5-run-identity`: accepted.
+- 2026-11-25, `refactor-foundation`: amended. Legacy records, the backfill script and the
+  legacy loader `training/io.py` are removed with the ICLR compatibility.

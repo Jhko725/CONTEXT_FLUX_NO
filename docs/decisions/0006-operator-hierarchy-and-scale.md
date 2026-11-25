@@ -1,14 +1,14 @@
 ---
 type: decision
 id: ADR-0006
-status: accepted
+status: amended
 updated: 2026-11-25
 verified_by: joon (discussed 2026-09-26/27)
 ---
 
 # ADR-0006 — `InContextOperator` ⊃ `InContextFluxOperator`; scale wraps the conditioned module
 
-**Status**: accepted (2026-09-27).
+**Status**: accepted (2026-09-27); amended 2026-11-25.
 
 ## Context
 
@@ -33,10 +33,18 @@ subclasses it with `target = FluxStepper(flux: NumericalFlux, integrator, source
 in the base class, `Scaled(target.flux)` in the subclass (normalize input, denormalize output); the
 integrator always sees physical `u`.
 
+`InContextOperator` exposes its two stages. `generate_solver(context)` runs the encoder and
+the conditioner once and returns the conditioned target, and `step(solver, u, args)` advances
+a state with it. The law `step(generate_solver(u), u[-1], args) == __call__(u, args)[0]` is a
+property test of Phase 3. The rebuttal branch has the two stages as
+`AbstractGeneratedSolverOperator`; that class is a requirement on Phase 3 and is not brought
+across as code, because its only users are the question-specific rebuttal diagnostics.
+
 ## Consequences
 
-Hypernet/FiLM/ContextAppend are each written once. The ICLR checkpoints load through a shim
-mapping the four old classes onto the hierarchy; review gate at the end of Phase 3.
+Hypernet/FiLM/ContextAppend are each written once. No shim loads the ICLR checkpoints into
+the hierarchy: Phase 3 is written on `fv/` and replaces `legacy/`. A rollout that refreshes
+its context, or that reuses one solver over many steps, calls the two stages directly.
 
 ## Alternatives rejected
 
@@ -47,3 +55,5 @@ mapping the four old classes onto the hierarchy; review gate at the end of Phase
 ## History
 
 - 2026-09-27: accepted.
+- 2026-11-25, `refactor-foundation`: amended. The two-stage contract (`generate_solver`, `step`) is
+  part of the decision, and the ICLR shim with its review gate is dropped.

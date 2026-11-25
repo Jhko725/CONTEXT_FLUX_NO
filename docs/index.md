@@ -44,8 +44,8 @@ enforces them and that every document is listed here.
 
 ## Decision records (`decisions/`)
 
-Smaller decisions without an ADR (D1 drop `DPOTEncoder`/LSK; D2 ICLR shim through Phase 3; D4
-`icon/` submodule; D15 `bias-hyperinit` default; D16 extensibility interfaces reserved) are
+Smaller decisions without an ADR (D1 drop `DPOTEncoder`/LSK; D2 ICLR shim through Phase 3, dropped
+2026-11-25; D4 `icon/` submodule, removed 2026-11-25; D15 `bias-hyperinit` default; D16 extensibility interfaces reserved) are
 recorded in the roadmap tables and the change documents that implement them.
 
 ### In force
@@ -57,12 +57,13 @@ recorded in the roadmap tables and the change documents that implement them.
 | [0003](decisions/0003-boundary-conditions-as-objects.md) | accepted | boundary conditions are objects applied by ghost-cell padding |
 | [0004](decisions/0004-weno5-and-reference-backends.md) | amended 2026-10-25 | own WENO5, time-boxed; PyClaw/SharpClaw and Trixi.jl as reference backends |
 | [0005](decisions/0005-three-part-numerical-flux.md) | accepted | numerical flux = reconstruction ∘ (base − dissipation) |
-| [0006](decisions/0006-operator-hierarchy-and-scale.md) | accepted | `InContextOperator` ⊃ `InContextFluxOperator`; scale wraps the conditioned module |
+| [0006](decisions/0006-operator-hierarchy-and-scale.md) | amended 2026-11-25 | `InContextOperator` ⊃ `InContextFluxOperator`; scale wraps the conditioned module |
 | [0007](decisions/0007-dataclass-configs.md) | accepted | dataclass component configs in Hydra `ConfigStore` |
-| [0008](decisions/0008-four-tier-testing.md) | accepted | unit / property / regression / verification tiers |
+| [0008](decisions/0008-four-tier-testing.md) | amended 2026-11-25 | unit / property / verification tiers; the regression tier removed 2026-11-25 |
 | [0009](decisions/0009-tracks.md) | accepted | work organized as Common → MVP → Rest |
-| [0010](decisions/0010-run-identity.md) | accepted | a run is a directory (`metadata.json` + whole-state checkpoints, Hydra output dir); trainer has no side effects; wandb is a mirror |
+| [0010](decisions/0010-run-identity.md) | amended 2026-11-25 | a run is a directory (`metadata.json` + whole-state checkpoints, Hydra output dir); trainer has no side effects; wandb is a mirror |
 | [0011](decisions/0011-solver-backends-and-dataset-provenance.md) | amended 2026-10-25 | reference solvers behind one `SolverBackend` (PyClaw Classic bit-identical, SharpClaw); minimal PDE interface until 4.1; agreement by mutual convergence; every store carries a `DatasetRecord` |
+| [0012](decisions/0012-legacy-directory-and-clean-list.md) | accepted | code awaiting its rewrite lives in `legacy/`; one clean list in `pyproject.toml` scopes the strict checks |
 
 ### Superseded
 
@@ -78,13 +79,13 @@ None.
 | `phase2a-pyclaw-backend` | merged 2026-10-26 | [`2026-10-25-phase2a-pyclaw-backend.md`](changes/2026-10-25-phase2a-pyclaw-backend.md) |
 | `phase2a-trixi-backend` | merged 2026-10-26 (Python side 2026-10-25; Julia package `ContextFluxTrixi`, committed lock and V18 green 2026-10-26; opt-in CI Julia job unverified) | [`2026-10-25-phase2a-trixi-backend.md`](changes/2026-10-25-phase2a-trixi-backend.md) |
 | `conventions-docs` | landed (recreated from `main` 2026-10-26: spelling checks wired, sweep applied) | [`2026-10-25-conventions-docs.md`](changes/2026-10-25-conventions-docs.md) |
-| `refactor-foundation` | in-progress (carries `workflow-bootstrap`; workflow, `legacy/`, entry point, loader, evaluation) | [`2026-11-25-refactor-foundation.md`](changes/2026-11-25-refactor-foundation.md) |
+| `refactor-foundation` | landed 2026-11-25, awaiting review (carries `workflow-bootstrap`; workflow, `legacy/`, entry point, loader, evaluation) | [`2026-11-25-refactor-foundation.md`](changes/2026-11-25-refactor-foundation.md) |
 
 ## Plans (`plans/`) — handoff documents, one per implementation round
 
 | Plan | Status | Document |
 |---|---|---|
-| `refactor-foundation` | planned | [`2026-11-25-refactor-foundation.md`](plans/2026-11-25-refactor-foundation.md) |
+| `refactor-foundation` | executed | [`2026-11-25-refactor-foundation.md`](plans/2026-11-25-refactor-foundation.md) |
 
 ## Historical
 

@@ -38,12 +38,17 @@ row is unverified. Tiers: `property` (fast, every commit) or `verification` (`-m
 | V20 | 2D Euler vs JAX-Fluids on one Lax–Liu configuration | `…::test_jaxfluids_euler` | JAX-Fluids | as V18 | verification | planned [R] |
 | V21 | `vmap` == Python loop; `jit` == eager, for every `FluxPredictor` | `tests/property/test_transforms.py` | each other | `rtol 1e-6` | property | planned |
 | V25 | `PyClawBackend("classic")` is bit-identical to the pre-2a per-class `solve()` on every PyClaw family | `tests/unit/test_pyclaw_backend.py::test_classic_is_bit_identical_to_pre_2a_solve` | goldens at `1ff31bb` | exact | unit | **green** |
-| V22 | ICLR checkpoints reproduce their recorded forward pass and 5-step rollout | `tests/regression/test_regression.py` | goldens | `rtol 1e-5, atol 1e-6` (CPU) | regression | **green** 2026-10-26: goldens from `main` @ `4658f65`, 7 cases, run twice bit-identical; on `phase1-prune` after parking the `operatornet` key fix (F15) |
+| V22 | ~~`tests/regression/test_regression.py`~~ | `tests/regression/test_regression.py` | goldens | `rtol 1e-5, atol 1e-6` (CPU) | regression | **retired 2026-11-25** (`refactor-foundation`): the regression tier and the code that loaded the ICLR checkpoints are removed (ADR-0008 amended); green on 2026-10-26 before that |
 | V23 | Mandatory statement: all of V1–V21 hold at N = 1, 2 and (tiny) 3 | parametrized | — | — | both | planned |
+| V26 | The evaluation metrics equal hand-computed values: norms and relative errors, total variation, error area fraction, valid horizon, segment errors, jump counts; the radial spectrum satisfies Parseval | `tests/unit/test_metrics.py` | closed form | named in the test file | unit | **green** 2026-11-25 |
+| V27 | A rollout of a stub that shifts the state one cell per step has zero error and a zero error spectrum against a wave that moves one cell per frame; a stub that holds the last frame reproduces the identity baseline at every step | `tests/unit/test_rollout.py` | closed form (stub operators of `tests/helpers.py`) | `ROLLOUT_ATOL` | unit | **green** 2026-11-25 |
+| V28 | The host-side summaries (divergence fractions, medians over finite values, conservation-drift quartiles, trajectory matching, means by bin) equal hand-computed values | `tests/unit/test_summary.py` | closed form | exact or `ROLLOUT_ATOL` | unit | **green** 2026-11-25 |
+| V29 | `Euler2D.pressure(to_conserved(rho, u, v, p)) == p`; a state with one non-positive depth, density or pressure is not admissible | `tests/unit/test_admissible.py` | identity | `PRESSURE_ROUND_TRIP_RTOL` (fp32) | unit | **green** 2026-11-25 |
+| V30 | `store_channel_order` maps a store written by `WellWriter` and read through `ZarrWellDatasetSource` to the family's order (Euler: `(0, 3, 1, 2)`; scalar: identity) (F16) | `tests/unit/test_generate_dataset.py` | written constants per channel | exact | unit | **green** 2026-11-25 |
 
 ## Tolerance notes
 
 - fp32 cannot demonstrate fifth order beyond ~2 refinements (error floor ~1e-7); verification uses `jax_enable_x64`.
 - Cross-code tolerances are set from a mutual convergence study (DG and FV dissipate differently near shocks), recorded here when measured.
-- Regression goldens are generated and compared on CPU (`JAX_PLATFORMS=cpu`) for determinism.
-| V24 | No PRNG key is consumed twice while constructing any model from its config (F5/F6 guard) | `tests/unit/test_key_hygiene.py` | identity of recorded keys | exact | property-style (unit) | green since `134dfdb`; DISCO case strict `xfail` until F15's fix (checkpointed `operatornet_scale`) |
+- The regression goldens and their tier were removed on 2026-11-25 (V22 retired).
+| V24 | No PRNG key is consumed twice while constructing any model from its config (F5/F6 guard) | `tests/legacy/test_key_hygiene.py` | identity of recorded keys | exact | property-style (unit) | green since `134dfdb`; DISCO case strict `xfail` until F15's fix (checkpointed `operatornet_scale`); the DISCO case passes since `c2ea7f0` (2026-11-25, F15 closed) |

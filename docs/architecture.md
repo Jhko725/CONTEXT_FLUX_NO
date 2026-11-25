@@ -22,60 +22,67 @@ conditioning mechanism (hypernetwork) specializes a target network, and the targ
 — a finite-volume *flux* network — predicts the next state. Families: cubic, sine and
 Burgers scalar laws, shallow water, 2D Euler. Baselines: DISCO, DPOT, FNO variants.
 
-## Module map — after Phase 1 (`phase1-prune`, 2026-10-24); struck-through = removed in Phase 1
+## Module map — after Phase 1b (`refactor-foundation`, 2026-11-25)
 
 ```
 src/context_flux_no/
-├── models/
-│   ├── multiphysics/
-│   │   ├── abstract.py          AbstractMultiphysicsOperator: __call__(u, args) -> (u_next, aux); rollout()
-│   │   ├── hyperfluxfno/        the method (four generations side by side)
-│   │   │   ├── hyperfluxfno.py  HyperFluxFNOLocal · HyperNeuralOperator · HyperNeuralOperatorv2 ·
-│   │   │   │                    ContextAppendedFluxNO; InterfaceReconstructor; FluxModel; ContextConditionedFluxModel
-│   │   │   ├── encoders/        ViTEncoder · TRecViTEncoder · ~~DPOTEncoder~~
-│   │   │   ├── target_networks/ FluxNO · NDFluxNO · UNet · FNO · ConvNeXtV2 · ~~LSKFluxNO~~; each does its own FV update
-│   │   │   └── utils.py         make_encoder / make_target_network (string dispatch)
-│   │   ├── disco/               DISCO baseline (own HyperNetworkHead, UNet blocks byte-identical to target_networks/unet.py)
-│   │   ├── dpot.py              DPOT baseline
-│   │   ├── fno.py, fluxno.py    NaiveFNO · SpatiotemporalFNO · NaiveFluxNO (thin wrappers)
-│   │   └── ~~wrapper.py~~
-│   └── fno.py                   FNO — the one real FNO implementation          (~~fluxfno.py~~)
-├── nn/                          attention (fork of eqx), hypernetwork.HypernetworkHead, embedding, position_encoding,
-│                                operators/fourier (SpectralConv, Fourier), ssm, convtranspose, misc, … (~~vit.py~~)
+├── legacy/                      code that awaits its rewrite (ADR-0012): importable, otherwise untouched, outside the strict checks
+│   ├── models/
+│   │   ├── multiphysics/
+│   │   │   ├── abstract.py          AbstractMultiphysicsOperator: __call__(u, args) -> (u_next, aux); rollout()
+│   │   │   ├── hyperfluxfno/        the method (four generations side by side): hyperfluxfno.py, encoders/ (ViT, TRecViT),
+│   │   │   │                        target_networks/ (FluxNO, NDFluxNO, UNet, FNO, ConvNeXtV2; each does its own FV update), utils.py
+│   │   │   ├── disco/               DISCO baseline (own HyperNetworkHead, UNet blocks byte-identical to target_networks/unet.py)
+│   │   │   ├── dpot.py              DPOT baseline
+│   │   │   └── fno.py, fluxno.py    NaiveFNO · SpatiotemporalFNO · NaiveFluxNO (thin wrappers)
+│   │   └── fno.py                   FNO, the one real FNO implementation
+│   ├── nn/                      attention (fork of eqx), hypernetwork.HypernetworkHead, embedding, position_encoding,
+│   │                            operators/fourier (SpectralConv, Fourier), ssm, convtranspose, misc
+│   └── plotting/
 ├── training/                    building blocks only (ADR-0010; imports nothing from runs/ or experiment): trainer.py (pure loop, injected side effects),
-│                                loggers.py, checkpoint.py (OrbaxCheckpointer, whole TrainerState), loss.py (OneStep/Denoising/Pushforward),
-│                                loader.py (DEPRECATED: SegmentLoaderBackground only, until Phase 4), io.py (legacy load_model)  (~~dataset.py~~, ~~batching.py~~)
+│                                loggers.py, checkpoint.py (OrbaxCheckpointer, whole TrainerState), loss.py (OneStep/Denoising/Pushforward)
 ├── runs/                        run identity: record.py (RunRecord, index columns), run.py (Run directory, RunLayout), index.py (index/select/load_run/load_state/from_wandb)
-├── experiment.py                config → objects: build_model/build_optimizer/state_template, wandb mirror (build/finish_wandb_run), what the training scripts share (Run in Hydra's dir, resume/warm_start)
-├── utils/                       arrays.py (is_floating_array, num_parameters; was utils.py), provenance.py (git_state, package_version),
-│                                serialization.py (dumps: the one JSON encoder for records and store attrs)
-├── data/                        sources.py: WellDatasetSourceBase · ZarrWellDatasetSource (current) · TheWellDataSource (re-implements base)  (~~transforms.py~~)
+├── experiment.py                config → objects: build_model/build_optimizer/state_template, the wandb mirror, and train(), which scripts/train.py calls
+├── utils/                       arrays.py (is_floating_array, num_parameters), provenance.py (git_state, package_version),
+│                                serialization.py (dumps: the one JSON encoder for records and store attributes)
+├── data/                        sources.py: WellDatasetSourceBase (loss_args, dataset_id) · ZarrWellDatasetSource · TheWellDataSource;
+│                                loader.py: make_loader (the one loader factory, training and evaluation order), gc_paused
+├── evaluation/                  imports nothing from legacy/ (rule R12); a model reaches it through the Operator protocol
+│                                metrics.py (norms, relative errors, total variation, spectra, conservation drift, rollout references and diagnostics,
+│                                valid horizon, segment errors), rollout.py (Operator, evaluate_rollouts, evaluate_references, segment evaluation;
+│                                accelerator side), summary.py (summaries, matching, binning; host side), cost.py (count_flops, measure),
+│                                record.py (EvaluationRecord)
 ├── simulations/                 reference solvers + data generation (ADR-0011): grid.py (Grid), record.py (DatasetRecord), writer.py (WellWriter,
-│                                Well boundary_conditions), generate.py (generate_dataset); pde/{base (minimal interface until 4.1), burgers,
-│                                cubic, euler, shallow_water, sine_1d} — 5 PyClaw families + CubicFlux2D/ViscousBurgers1D own steppers
-│                                (~~dataset.py~~, ~~utils.py~~, ~~pdesolve.py~~, ~~pyclaw_utils.py~~)
+│                                Well boundary_conditions, store_channel_order), generate.py (generate_dataset); pde/{base (minimal interface until 4.1;
+│                                positive_quantities, admissible), burgers, cubic, euler, shallow_water, sine_1d}: 5 PyClaw families + CubicFlux2D/ViscousBurgers1D own steppers
 │   ├── backends/                base.py (SolverBackend, BC names, SolverFailure), pyclaw.py (PyClawSpec, PyClawBackend classic|sharpclaw),
 │                                trixi.py (TrixiSpec, TrixiBackend via juliacall; Julia side in reference/trixi/ContextFluxTrixi/); jax.py at 4.7
 │   └── initial_conditions/      base.py (InitialCondition.at_points, FromFunction, Stacked, Conserved; InitialConditionSampler.sample(key, x_spans),
-│                                Multichannel), grf.py (GaussianRandomField via gstools, evaluable anywhere), step.py (PeriodicStep1D/PeriodicVoronoi2D
-│                                + their samplers), fourier.py (TruncatedFourier1D)
-├── plotting/, metrics.py, custom_types.py
+│                                Multichannel), grf.py (GaussianRandomField via gstools), step.py (PeriodicStep1D/PeriodicVoronoi2D
+│                                + their samplers; at least two jumps), fourier.py (TruncatedFourier1D)
+└── custom_types.py
 scripts/
-├── training/  train_multiphysics.py (zarr) · train_the_well.py — data + loaders only, on experiment.train; configs/ (22 model, 3 data, 2 training, 3 wandb yamls; config.yaml + config_the_well.yaml)
-├── backfill_run_records.py   legacy ICLR checkpoints → metadata.json
+├── train.py                  the one training entry point: the data config's `source:` node picks the source class
+├── evaluate.py               named runs on a named test set → one HDF5 result file with its EvaluationRecord
+├── bench_loader.py           times make_loader on a named dataset (numbers pending, roadmap 4.6)
+├── training/configs/         model (22), data (3, each with a `source:` node), training (2), wandb (3) yamls; config.yaml
+├── checks/                   check_docs · check_changes · check_md_math (+ markdown.py) · check_references · check_spelling ·
+│                             check_containers · check_dependencies · check_docstrings; each reads text or syntax and never imports the package (rule R10)
+├── docs/generate_references.py   writes docs/references.md from docs/references.bib
 ├── setup_julia.py            Julia ~1.12 + reference/trixi/ project via juliapkg, once per machine
-└── data/      generate_dataset.py (backend=default|classic|sharpclaw, bc=); configs/ (pde, initial_condition (sampler:), backend)
-notebooks/    data_generation/ evaluation/ misc/ nn/ training/ — evaluation logic (compute_metrics ×7, metrics_long_rollout ×4) lives here; 5 legacy notebooks removed
-tests/        5 example files + test_nn_hypernetwork.py; tests/unit/ (key hygiene; training/runs; pyclaw backend + goldens_simulations/, backend agreement, generate — 59 tests); tests/verification/ (x64, -m slow: cross-code); tests/regression/ machinery (goldens pending)
-third_party/icon   submodule → Jhko725/icon-baseline (upstream ICON + Joon's HDF5 data path); not imported by src   [0.5 done]
+└── data/                     generate_dataset.py (backend=default|classic|sharpclaw, bc=); configs/ (pde, initial_condition (sampler:), backend)
+tests/        conftest.py (Hypothesis profiles; jaxtyping + beartype import hook on the clean paths), helpers.py (named tolerances, stub operators);
+              unit/ (training, runs, loader, configs, imports, evaluation, admissibility, backends + goldens_simulations/);
+              verification/ (backend agreement, cross-code; x64); legacy/ (the tests of legacy/, unchanged)
+justfile, prek.toml           every command is a recipe; every hook runs in `just check`
 ```
 
-Full evidence: `assessment-2026-09-26.md`.
+The survey of the repository before the cleanup is `assessment-2026-09-26.md`, which was never committed to this repository.
 
 ## Data flow of one training step — as found
 
 ```
-grain: ZarrWellDatasetSource ─► shuffle/repeat/batch ─► host prefetch ─► device_put ─► thread prefetch
+data.make_loader(source): shuffle/repeat/batch ─► host prefetch ─► device_put ─► thread prefetch
         batch u[B, T+1, C, *grid], loss_args = (dt, dx, …)
           │
           ▼
@@ -99,12 +106,11 @@ src/context_flux_no/
   training/      Phase 5 ✓ Trainer · losses · loggers · checkpoint   (building blocks)
   runs/          Phase 5 ✓ RunRecord · Run · index                  (run identity)
   experiment.py  Phase 5 ✓ config → objects incl. the wandb mirror; Phase 3/7 build() lands here
-  evaluation/    Phase 6  rollout · metrics · tables · figures
+  evaluation/    Phase 1b ✓ metrics · rollout · summary · cost · record;  Phase 6.2: tables · figures
   configs/       Phase 3/7  dataclass configs + ConfigStore
 reference/trixi/  Julia project (committed Project/Manifest lock; Trixi 0.17.16, Julia 1.12.7) + ContextFluxTrixi 0.1.0: equations.jl (cubic 1D/2D, sine, parametrized SW; exact LF bound), solve.jl (node_coordinates, solve, versions), test/runtests.jl (72 checks) — reference oracle, fallback generator
-scripts/        generate.py · train.py · evaluate.py · bench_loader.py · check_configs.py · check_docs.py
-tests/          unit/ · property/ · regression/ · verification/
-third_party/icon
+scripts/        generate.py · train.py ✓ · evaluate.py ✓ · bench_loader.py ✓ · checks/ ✓
+tests/          unit/ · property/ · verification/
 ```
 
 ## Data flow of one training step — planned
@@ -125,10 +131,12 @@ the classical flux are interchangeable plug-ins of one stepper (Principle 6).
 
 ## Tests
 
-As found: five example-test files on the baselines and nn utilities. Planned (ADR-0008):
-four tiers — `unit/`, `property/` (Hypothesis + chex; invariants), `regression/` (goldens
-from the ICLR checkpoints, CPU), `verification/` (oracle-based numerics, `x64`, slow). The
-evidence that each numerics claim is tested is `verification.md`.
+The fast tier holds `tests/unit`, the unmarked tests of `tests/verification` and
+`tests/legacy`; the slow tier holds the tests marked `slow`. The property tier of
+ADR-0008 (`tests/property`, Hypothesis and chex) arrives with the finite-volume core.
+There is no regression tier (ADR-0008, amended 2026-11-25). `verification.md` is the
+evidence that each numerics claim is tested, and `coding-standards.md` gives the recipes
+and the contract of each tier.
 
 ## Where each decision is recorded
 
@@ -141,8 +149,9 @@ evidence that each numerics claim is tested is `verification.md`.
 | Three-part numerical flux | ADR-0005 |
 | Operator hierarchy; scale wraps the conditioned module | ADR-0006 |
 | Dataclass configs + ConfigStore | ADR-0007 |
-| Four-tier testing | ADR-0008 |
+| Test tiers (the regression tier removed 2026-11-25) | ADR-0008 |
 | Tracks C/M/R | ADR-0009 |
 | Run identity: run directory, `RunRecord`, injected side effects, wandb as mirror, resume | ADR-0010, `design/run-identity.md` |
 | Reference solvers behind `SolverBackend`; `DatasetRecord`; agreement by mutual convergence | ADR-0011, `design/simulation-backends.md` |
+| `legacy/` and the clean list that scopes the strict checks | ADR-0012 |
 | Smaller decisions (D1–D4, D15, D16) | `roadmap.md` tables and change documents |

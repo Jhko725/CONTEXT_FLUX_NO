@@ -20,9 +20,9 @@ are Joon's pain points, referenced below).
 
 ## Principles
 
-1. Every phase ends with a repo that trains the current 2D Euler model and loads the ICLR checkpoints.
-2. Refactor only behind the regression harness built from the ICLR checkpoints.
-3. Delete by default; the `iclr2027-submission` tag is the archive. No `legacy/` directory.
+1. Every phase ends with a repository that trains a model on a Well-schema dataset, with the fast tier green.
+2. Refactor behind tests: the unit and property tiers guard every change, and the verification tier guards the numerics.
+3. Nothing dead is kept; code that awaits its rewrite lives in `legacy/`, and the tag `iclr2027-submission` is the archive of what was submitted.
 4. Fix interfaces now; defer implementations that are undecided.
 5. Move code, don't rewrite — except in Phases 2–3, where the rewrite is the point.
 6. Classical and learned numerics share one interface (`FluxPredictor` + `Integrator`); simulators and models are built from the same `fv/` package.
@@ -32,7 +32,7 @@ are Joon's pain points, referenced below).
 
 | Track | Meaning | Phases |
 |---|---|---|
-| **[C] Common** | needed by everything; no research until done | 0, 1, 5, 2 (C items), 3 |
+| **[C] Common** | needed by everything; no research until done | 0, 1, 1b, 5, 2 (C items), 3 |
 | **[M] MVP** | smallest addition that lets post-submission experiments run on clean infrastructure | 4 (M items), 6 (M items); then FiLM as the first research item |
 | **[R] Rest** | valuable, not blocking | WENO5 + full verification, `JaxBackend`, figures, 7 |
 
@@ -40,7 +40,7 @@ Rule: [R] is not started while a [C] or [M] item is open — except WENO5, which
 its one-week time-box alongside Phase 3.
 
 ```
-[C]  P0 ─► P1 ─► P5 ─► P2a ─► P2b ─► P2c ─► P2d ─► P2e ─► P2g ─► P3 ─┐
+[C]  P0 ─► P1 ─► P5 ─► P2a ─► P1b ─► P2b ─► P2c ─► P2d ─► P2e ─► P3 ─┐
                         └─► [R] WENO5 (time-box, parallel to P3) ─────┤
 [M]                                                    P4 ─► P6 ─► research resumes
 [R]                                   JaxBackend ─► full verification ─► figures ─► P7
@@ -48,7 +48,7 @@ its one-week time-box alongside Phase 3.
 
 ---
 
-## Phase 0 — Freeze, safety net, hygiene  [C]  (current; branch `phase0-freeze`; remaining: 0.7 run, 0.8 goldens)
+## Phase 0 — Freeze, safety net, hygiene  [C]  (branch `phase0-freeze`; closed 2026-11-25, when 0.7 was dropped)
 
 Change document: `changes/2026-10-04-phase0-freeze.md`. Mechanical items by Claude; the
 substantive ones (0.2, 0.5–0.8) by Joon.
@@ -65,7 +65,7 @@ substantive ones (0.2, 0.5–0.8) by Joon.
 | 0.6c | `data/__init__` exports | `from context_flux_no.data import TheWellDataSource` works | done (`25c7494`) |
 | 0.6d | Delete/rename the misnamed `lskflux` config | a ConvNeXt config still exists | done (`25c7494`) |
 | 0.6e | `scripts/check_configs.py`; census → `docs/config_census_phase0.txt` | no Import/Attribute/init-string failures | done (`25c7494`) |
-| 0.7 | Bias-HyperInit audit of wandb runs → `findings.md` | conclusion recorded | script ready (`scripts/audit_bias_hyperinit.py`); run deferred — cluster down |
+| 0.7 | Bias-HyperInit audit of wandb runs → `findings.md` | conclusion recorded | **dropped 2026-11-25**: the audit served the ICLR checkpoints, and the repository no longer keeps compatibility with them (`refactor-foundation`; script deleted) |
 | 0.8 | Regression harness: cases, inputs, goldens (CPU), tests green twice | `pytest tests/regression` green ×2 | **done 2026-10-26** (7 cases; green twice on `main`, then on each branch before its merge) |
 | 0.9 | Tooling: dev deps, ruff format, pre-commit, CUDA as optional extra, CPU CI, pytest markers | CI green | done (`fbeb7a8`, `2a65dfc`); `the-well`/`torch` dropped 2026-10-24 |
 | 0.10 | README, `pyproject` metadata, hello-world removed, training README fixed | — | done (`7325817`) |
@@ -102,11 +102,26 @@ with that fix parked.
 | 1.3 | Correctness fixes: `test_models_disco.py:286` assert; DISCO `split(key, 4)`; `HyperNeuralOperator` key reuse; UNet `keys_bot` (F6, pulled forward; the `operatornet` copy parked 2026-10-26, F15); `jax.flatten_util` import (F9); key-hygiene test | regression unchanged | done (`134dfdb`, `518ee62`); `train_the_well.py` was already correct |
 | 1.3 | Deferred correctness items recorded in `findings.md` (rfftn axes, `stack_grid`, UNet mask channel, DISCO double standardize, four face conventions) | — | done (F3, F4, F6 remainder, F2) |
 
-Exit: `import_all.py` and `ruff check` clean ✔; fast tier green (33 tests) ✔; regression tier green 2026-10-26 ✔; `evaluate_cubic.ipynb` reaches its first metric cell — to be checked by Joon on the cluster.
+Exit: `import_all.py` and `ruff check` clean ✔; fast tier green (33 tests) ✔; regression tier green 2026-10-26 ✔; ~~`evaluate_cubic.ipynb` reaches its first metric cell~~ (struck 2026-11-25: the notebooks are deleted).
 
 | # | Item | Done when | Status |
 |---|---|---|---|
 | 1.0 | CI repair: `ruff` in the dev group; `scripts/import_all.py` | CI green on `phase1-prune` | done (`758600f`) |
+
+## Phase 1b — Foundation  [C]  (branch `refactor-foundation`; **landed 2026-11-25**, awaiting review)
+
+Change document: `changes/2026-11-25-refactor-foundation.md`; plan:
+`plans/2026-11-25-refactor-foundation.md`; ADR-0012. The branch drops the compatibility with the
+ICLR checkpoints, so it also closes 0.7 and 5.4 as dropped and removes 2g and 3c.
+
+| # | Item | Done when | Status |
+|---|---|---|---|
+| 1b.1 | Workflow of `UniversalForceReconstruction`: rules and the implementer agent in the repository, `justfile`, `prek`, checks under `scripts/checks/`, `docs/document-conventions.md`, round tables, plans, unconfirmed markers | `just check` exits 0 | done |
+| 1b.2 | ICLR compatibility removed: legacy loader, regression tier, audit and backfill scripts, xarray loader, notebooks, ICON submodule | the unit-4 and unit-5 greps of the plan print nothing | done |
+| 1b.3 | `legacy/` and the clean list (ADR-0012) | no clean path imports `legacy/` (`check_dependencies.py`) | done |
+| 1b.4 | One `scripts/train.py`; `data.make_loader`; config census and import sweep as tests | `tests/unit/test_configs.py`, `test_imports.py`, `test_loader.py` green | done (closes 4.5, half of 7.1; 4.6 without its numbers) |
+| 1b.5 | `evaluation/` and `scripts/evaluate.py`; family admissibility; store channel order | `tests/unit/test_{metrics,rollout,summary,cost,evaluate,admissible}.py` green | done (closes 6.1) |
+| 1b.6 | Strict checks on the clean list: docstrings, complexity 8, `ty`, containers, dependencies, runtime shape checks; one bibliography | `just check` exits 0 with the checks on | done; `simulations/pde/burgers.py` excluded from `ty` (open issue) |
 
 ## Phase 5 — Run identity  [C]  (branch `phase5-run-identity`, based on `phase1-prune`; **landed 2026-10-24**; P9, P10; ADR-0010)
 
@@ -115,7 +130,7 @@ Exit: `import_all.py` and `ruff check` clean ✔; fast tier green (33 tests) ✔
 | 5.1 | `RunRecord` (`metadata.json`): locally generated `run_id`, git SHA + dirty, package version, `x64`, `dataset_id`, index columns, model config, status, best/final step, resume notes | dataclass + Hypothesis round trip | done |
 | 5.2 | `Run` directory = Hydra output dir; record written to `metadata.json`, orbax `custom_metadata` and wandb (`config` = index columns only; full config as file; `group`/`job_type`/`tags`); trainer loses wandb/orbax (injected `Logger`/`Checkpointer`), checkpoints whole `TrainerState`, final step forced | one training run shows all three; 28 CPU tests | done (wandb path untested against the service) |
 | 5.3 | `runs/index.py`: `index(root) → DataFrame`, `select`, `load_run`, `load_state`, `from_wandb` | notebooks lose `CHECKPOINT_DICT` | code done; notebooks switch in Phase 6 |
-| 5.4 | Backfill `metadata.json` for ICLR checkpoints (`scripts/backfill_run_records.py`, wandb match via the F1 audit CSV) | run once on the cluster | script + test done; **run pending** (with 0.7/0.8) |
+| 5.4 | Backfill `metadata.json` for ICLR checkpoints (`scripts/backfill_run_records.py`, wandb match via the F1 audit CSV) | run once on the cluster | **dropped 2026-11-25**: legacy records are removed with the ICLR compatibility (`refactor-foundation`, ADR-0010 amended; script and test deleted) |
 | 5.5 | One line of design so `Trainer` does not preclude `jax.sharding` | — | done (`mesh` argument; loop never reads device values) |
 | 5.6 | Exact data-stream continuation on resume (grain iterator state in the checkpoint) | resumed run bit-equal to an uninterrupted one | open; the stream restarts today (ADR-0010 §5) |
 | 5.7 | `save_every` default: 1 (ICLR protocol, best over every step) or 100 (current) | Joon decides | open (F10) |
@@ -137,19 +152,18 @@ Conventions: `design/fv-conventions.md`. Decisions: ADR-0001 (tiered coupling), 
 | 2e | R | `WENO5Flux` (FD-WENO, LF splitting, JS/Z), **time-box 1 week** — start ____ end ____; `design/weno5.md` | EOC ≥ 4.8 on scalar families |
 | 2f | C | property tier for `fv/` (`verification.md` rows marked property) | green |
 | 2f | R | verification suite: EOC + MMS; exact discontinuous; non-periodic; three-way cross-code (own / SharpClaw / Trixi); benchmarks notebook | `verification.md` rows green |
-| 2g | C | Models migrated onto `fv/`: v2 → HNO → Local → Appended → ConvNeXt; regression after each; face-convention mismatches → `findings.md` | `grep "dt \*" src/context_flux_no/models` empty |
 
 ## Phase 3 — In-context operator hierarchy + typed configs  [C]
 
-ADR-0006 (hierarchy, scale placement), ADR-0007 (dataclass configs).
+ADR-0006 (hierarchy, scale placement, the two-stage contract), ADR-0007 (dataclass configs).
+Re-scoped 2026-11-25: written on `fv/`, replacing `legacy/`; no shim.
 
 | # | Item | Done when |
 |---|---|---|
 | 3a | `InContextOperator` / `InContextFluxOperator` / `FluxStepper`; conditioners `Hypernet`, `ContextAppend`, `NoCondition`; `Scaled(...)` wraps the conditioned module | property test over random (encoder × conditioner × target) |
 | 3b | Dataclass configs + `ConfigStore`; `DataSpec` (shapes + `bcs`); `ModelConfig.to_yaml/from_yaml`; `load_model` via config | `hydra.utils.instantiate` unused for models |
-| 3c | ICLR shim; regression runs through it; **review gate**: keep or retrain-and-drop → decision: ____ | regression green via shim |
 
-Exit: `hyperfluxfno.py` deleted; conditioner ablation is a one-key config change.
+Exit: `legacy/models` deleted; conditioner ablation is a one-key config change.
 
 ## Phase 4 — PDE families, ICs, data regeneration  [M] / `JaxBackend` [R]
 
@@ -159,8 +173,8 @@ Exit: `hyperfluxfno.py` deleted; conditioner ablation is a one-key config change
 | 4.2 | M | `ic/InitialCondition.sample(key, grid, layout, bcs)`; one GRF, one RandomStep | property: valid for the PDE for any seed |
 | 4.3 | M | `DatasetRecord`; backend-agnostic writer; `bcs` + backend in Well metadata | **done 2026-10-25** with 2a (`simulations/{record,writer}.py`; `dataset_id` from records) |
 | 4.4 | M | Regen cubic 1D · sine · Burgers · SW · cubic 2D via reference backends (backend: ____ — `backend=sharpclaw` available now; cubic 2D needs Trixi or `JaxBackend`); Euler stays on Clawpack | datasets on disk with `dataset.json` |
-| 4.5 | M | `TheWellDataSource` folded into base; `SegmentLoaderBackground` deleted; xarray/h5netcdf/netcdf4/dask gone from `src` | `grep xarray src` empty |
-| 4.6 | M | `bench_loader.py`; GC/prefetch fixes into the loader factory (P3) | before/after numbers in change doc |
+| 4.5 | M | `TheWellDataSource` folded into base; `SegmentLoaderBackground` deleted; xarray/h5netcdf/netcdf4/dask gone from `src` | `grep xarray src` empty — **done 2026-11-25** (`refactor-foundation`: the xarray loader and its four dependencies are gone; the two source classes share `WellDatasetSourceBase` and differ in their two abstract methods) |
+| 4.6 | M | `bench_loader.py`; GC/prefetch fixes into the loader factory (P3) | before/after numbers in change doc — loader factory done; benchmark numbers pending (cluster) |
 | 4.7 | R | `simulations/jax.py::JaxBackend`; second regen with verified WENO5 (new `DatasetRecord` version) | cross-code agreement |
 | 4.8 | R | Baselines under non-periodic data (FNO padding; DISCO mask) | — |
 
@@ -168,14 +182,14 @@ Exit: `hyperfluxfno.py` deleted; conditioner ablation is a one-key config change
 
 | # | Track | Item | Done when |
 |---|---|---|---|
-| 6.1 | M | `evaluation/`: `rollout`, `metrics` (rel ℓ2/ℓ∞ curves, conservation drift, effective flux split by part), selection via `runs.index()`; `scripts/evaluate.py` | no `def compute_metrics` in any notebook |
+| 6.1 | M | `evaluation/`: `rollout`, `metrics` (rel ℓ2/ℓ∞ curves, conservation drift, effective flux split by part), selection via `runs.index()`; `scripts/evaluate.py` | no `def compute_metrics` in any notebook — **done 2026-11-25** (`refactor-foundation`: `evaluation/{metrics,rollout,summary,cost,record}.py`, `scripts/evaluate.py`; the effective-flux split stays on the rebuttal branch) |
 | 6.2 | R | `tables`, `figures`; `scripts/figures/` regenerates every paper figure | — |
 
 ## Phase 7 — Config surface  [R]
 
 | # | Item | Done when |
 |---|---|---|
-| 7.1 | One `train.py`; component groups `model/{encoder,conditioner,target\|flux,integrator}`, `data/`, `ic/`, `training/`, `loss/`; `experiment/*` presets | `check_configs.py` → 0 failures |
+| 7.1 | One `train.py`; component groups `model/{encoder,conditioner,target\|flux,integrator}`, `data/`, `ic/`, `training/`, `loss/`; `experiment/*` presets | `check_configs.py` → 0 failures — entry-point half **done 2026-11-25** (`scripts/train.py`; the census is `tests/unit/test_configs.py`); the component groups remain |
 | 7.2 | Dependencies pruned (`the-well` already gone; xarray/h5netcdf/netcdf4/dask after Phase 4; check `diffrax`, `tensorstore`, `fsspec`); README final | — |
 
 ## Research items waiting on the interfaces
@@ -191,9 +205,9 @@ IMEX) — see `design/fv-conventions.md` §Extensibility.
 - Multi-device training — single GPU assumed throughout; Phase 5.5 only keeps the door open.
 - Nonconservative products, incompressible Navier–Stokes — out of `fv/` scope (ADR-0001 §Extensibility).
 - `CFLAdaptive` implementation (`scan` with bounded substeps vs diffrax controller) — when first needed.
-- ~~`orbax-checkpoint==0.11.25` pin~~ — upgraded to `>=0.12.8` in Phase 5 (review round 1; typed PRNG keys restore natively). 0.12 reads the 0.11.25 ICLR checkpoints once `load_model` names the legacy checkpointable (`pytree`, renamed `state` in 0.12) — confirmed by the regression tier 2026-10-26; no re-save needed.
+- ~~`orbax-checkpoint==0.11.25` pin~~ — closed 2026-11-25: nothing reads the ICLR checkpoints any more. Earlier: upgraded to `>=0.12.8` in Phase 5 (review round 1; typed PRNG keys restore natively). 0.12 reads the 0.11.25 ICLR checkpoints once `load_model` names the legacy checkpointable (`pytree`, renamed `state` in 0.12) — confirmed by the regression tier 2026-10-26; no re-save needed.
 - Whether `TrixiBackend` remains a permanent generator after WENO5 is verified.
-- DISCO `operatornet_scale` as checkpointed array leaves (F15), with the `operatornet.py` `keys_bot` fix and the hygiene xfail flip — Phase 3 (baselines), when legacy checkpoints get the leaf filled at load.
+- ~~DISCO `operatornet_scale` as checkpointed array leaves (F15)~~ — closed 2026-11-25: the `operatornet.py` `keys_bot` fix is applied and the hygiene test passes (`refactor-foundation`); checkpointing the scales is dropped, since Phase 3 rewrites the baselines.
 
 ---
 
@@ -224,3 +238,4 @@ IMEX) — see `design/fv-conventions.md` §Extensibility.
 | 2026-10-26 | `phase2a-trixi-backend` | Julia side of 2a-trixi: `reference/trixi/ContextFluxTrixi` 0.1.0 (cubic 1D/2D, sine, parametrized SW equations with the exact LF bound; `node_coordinates`/`solve`/`versions`; 72 Julia checks) + the committed `reference/trixi/{Project,Manifest}.toml` lock (Trixi 0.17.16, Julia 1.12.7); V18 green on six families (ratios in `verification.md`); `julia_package_version` in `describe()`; `CubicFlux2D.solve` time stepping fixed (F14); `SHARPCLAW_SSP33` in `tests/helpers.py`; F13 | `changes/2026-10-25-phase2a-trixi-backend.md` |
 | 2026-10-26 | `main`, `phase1-prune` | 0.8: regression goldens from the ICLR checkpoints (7 cases; `translate_legacy_config` F1, `checkpoint_template` for DISCO's `DropPath.p` leaves); V22 green twice on `main`; on `phase1-prune` after parking the `operatornet` key fix (F15: DISCO's forward pass depends on un-checkpointed `operatornet_scale`) | `changes/2026-10-04-phase0-freeze.md`, `changes/2026-10-04-phase1-prune.md` |
 | 2026-10-26 | `main` | Merge chain closed: `phase1-prune` → `phase5-run-identity` → `phase2a-pyclaw-backend` → `phase2a-trixi-backend`, each after a green regression tier; orbax 0.12 reads the ICLR checkpoints under the legacy `pytree` name | `changes/2026-10-24-phase5-run-identity.md` |
+| 2026-11-25 | `refactor-foundation` | Phase 1b: the workflow of `UniversalForceReconstruction` (`just`, `prek`, eight check scripts, document conventions, plans, round tables); ICLR compatibility, xarray loader, notebooks and ICON submodule removed (0.7 and 5.4 dropped, 2g and 3c removed); `legacy/` and the clean list (ADR-0012); one `scripts/train.py`, `data.make_loader`, config census and import sweep as tests (4.5, entry-point half of 7.1); `evaluation/` and `scripts/evaluate.py` (6.1); docstrings, `ty` and runtime shape checks on the clean list; `docs/references.bib` | `changes/2026-11-25-refactor-foundation.md` |

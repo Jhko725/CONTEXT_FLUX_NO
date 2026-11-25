@@ -238,4 +238,6 @@ GitHub runs Markdown before MathJax, and VS Code's preview parses inline math fi
 | a superseded ADR's status, frontmatter, opening line, and index table agree | `check_docs.py` | `prek`, CI |
 | no `[unconfirmed]` in a settled document | `check_docs.py`; `just pending` lists all | `prek`, CI |
 | the templates in this document match the check's table | `check_docs.py` | `prek`, CI |
+| each round of a change document's *Review notes* covers exactly the files changed in its range | `check_changes.py` | `prek`, CI |
+| every citation key and relative link resolves; `references.md` equals the generated page | `check_references.py` | `prek`, CI |
 | American English | `codespell`, `check_spelling.py` | `prek`, CI |
